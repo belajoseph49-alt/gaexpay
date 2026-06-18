@@ -1,0 +1,288 @@
+// GaexPay - Fintech platform database schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  phone           String   @unique
+  passwordHash    String
+  firstName       String
+  lastName        String
+  username        String?  @unique
+  avatar          String?
+  country         String   @default("Nigeria")
+  city            String?
+  address         String?
+  dob             String?
+  gender          String?
+
+  // KYC
+  kycStatus       String   @default("unverified") // unverified | pending | verified | rejected
+  kycTier         Int      @default(0) // 0, 1, 2, 3
+  kycSubmittedAt  DateTime?
+  kycVerifiedAt   DateTime?
+  kycRejectionReason String?
+
+  // Security
+  mfaEnabled      Boolean  @default(false)
+  mfaSecret       String?
+  biometricEnabled Boolean @default(false)
+  twoFactorMethod String?  // authenticator | sms | email
+  pinHash         String?
+
+  // Preferences
+  language        String   @default("en")
+  currency        String   @default("NGN")
+  themePreference String   @default("system") // light | dark | system
+  emailNotif      Boolean  @default(true)
+  pushNotif       Boolean  @default(true)
+  smsNotif        Boolean  @default(false)
+
+  // Status
+  status          String   @default("active") // active | suspended | frozen | closed
+  role            String   @default("user") // user | admin | agent | support
+  lastLoginAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  wallets         Wallet[]
+  transactions    Transaction[] @relation("TxUser")
+  transactionsOut Transaction[] @relation("TxSender")
+  cards           Card[]
+  beneficiaries   Beneficiary[]
+  notifications   Notification[]
+  supportTickets  SupportTicket[]
+  supportMessages SupportMessage[]
+  auditLogs       AuditLog[]
+  devices         Device[]
+  referralCode    String?  @unique
+  referredById    String?
+  referralEarnings Float   @default(0)
+  referralCount   Int      @default(0)
+  rewardPoints    Int      @default(0)
+  kycDocuments    KycDocument[]
+}
+
+model Wallet {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currency     String   // NGN, USD, EUR, GBP, GHS, KES, UGX, XOF
+  balance      Float    @default(0)
+  ledgerBalance Float   @default(0)
+  type         String   @default("primary") // primary | savings | business
+  label        String   @default("Main Wallet")
+  isDefault    Boolean  @default(false)
+  status       String   @default("active") // active | frozen | closed
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, currency, type])
+}
+
+model Transaction {
+  id              String   @id @default(cuid())
+  reference       String   @unique
+  userId          String
+  user            User     @relation("TxUser", fields: [userId], references: [id], onDelete: Cascade)
+  senderId        String?
+  sender          User?    @relation("TxSender", fields: [senderId], references: [id])
+  type            String   // transfer | deposit | withdrawal | payment | bill | airtime | exchange | card | referral | fee
+  direction       String   // credit | debit
+  status          String   @default("pending") // pending | completed | failed | reversed | flagged
+  amount          Float
+  fee             Float    @default(0)
+  currency        String   @default("NGN")
+  description     String
+  category        String   @default("general") // general | p2p | bills | shopping | travel | food | income | investment
+  counterpartyName String?
+  counterpartyAccount String?
+  counterpartyBank String?
+  method          String?  // wallet | momo | bank | card | qr | airtime
+  provider        String?  // mtn | orange | airtel | moov | access | gtbank
+  walletId        String?
+  riskScore       Float    @default(0)
+  fraudFlag       Boolean  @default(false)
+  metadata        String?
+  createdAt       DateTime @default(now())
+  completedAt     DateTime?
+}
+
+model Card {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          String   // virtual | physical
+  brand         String   // visa | mastercard | verve
+  nickname      String   @default("GaexPay Card")
+  maskedNumber  String
+  fullNumberEnc String
+  expiryMonth   String
+  expiryYear    String
+  cvvEnc        String
+  holderName    String
+  currency      String   @default("NGN")
+  balance       Float    @default(0)
+  limit         Float    @default(500000)
+  spending      Float    @default(0)
+  status        String   @default("active") // active | frozen | blocked
+  color         String   @default("emerald")
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+}
+
+model Beneficiary {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  account   String
+  bank      String?
+  type      String   @default("bank") // bank | momo | wallet | gaexpay
+  provider  String?
+  currency  String   @default("NGN")
+  email     String?
+  phone     String?
+  avatar    String?
+  createdAt DateTime @default(now())
+}
+
+model KycDocument {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // national_id | passport | drivers_license | voters_card | utility_bill | selfie
+  documentNumber String?
+  frontImage String?
+  backImage  String?
+  selfieImage String?
+  status    String   @default("pending") // pending | approved | rejected
+  reviewedBy String?
+  reviewNote String?
+  createdAt DateTime @default(now())
+  reviewedAt DateTime?
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   @default("info") // info | success | warning | error | transaction | security | promo
+  channel   String   @default("push") // push | email | sms | in_app
+  isRead    Boolean  @default(false)
+  actionUrl String?
+  metadata  String?
+  createdAt DateTime @default(now())
+}
+
+model SupportTicket {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   String
+  category  String   @default("general") // general | transaction | card | kyc | security | account
+  priority  String   @default("medium") // low | medium | high | urgent
+  status    String   @default("open") // open | in_progress | resolved | closed
+  assignedTo String?
+  messages  SupportMessage[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SupportMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  senderType String  @default("user") // user | agent | ai | system
+  content   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actor     String   @default("system")
+  action    String
+  entity    String
+  entityId  String?
+  ip        String?
+  userAgent String?
+  details   String?
+  severity  String   @default("info") // info | warning | critical
+  createdAt DateTime @default(now())
+}
+
+model Device {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  type       String   // mobile | desktop | tablet | web
+  os         String?
+  browser    String?
+  location   String?
+  ip         String?
+  trusted    Boolean  @default(false)
+  lastActive DateTime @default(now())
+  createdAt  DateTime @default(now())
+}
+
+model ExchangeRate {
+  id        String   @id @default(cuid())
+  base      String
+  quote     String
+  rate      Float
+  buy       Float
+  sell      Float
+  source    String   @default("internal")
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@unique([base, quote])
+}
+
+model Merchant {
+  id        String   @id @default(cuid())
+  name      String
+  category  String   @default("retail") // retail | food | transport | utilities | entertainment | health
+  logo      String?
+  qrCode    String   @unique
+  account   String
+  phone     String?
+  email     String?
+  status    String   @default("active")
+  rating    Float    @default(4.5)
+  createdAt DateTime @default(now())
+}
+
+model Biller {
+  id        String   @id @default(cuid())
+  name      String
+  category  String   // electricity | water | internet | tv | education | betting | government
+  logo      String?
+  fields    String   // JSON of required fields
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+}
+
+model AdminMetric {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Float
+  label     String
+  category  String   @default("general")
+  updatedAt DateTime @updatedAt
+}

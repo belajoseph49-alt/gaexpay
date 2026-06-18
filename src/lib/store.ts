@@ -1,0 +1,43 @@
+"use client";
+
+import { create } from "zustand";
+
+export type View =
+  | "dashboard"
+  | "wallets"
+  | "send"
+  | "transactions"
+  | "cards"
+  | "pay"
+  | "analytics"
+  | "kyc"
+  | "settings"
+  | "support"
+  | "admin"
+  | "referral";
+
+interface AppState {
+  view: View;
+  setView: (v: View) => void;
+  sidebarOpen: boolean;
+  setSidebarOpen: (o: boolean) => void;
+  notifOpen: boolean;
+  setNotifOpen: (o: boolean) => void;
+  aiOpen: boolean;
+  setAiOpen: (o: boolean) => void;
+  sendPrefill: { recipient?: string; amount?: number } | null;
+  setSendPrefill: (p: { recipient?: string; amount?: number } | null) => void;
+}
+
+export const useApp = create<AppState>((set) => ({
+  view: "dashboard",
+  setView: (v) => set({ view: v, sidebarOpen: false }),
+  sidebarOpen: false,
+  setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
+  notifOpen: false,
+  setNotifOpen: (notifOpen) => set({ notifOpen }),
+  aiOpen: false,
+  setAiOpen: (aiOpen) => set({ aiOpen }),
+  sendPrefill: null,
+  setSendPrefill: (sendPrefill) => set({ sendPrefill }),
+}));

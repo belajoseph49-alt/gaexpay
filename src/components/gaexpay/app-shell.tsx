@@ -1,0 +1,62 @@
+"use client";
+
+import { Sidebar } from "./sidebar";
+import { Topbar } from "./topbar";
+import { AiAssistant } from "./ai-assistant";
+import { useApp } from "@/lib/store";
+import { DashboardView } from "./views/dashboard-view";
+import { WalletsView } from "./views/wallets-view";
+import { SendView } from "./views/send-view";
+import { TransactionsView } from "./views/transactions-view";
+import { CardsView } from "./views/cards-view";
+import { PayView } from "./views/pay-view";
+import { AnalyticsView } from "./views/analytics-view";
+import { KycView } from "./views/kyc-view";
+import { SettingsView } from "./views/settings-view";
+import { SupportView } from "./views/support-view";
+import { AdminView } from "./views/admin-view";
+import { ReferralView } from "./views/referral-view";
+import { motion, AnimatePresence } from "framer-motion";
+
+export function AppShell() {
+  const { view } = useApp();
+
+  const views: Record<string, React.ReactNode> = {
+    dashboard: <DashboardView />,
+    wallets: <WalletsView />,
+    send: <SendView />,
+    transactions: <TransactionsView />,
+    cards: <CardsView />,
+    pay: <PayView />,
+    analytics: <AnalyticsView />,
+    kyc: <KycView />,
+    settings: <SettingsView />,
+    support: <SupportView />,
+    admin: <AdminView />,
+    referral: <ReferralView />,
+  };
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-background mesh-bg">
+      <Sidebar />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <Topbar />
+        <main className="flex-1 overflow-y-auto">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={view}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.2 }}
+              className="mx-auto max-w-7xl px-4 py-6 lg:px-8"
+            >
+              {views[view] || <DashboardView />}
+            </motion.div>
+          </AnimatePresence>
+        </main>
+      </div>
+      <AiAssistant />
+    </div>
+  );
+}
