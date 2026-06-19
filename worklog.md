@@ -1032,3 +1032,92 @@ Ran `bun run db:push` + `bun run db:generate` to sync. Wrote `prisma/seed-phase2
 - **P2**: Add interactive map (Leaflet/Mapbox) for spending map instead of bar chart.
 - **P3**: Wire up next-intl for multi-language (8 languages declared).
 - **P3**: Add dark/light theme persistence across sessions.
+
+---
+
+## Phase 11 — Cron Round 10: Transaction Tags UI, Onboarding Tour, PDF Statement
+
+**Task ID**: 17 (webDevReview cron round)
+**Agent**: Main (Z.ai Code)
+**Date**: 2026-06-19
+
+### Current Project Status Assessment
+- Dev server running stably on port 3000 (PID 10502).
+- Lint clean (0 errors, 0 warnings).
+- QA via agent-browser confirmed all 21 views render without runtime errors.
+- No bugs found — app was stable. Proceeded to implement P1/P2 features: Transaction Tag UI, Onboarding Tour, PDF Statement download.
+
+### Work Completed This Round
+
+#### 1. Transaction Tag UI (P2 — New Feature)
+- **Updated Transactions view** (`transactions-view.tsx`):
+  - Added tags section in transaction detail dialog with 8 preset tags (Essential, Subscription, Business, Personal, Investment, Gift, Loan, Tax).
+  - Each tag is a toggle button with emoji icon + label + check icon when active.
+  - Tags load from transaction's metadata JSON field when dialog opens.
+  - `toggleTag` function calls `/api/transactions/tag` PATCH to persist changes.
+  - Toast confirmation on tag add/remove.
+  - Tags persist across page reloads (stored in DB metadata).
+- **Verified**: Clicked "Essential" tag on a transaction → "Tag added" toast → API confirmed 1 transaction tagged "Essential".
+
+#### 2. Onboarding Tour (P2 — New Feature)
+- **New component** `onboarding-tour.tsx`:
+  - Shows on first app entry (checks `localStorage.gxp_onboarded`).
+  - 6-step guided tour with animated icon entrance (Framer Motion scale + rotate).
+  - Steps: Welcome → Send & Receive → Pay & Bills → Savings & Budgets → Analytics → Security.
+  - Each step has: gradient icon, title, description, "Try it" button (navigates to feature), Back/Next navigation.
+  - Progress bar at top showing completion %.
+  - Step indicator dots (clickable to jump).
+  - Skip tour / Get Started buttons.
+  - Backdrop overlay with blur.
+- **Added to app-shell**: `<OnboardingTour />` renders globally.
+- **Verified**: Tour appears 1.5s after first entry, navigates through all 6 steps, "Get Started" on last step closes tour and sets localStorage.
+
+#### 3. PDF Statement Download (P1 — New Feature)
+- **Updated Statement view** (`statement-view.tsx`):
+  - New "PDF" button that triggers `window.print()` with toast: "Use 'Save as PDF' in the print dialog to download".
+  - Separated Print and PDF buttons (Print = direct print, PDF = save as PDF).
+  - Renamed "Download CSV" to just "CSV" for consistency.
+- **Added print CSS** to `globals.css`:
+  - `@media print` block that hides everything except `.printable-statement`.
+  - `.no-print` class to hide specific elements (month navigator, action buttons).
+  - Color adjust: exact (preserves gradient colors in PDF).
+  - Page setup: A4 size, 1.5cm margins.
+- **Wrapped statement content** in `printable-statement` div.
+- **Verified**: PDF button triggers print dialog, print CSS hides non-statement elements.
+
+#### 4. Styling Improvements
+- Tag buttons: rounded-full with emoji + label + check icon, primary highlight when active.
+- Onboarding tour: gradient icon (6 color variations), spring animations, progress bar, step dots.
+- Print styles: clean A4 layout with only statement content visible.
+- All new UI maintains consistent emerald/teal + amber accent design language.
+
+### Verification Results
+- ✅ `bun run lint` — 0 errors, 0 warnings
+- ✅ All 21 views tested via agent-browser — no runtime errors
+- ✅ Transaction tags: 8 tags render in detail dialog, clicking toggles + saves to DB (verified via API)
+- ✅ Onboarding tour: appears on first load, 6 steps navigate correctly, "Get Started" closes tour
+- ✅ Statement PDF: button triggers print dialog, print CSS hides non-statement elements
+- ✅ Mobile (390×844): Transaction tags + Statement PDF responsive
+- ✅ Dev log: no errors/warnings
+- ✅ Server running stably
+
+### Current App Stats
+- **23 views** (unchanged count, but Transactions + Statements enhanced)
+- **37 API routes** (unchanged)
+- **19 database models** (unchanged)
+- **New components**: OnboardingTour, transaction tag UI
+- **New CSS**: Print styles for PDF generation
+
+### Unresolved Issues / Risks
+1. **PDF generation**: Uses browser's native print-to-PDF (not server-side). User must select "Save as PDF" in print dialog. For server-side PDF, would need `pdfkit` or `puppeteer`.
+2. **Onboarding tour**: Shows only once per browser (localStorage). Can be re-triggered by clearing localStorage.
+3. **Transaction tags**: Only 8 preset tags (no custom tag creation yet). Custom tags would need a new DB model or tags array field.
+
+### Priority Recommendations for Next Phase
+- **P1**: Add server-side PDF generation with `pdfkit` for downloadable PDFs without print dialog.
+- **P2**: WebSocket real-time notifications.
+- **P2**: Add custom tag creation (let users define their own tags).
+- **P2**: Add interactive map (Leaflet/Mapbox) for spending map.
+- **P3**: Wire up next-intl for multi-language (8 languages declared).
+- **P3**: Add dark/light theme persistence across sessions.
+- **P3**: Add transaction notes (free-text notes on transactions).

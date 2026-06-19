@@ -29,6 +29,7 @@ import { WalletDetailView } from "./views/wallet-detail-view";
 import { MerchantView } from "./views/merchant-view";
 import { CommandPalette } from "./command-palette";
 import { AchievementMonitor } from "./achievement-monitor";
+import { OnboardingTour } from "./onboarding-tour";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function AppShell() {
@@ -83,6 +84,7 @@ export function AppShell() {
       <AiAssistant />
       <CommandPalette />
       <AchievementMonitor />
+      <OnboardingTour />
     </div>
   );
 }

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Search, Filter, Download, ArrowDownRight, ArrowUpRight, ArrowLeftRight,
   Receipt, Smartphone, QrCode, CreditCard, Gift, Zap, TrendingUp,
-  CheckCircle2, XCircle, Clock, Flag, Repeat, AlertTriangle, FileText, X, Calendar,
+  CheckCircle2, XCircle, Clock, Flag, Repeat, AlertTriangle, FileText, X, Calendar, Check,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,7 @@ const STATUS_STYLES: Record<string, any> = {
 export function TransactionsView() {
   const { data, reload } = useFetch<{ transactions: any[] }>("/api/transactions?limit=200");
   const { data: disputesData, reload: reloadDisputes } = useFetch<{ disputes: any[]; open: number }>("/api/disputes");
+  const { data: tagsData } = useFetch<{ tags: any[] }>("/api/transactions/tag");
   const { setView } = useApp();
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
@@ -51,6 +52,38 @@ export function TransactionsView() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [showDateFilter, setShowDateFilter] = useState(false);
+  const [txTags, setTxTags] = useState<string[]>([]);
+
+  const tags = tagsData?.tags ?? [];
+
+  // Load tags when a transaction is selected
+  useEffect(() => {
+    if (selected?.metadata) {
+      try {
+        const meta = JSON.parse(selected.metadata);
+        setTxTags(meta.tags || []);
+      } catch {
+        setTxTags([]);
+      }
+    } else {
+      setTxTags([]);
+    }
+  }, [selected]);
+
+  const toggleTag = async (tagId: string) => {
+    if (!selected) return;
+    const newTags = txTags.includes(tagId)
+      ? txTags.filter((t) => t !== tagId)
+      : [...txTags, tagId];
+    setTxTags(newTags);
+    await fetch("/api/transactions/tag", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transactionId: selected.id, tags: newTags }),
+    });
+    toast.success(newTags.includes(tagId) ? "Tag added" : "Tag removed");
+    reload();
+  };
 
   const txs = data?.transactions ?? [];
 
@@ -314,6 +347,33 @@ export function TransactionsView() {
                 {selected.completedAt && <DetailRow label="Completed" value={formatDateTime(selected.completedAt)} />}
                 {selected.riskScore > 0.5 && <DetailRow label="Risk Score" value={`${(selected.riskScore * 100).toFixed(0)}%`} />}
               </div>
+
+              {/* Tags */}
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Tags</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {tags.map((tag) => {
+                    const active = txTags.includes(tag.id);
+                    return (
+                      <button
+                        key={tag.id}
+                        onClick={() => toggleTag(tag.id)}
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition",
+                          active
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-muted-foreground hover:bg-muted",
+                        )}
+                      >
+                        <span>{tag.icon}</span>
+                        {tag.label}
+                        {active && <Check className="h-3 w-3" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1" type="button"><Download className="h-4 w-4 mr-1.5" /> Receipt</Button>
                 {selected.direction === "debit" && selected.status === "completed" && (
