@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Search, Menu, Plus, Sparkles } from "lucide-react";
+import { Bell, Search, Menu, Plus, Sparkles, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeToggle } from "./theme-toggle";
@@ -13,7 +13,7 @@ import { useFetch } from "@/hooks/use-fetch";
 import { cn } from "@/lib/utils";
 
 export function Topbar() {
-  const { setAiOpen, setView } = useApp();
+  const { setAiOpen, setView, userCurrency, setCurrencyPickerOpen } = useApp();
   const { data } = useFetch<{ unread: number; notifications: any[] }>("/api/notifications");
 
   return (
@@ -67,6 +67,15 @@ export function Topbar() {
         >
           <Sparkles className="h-[18px] w-[18px] text-primary" />
         </Button>
+
+        {/* Currency switcher */}
+        <button
+          onClick={() => setCurrencyPickerOpen(true)}
+          className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[13px] font-semibold transition hover:bg-muted"
+        >
+          <Globe className="h-4 w-4 text-muted-foreground" />
+          {userCurrency}
+        </button>
 
         <ThemeToggle />
 

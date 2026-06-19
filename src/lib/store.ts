@@ -52,6 +52,11 @@ interface AppState {
   setSendPrefill: (p: { recipient?: string; amount?: number } | null) => void;
   selectedWalletId: string | null;
   setSelectedWalletId: (id: string | null) => void;
+  // User's preferred display currency (global, persistent)
+  userCurrency: string;
+  setUserCurrency: (c: string) => void;
+  currencyPickerOpen: boolean;
+  setCurrencyPickerOpen: (o: boolean) => void;
 }
 
 export const useApp = create<AppState>((set) => ({
@@ -67,4 +72,12 @@ export const useApp = create<AppState>((set) => ({
   setSendPrefill: (sendPrefill) => set({ sendPrefill }),
   selectedWalletId: null,
   setSelectedWalletId: (selectedWalletId) => set({ selectedWalletId }),
+  // Default currency — read from localStorage on first client render
+  userCurrency: "NGN",
+  setUserCurrency: (c) => {
+    if (typeof window !== "undefined") localStorage.setItem("gxp_default_currency", c);
+    set({ userCurrency: c, currencyPickerOpen: false });
+  },
+  currencyPickerOpen: false,
+  setCurrencyPickerOpen: (currencyPickerOpen) => set({ currencyPickerOpen }),
 }));

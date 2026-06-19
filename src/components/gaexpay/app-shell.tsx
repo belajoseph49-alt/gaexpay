@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { AiAssistant } from "./ai-assistant";
@@ -43,10 +44,23 @@ import { CommandPalette } from "./command-palette";
 import { AchievementMonitor } from "./achievement-monitor";
 import { OnboardingTour } from "./onboarding-tour";
 import { InstallPrompt } from "./install-prompt";
+import { CurrencyPicker } from "./currency-picker";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function AppShell() {
-  const { view } = useApp();
+  const { view, userCurrency, setUserCurrency, currencyPickerOpen, setCurrencyPickerOpen } = useApp();
+
+  // On first mount, check if user has chosen a currency
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("gxp_default_currency");
+      if (stored) {
+        useApp.setState({ userCurrency: stored });
+      } else {
+        setCurrencyPickerOpen(true);
+      }
+    }
+  }, [setCurrencyPickerOpen]);
 
   const views: Record<string, React.ReactNode> = {
     dashboard: <DashboardView />,
@@ -111,6 +125,7 @@ export function AppShell() {
       <AchievementMonitor />
       <OnboardingTour />
       <InstallPrompt />
+      <CurrencyPicker open={currencyPickerOpen} onSelect={setUserCurrency} current={userCurrency} />
     </div>
   );
 }

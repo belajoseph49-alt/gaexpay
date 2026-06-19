@@ -33,7 +33,7 @@ const QUICK_ACTIONS = [
 ];
 
 export function DashboardView() {
-  const { setView, setSendPrefill } = useApp();
+  const { setView, setSendPrefill, userCurrency } = useApp();
   const { data: walletData } = useFetch<{ wallets: any[]; totalNGN: number }>("/api/wallets");
   const { data: txData } = useFetch<{ transactions: any[] }>("/api/transactions?limit=8");
   const { data: userData } = useFetch<{ user: any }>("/api/me");
@@ -43,6 +43,14 @@ export function DashboardView() {
   const wallets = walletData?.wallets ?? [];
   const totalNGN = walletData?.totalNGN ?? 0;
   const transactions = txData?.transactions ?? [];
+
+  // Convert total to user's preferred currency
+  const RATES_TO_NGN: Record<string, number> = {
+    NGN: 1, USD: 1540, EUR: 1660, GBP: 1950, GHS: 125, KES: 12,
+    XAF: 2.55, XOF: 2.55, ZAR: 82, UGX: 0.42, TZS: 0.61, RWF: 1.28,
+    ETB: 27.5, EGP: 32, MAD: 154, CNY: 213, AED: 419, INR: 18.5,
+  };
+  const userTotal = totalNGN / (RATES_TO_NGN[userCurrency] || 1);
 
   // build 30-day series from transactions
   const series = build30DaySeries(transactions);
@@ -94,10 +102,10 @@ export function DashboardView() {
             <div className="relative">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-white/80">Total Balance (≈ NGN)</p>
+                  <p className="text-sm text-white/80">Total Balance ({userCurrency})</p>
                   <div className="mt-1 flex items-center gap-2">
                     <h2 className="text-3xl font-bold tracking-tight tabular-nums">
-                      {hidden ? "₦ • • • • • •" : <AnimatedNumber value={totalNGN} prefix="₦" decimals={2} />}
+                      {hidden ? `${CURRENCY_SYMBOL[userCurrency] || ""} • • • • • •` : <AnimatedNumber value={userTotal} prefix={CURRENCY_SYMBOL[userCurrency] || ""} decimals={2} />}
                     </h2>
                     <button onClick={() => setHidden(!hidden)} className="text-white/70 hover:text-white">
                       {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
