@@ -14,6 +14,8 @@ import { SavingsView } from "./views/savings-view";
 import { BudgetsView } from "./views/budgets-view";
 import { ScheduledView } from "./views/scheduled-view";
 import { AnalyticsView } from "./views/analytics-view";
+import { CalendarView } from "./views/calendar-view";
+import { SpendingMapView } from "./views/spending-map-view";
 import { ExchangeView } from "./views/exchange-view";
 import { StatementView } from "./views/statement-view";
 import { AchievementsView } from "./views/achievements-view";
@@ -44,6 +46,8 @@ export function AppShell() {
     budgets: <BudgetsView />,
     scheduled: <ScheduledView />,
     analytics: <AnalyticsView />,
+    calendar: <CalendarView />,
+    "spending-map": <SpendingMapView />,
     exchange: <ExchangeView />,
     statement: <StatementView />,
     achievements: <AchievementsView />,

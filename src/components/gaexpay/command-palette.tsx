@@ -6,7 +6,7 @@ import {
   Search, LayoutDashboard, Wallet, SendHorizontal, ArrowLeftRight, CreditCard,
   QrCode, BarChart3, ShieldCheck, Settings, LifeBuoy, Users, Gift, PiggyBank,
   Wallet2, CalendarClock, FileText, Store, ArrowLeftRight as Exchange,
-  CornerDownLeft, ArrowUp, ArrowDown, Loader2, User, Store as StoreIcon, Receipt, Trophy,
+  CornerDownLeft, ArrowUp, ArrowDown, Loader2, User, Store as StoreIcon, Receipt, Trophy, Calendar, MapPin,
 } from "lucide-react";
 import { useApp, type View } from "@/lib/store";
 import {
@@ -46,6 +46,8 @@ const COMMANDS: CommandItem[] = [
   { id: "support", label: "Support", description: "Get help & contact us", icon: LifeBuoy, keywords: ["help", "faq", "chat"], section: "Navigate" },
   { id: "admin", label: "Admin Console", description: "Platform administration", icon: Users, keywords: ["manage", "users", "fraud"], section: "Navigate" },
   { id: "achievements", label: "Achievements", description: "View your badges & progress", icon: Trophy, keywords: ["badges", "rewards", "level", "gamification"], section: "Navigate" },
+  { id: "calendar", label: "Payment Calendar", description: "Monthly calendar of transfers", icon: Calendar, keywords: ["schedule", "monthly", "calendar", "dates"], section: "Navigate" },
+  { id: "spending-map", label: "Spending Map", description: "Spending by location & merchant", icon: MapPin, keywords: ["geo", "location", "merchant", "map"], section: "Navigate" },
 ];
 
 const QUICK_ACTIONS: CommandItem[] = [

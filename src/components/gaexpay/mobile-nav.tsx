@@ -3,7 +3,7 @@
 import {
   LayoutDashboard, Wallet, SendHorizontal, ArrowLeftRight, CreditCard,
   QrCode, BarChart3, ShieldCheck, Settings, LifeBuoy, Users, Gift,
-  PiggyBank, Wallet2, CalendarClock, Store, FileText, Trophy,
+  PiggyBank, Wallet2, CalendarClock, Store, FileText, Trophy, Calendar, MapPin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp, type View } from "@/lib/store";
@@ -21,8 +21,10 @@ const NAV: { section: string; items: { id: View; label: string; icon: any }[] }[
     { id: "savings", label: "Savings Goals", icon: PiggyBank },
     { id: "budgets", label: "Budgets", icon: Wallet2 },
     { id: "scheduled", label: "Scheduled", icon: CalendarClock },
+    { id: "calendar", label: "Calendar", icon: Calendar },
     { id: "exchange", label: "Exchange", icon: ArrowLeftRight },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
+    { id: "spending-map", label: "Spending Map", icon: MapPin },
     { id: "statement", label: "Statements", icon: FileText },
   ]},
   { section: "Business", items: [

@@ -938,3 +938,97 @@ Ran `bun run db:push` + `bun run db:generate` to sync. Wrote `prisma/seed-phase2
 - **P3**: Wire up next-intl for multi-language (8 languages declared).
 - **P3**: Add dark/light theme persistence across sessions.
 - **P3**: Add transaction notes/tags for better categorization.
+
+---
+
+## Phase 10 — Cron Round 9: Payment Calendar, Spending Map, Transaction Tags
+
+**Task ID**: 16 (webDevReview cron round)
+**Agent**: Main (Z.ai Code)
+**Date**: 2026-06-19
+
+### Current Project Status Assessment
+- Dev server running stably on port 3000 (PID 10502).
+- Lint clean (0 errors, 0 warnings).
+- QA via agent-browser confirmed all 19 views render without runtime errors.
+- No bugs found — app was stable. Proceeded to implement P2 features: Payment Calendar, Geographic Spending Map, and Transaction Tags API.
+
+### Work Completed This Round
+
+#### 1. Payment Calendar View (P2 — New Feature)
+- **New API route** `/api/calendar` (GET):
+  - Accepts `month` param (YYYY-MM, defaults to current month).
+  - Returns calendar days (1-31) with per-day: scheduled transfers, completed transactions, total outflow/inflow, isToday flag.
+  - Summary: totalScheduled, scheduledCount, totalSpent, totalReceived, txCount.
+  - Includes firstDayOfWeek for calendar grid alignment.
+- **New view** `calendar-view.tsx`:
+  - 3 summary stat cards (Scheduled This Month, Total Spent, Total Received) with AnimatedNumber.
+  - Month navigator (prev/next buttons).
+  - Full calendar grid (7 columns, weekday headers, empty cells for offset).
+  - Day cells show: date number, scheduled indicator (blue dot), inflow/outflow dots, amount preview.
+  - Today highlighted with primary border + ring.
+  - Selected day highlighted with primary bg.
+  - Right panel: day detail showing scheduled transfers (blue cards with Repeat icon) + completed transactions (green/red icons).
+  - Empty state when no day selected.
+  - Legend: Scheduled, Inflow, Outflow, Today.
+- **Verified**: June 2026 calendar with 30 days, 5 scheduled transfers (₦610,500), 30 transactions (₦1.90M spent, ₦1.12M received).
+
+#### 2. Geographic Spending Map (P2 — New Feature)
+- **New API route** `/api/spending-map` (GET):
+  - Groups debit transactions by counterparty name.
+  - Assigns simulated geographic locations (lat/lng/city/country) for known merchants (Spencer Supermarket → Lagos, DSTV → Johannesburg, MTN MoMo → Kampala, etc.).
+  - Returns: locations (sorted by spend), cities (aggregated by city), totalSpent, merchantCount, cityCount.
+- **New view** `spending-map-view.tsx`:
+  - 4 stat cards (Total Spent, Merchants, Cities, Top City) with AnimatedNumber.
+  - "Spending Distribution" section: animated horizontal bars per merchant with country flags, city, category, tx count, % of top.
+  - "By City" sidebar: city breakdown with flag, merchant count, animated progress bars.
+  - Full merchant table: rank, name, location, category, tx count, total spent.
+  - All bars use Framer Motion width animation with staggered delays.
+  - Color-coded bars (6 gradient variations for merchants, 3 solid colors for cities).
+- **Verified**: 18 merchant locations across 4 cities (Lagos, Johannesburg, Kampala, Abidjan), ₦10.3M total spent, Spencer Supermarket is top merchant.
+
+#### 3. Transaction Tags API (P2 — New Feature)
+- **New API route** `/api/transactions/tag` (GET/PATCH):
+  - GET: returns 8 preset tags (Essential, Subscription, Business, Personal, Investment, Gift, Loan, Tax) with usage counts.
+  - PATCH: adds/removes tags on a transaction by storing them in the existing `metadata` JSON field (no schema change needed).
+  - Tags have: id, label, color, icon (emoji), count.
+- **Verified**: API returns 200, tags stored in transaction metadata as JSON.
+
+#### 4. Navigation & Styling Updates
+- Added "Calendar" and "Spending Map" to sidebar + mobile-nav Main section.
+- Added to Command Palette as searchable commands.
+- Store updated with new View types: `calendar`, `spending-map`.
+- Calendar: month grid with color-coded indicators, animated day selection.
+- Spending Map: animated horizontal bars with staggered Framer Motion entrance, country flags, gradient backgrounds.
+- All new UI maintains consistent emerald/teal + amber accent design language.
+
+### Verification Results
+- ✅ `bun run lint` — 0 errors, 0 warnings
+- ✅ All 21 views tested via agent-browser — no runtime errors
+- ✅ Calendar API: returns 30 days, 5 scheduled, 30 transactions for June 2026
+- ✅ Spending Map API: returns 18 locations, 4 cities, ₦10.3M total
+- ✅ Transaction Tag API: returns 8 preset tags, PATCH stores in metadata
+- ✅ Calendar view: renders month grid, stats, day detail panel
+- ✅ Spending Map view: renders distribution bars, city breakdown, merchant table
+- ✅ Mobile (390×844): Calendar + Spending Map responsive
+- ✅ Dev log: no errors/warnings
+- ✅ Server running stably
+
+### Current App Stats
+- **23 views** (added Calendar, Spending Map)
+- **37 API routes** (added `/api/calendar`, `/api/spending-map`, `/api/transactions/tag`)
+- **19 database models** (unchanged — tags use existing metadata field)
+- **5 nav sections** (Main now has 12 items)
+
+### Unresolved Issues / Risks
+1. **Geographic locations are simulated**: Merchant addresses aren't stored in DB, so locations are hardcoded for known merchants. Unknown merchants get random Lagos coordinates. In production, would use real merchant addresses or IP geolocation.
+2. **Transaction tags**: Stored in JSON metadata field (no schema change). UI for applying tags not yet built — API is ready for future transaction detail enhancement.
+3. **Calendar**: Only shows current month's scheduled + completed items. Multi-month recurring schedule projection would need future enhancement.
+
+### Priority Recommendations for Next Phase
+- **P1**: Add PDF statement download (browser print-to-PDF or pdfkit).
+- **P2**: Add transaction tag UI in transaction detail dialog (apply/remove tags).
+- **P2**: WebSocket real-time notifications.
+- **P2**: Add interactive map (Leaflet/Mapbox) for spending map instead of bar chart.
+- **P3**: Wire up next-intl for multi-language (8 languages declared).
+- **P3**: Add dark/light theme persistence across sessions.
