@@ -19,6 +19,8 @@ import { SettingsView } from "./views/settings-view";
 import { SupportView } from "./views/support-view";
 import { AdminView } from "./views/admin-view";
 import { ReferralView } from "./views/referral-view";
+import { WalletDetailView } from "./views/wallet-detail-view";
+import { MerchantView } from "./views/merchant-view";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function AppShell() {
@@ -27,6 +29,7 @@ export function AppShell() {
   const views: Record<string, React.ReactNode> = {
     dashboard: <DashboardView />,
     wallets: <WalletsView />,
+    "wallet-detail": <WalletDetailView />,
     send: <SendView />,
     transactions: <TransactionsView />,
     cards: <CardsView />,
@@ -40,6 +43,7 @@ export function AppShell() {
     support: <SupportView />,
     admin: <AdminView />,
     referral: <ReferralView />,
+    merchant: <MerchantView />,
   };
 
   return (

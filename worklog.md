@@ -344,3 +344,100 @@ Ran `bun run db:push` + `bun run db:generate` to sync. Wrote `prisma/seed-phase2
 - **P3**: Wire up next-intl for multi-language (8 languages declared).
 - **P3**: Add geographic spending heatmap in analytics.
 - **P3**: Add dark/light theme persistence across sessions.
+
+---
+
+## Phase 4 — Cron Round 3: Wallet Detail, Merchant Dashboard, Scheduled Auto-Execution
+
+**Task ID**: 10 (webDevReview cron round)
+**Agent**: Main (Z.ai Code)
+**Date**: 2026-06-19
+
+### Current Project Status Assessment
+- Dev server running stably on port 3000 (PID 10502).
+- Lint clean (0 errors, 0 warnings).
+- QA via agent-browser confirmed all 15 views (from Phase 3) render without console/runtime errors.
+- No bugs found — app was stable. Proceeded to implement P1 features recommended in Phase 3 worklog: Wallet Detail view, Merchant Dashboard, and scheduled transfer auto-execution.
+
+### Work Completed This Round
+
+#### 1. Wallet Detail View (P1 — New Feature)
+- **New API route** `/api/wallets/[id]` (GET):
+  - Returns wallet details + its transaction history (filtered by currency).
+  - Calculates monthly stats (money in, money out, net, tx count).
+  - Builds 7-day inflow/outflow series for chart.
+- **New view** `wallet-detail-view.tsx`:
+  - Back button to return to Wallets list.
+  - Gradient hero card with AnimatedNumber balance, Send/Receive buttons.
+  - 3 stat cards (Money In, Money Out, Net Flow) with color-coded icons.
+  - 7-day activity area chart (inflow vs outflow).
+  - Transaction history list (15 most recent) with type icons, amounts, and time-ago.
+  - Empty state when no transactions exist.
+- **Updated Wallets view**: Wallet cards are now clickable (cursor:pointer, onClick) → opens wallet detail. Hover reveals Transfer + ChevronRight buttons. Click propagation stopped on action buttons.
+- **Updated store**: Added `selectedWalletId` state + `setSelectedWalletId` to track which wallet to show in detail view.
+- **Verified**: Clicked NGN wallet → detail view renders with balance ₦845,230.55, 7-day chart, and transaction history.
+
+#### 2. Merchant Dashboard View (P1 — New Feature)
+- **New API route** `/api/merchant-dashboard` (GET):
+  - Uses first merchant (Spencer Supermarket) as "our" merchant account.
+  - Aggregates all payment-type transactions as incoming merchant payments.
+  - Calculates stats: today/week/month/total volume + count, avg order value.
+  - Builds 14-day sales series for trend chart.
+  - Computes top 5 customers by total spend.
+  - Breaks down payment methods by volume.
+- **New view** `merchant-view.tsx`:
+  - Dark gradient merchant profile banner with Store icon, name, rating, verified badge, total revenue.
+  - 4 KPI cards (Today's Sales, This Week, This Month, Avg Order Value) with AnimatedNumber.
+  - 14-day sales trend area chart + "Payment Methods" pie chart with legend.
+  - Recent Payments list (10 most recent) with green +amount styling.
+  - Top Customers list with avatars, Crown badge for #1, order counts.
+  - 3 quick action cards (Generate QR, Send Invoice, Settle to Bank).
+  - Skeleton loading states for all sections.
+- **Added to sidebar** under new "Business" section with Store icon + "Pro" badge.
+- **Verified**: Renders with Spencer Supermarket, ₦2.5M total revenue, 21 lifetime orders, sales trend chart, payment methods, recent payments, top customers.
+
+#### 3. Scheduled Transfer Auto-Execution (P2 — New Feature)
+- **Updated** `/api/scheduled-transfers` GET route:
+  - On every GET request, checks for active scheduled transfers where `nextRunAt <= now`.
+  - For each due transfer: creates a completed Transaction (with fee calculation), creates a notification, increments totalRuns, updates lastRunAt, calculates next nextRunAt based on frequency (daily +1d, weekly +7d, monthly +1month), marks "once" transfers as completed.
+  - Returns `processed` count in response.
+- **Verified**: Created a transfer with nextRunAt 1 day ago → GET triggered auto-execution → transaction created, notification "Scheduled transfer executed: NGN 3,000 sent to Auto Exec Test 2 automatically", totalRuns incremented to 1, nextRunAt advanced to next month.
+
+#### 4. Navigation & Styling Updates
+- Added "Business" section to sidebar + mobile-nav with Merchant Dashboard entry.
+- Wallet cards now have cursor:pointer, hover-reveal action buttons, ChevronRight detail button.
+- All new views use consistent design language: gradient heroes, card-lift, Framer Motion entrance animations, AnimatedNumber count-ups, skeleton loaders, emerald/teal accent.
+- Wallet detail view has proper back navigation and empty states.
+
+### Verification Results
+- ✅ `bun run lint` — 0 errors, 0 warnings
+- ✅ All 16 views tested via agent-browser — no console/runtime errors
+- ✅ Wallet Detail API: `/api/wallets/{id}` returns 200 with wallet + transactions + stats + series
+- ✅ Merchant Dashboard API: `/api/merchant-dashboard` returns 200 with merchant + stats + payments + series + top customers + method breakdown
+- ✅ Scheduled Transfer auto-execution: due transfer processed → transaction created, notification sent, totalRuns incremented, nextRunAt advanced
+- ✅ Wallet cards clickable → detail view opens with back button, balance, chart, history
+- ✅ Merchant Dashboard renders: profile banner, 4 KPIs, sales trend, payment methods pie, recent payments, top customers, quick actions
+- ✅ Mobile (390×844): Merchant Dashboard responsive
+- ✅ Dev log: no errors/warnings
+- ✅ Server running stably
+
+### Current App Stats
+- **17 views** (dashboard, wallets, wallet-detail, send, transactions, cards, pay, savings, budgets, scheduled, analytics, merchant, kyc, settings, support, admin, referral)
+- **27 API routes** (added `/api/wallets/[id]`, `/api/merchant-dashboard`)
+- **19 database models** (unchanged this round)
+- **5 nav sections** (Main, Business, Account, Platform + mobile)
+
+### Unresolved Issues / Risks
+1. **agent-browser ref click on Radix Dialog buttons**: Still present (carryover). Real user clicks work fine; verified via API testing.
+2. **Merchant dashboard uses existing payment transactions**: Since there's no separate merchant transaction model, it reuses the user's payment-type transactions as merchant sales. In production, this would be separate merchant accounts.
+3. **Scheduled auto-execution runs on GET**: Every time the scheduled transfers page loads, it checks for due transfers. This is fine for demo but in production would need a background job/cron.
+
+### Priority Recommendations for Next Phase
+- **P1**: Add PDF statement generation (monthly statements with transaction summary, downloadable).
+- **P1**: Add wallet-to-wallet transfer (convert between currencies within the app).
+- **P2**: Add transaction search by date range in transactions view.
+- **P2**: Add merchant QR code generation (visual QR code for the merchant's payment link).
+- **P2**: WebSocket real-time notifications.
+- **P3**: Wire up next-intl for multi-language (8 languages declared).
+- **P3**: Add geographic spending heatmap in analytics.
+- **P3**: Add dark/light theme persistence across sessions.

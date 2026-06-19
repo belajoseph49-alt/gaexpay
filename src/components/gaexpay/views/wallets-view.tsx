@@ -34,9 +34,14 @@ const WALLET_GRADIENTS: Record<string, string> = {
 export function WalletsView() {
   const { data, reload } = useFetch<{ wallets: any[]; totalNGN: number }>("/api/wallets");
   const { data: ratesData } = useFetch<{ rates: any[] }>("/api/exchange-rates");
-  const { setView } = useApp();
+  const { setView, setSelectedWalletId } = useApp();
   const [hidden, setHidden] = useState(false);
   const [open, setOpen] = useState(false);
+
+  const openWallet = (id: string) => {
+    setSelectedWalletId(id);
+    setView("wallet-detail");
+  };
 
   const wallets = data?.wallets ?? [];
   const totalNGN = data?.totalNGN ?? 0;
@@ -114,7 +119,10 @@ export function WalletsView() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
             >
-              <Card className={cn("group relative h-48 overflow-hidden border-0 bg-gradient-to-br p-5 text-white shadow-lg card-lift", gradient)}>
+              <Card
+                className={cn("group relative h-48 cursor-pointer overflow-hidden border-0 bg-gradient-to-br p-5 text-white shadow-lg card-lift", gradient)}
+                onClick={() => openWallet(w.id)}
+              >
                 <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-xl" />
                 <div className="relative flex h-full flex-col justify-between">
                   <div className="flex items-start justify-between">
@@ -134,8 +142,11 @@ export function WalletsView() {
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-white/60">•••• {w.id.slice(-4)}</span>
                     <div className="flex gap-1 opacity-0 transition group-hover:opacity-100">
-                      <Button size="icon" variant="secondary" className="h-8 w-8 bg-white/20 border-0 backdrop-blur hover:bg-white/30" onClick={() => setView("send")}>
+                      <Button size="icon" variant="secondary" className="h-8 w-8 bg-white/20 border-0 backdrop-blur hover:bg-white/30" onClick={(e) => { e.stopPropagation(); setView("send"); }}>
                         <ArrowUpDown className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="icon" variant="secondary" className="h-8 w-8 bg-white/20 border-0 backdrop-blur hover:bg-white/30" onClick={(e) => { e.stopPropagation(); openWallet(w.id); }}>
+                        <ChevronRight className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </div>

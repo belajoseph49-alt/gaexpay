@@ -5,6 +5,7 @@ import { create } from "zustand";
 export type View =
   | "dashboard"
   | "wallets"
+  | "wallet-detail"
   | "send"
   | "transactions"
   | "cards"
@@ -17,7 +18,8 @@ export type View =
   | "settings"
   | "support"
   | "admin"
-  | "referral";
+  | "referral"
+  | "merchant";
 
 interface AppState {
   view: View;
@@ -30,6 +32,8 @@ interface AppState {
   setAiOpen: (o: boolean) => void;
   sendPrefill: { recipient?: string; amount?: number } | null;
   setSendPrefill: (p: { recipient?: string; amount?: number } | null) => void;
+  selectedWalletId: string | null;
+  setSelectedWalletId: (id: string | null) => void;
 }
 
 export const useApp = create<AppState>((set) => ({
@@ -43,4 +47,6 @@ export const useApp = create<AppState>((set) => ({
   setAiOpen: (aiOpen) => set({ aiOpen }),
   sendPrefill: null,
   setSendPrefill: (sendPrefill) => set({ sendPrefill }),
+  selectedWalletId: null,
+  setSelectedWalletId: (selectedWalletId) => set({ selectedWalletId }),
 }));
