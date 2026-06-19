@@ -358,6 +358,9 @@ export function DashboardView() {
         </Card>
       </div>
 
+      {/* Financial Health Score */}
+      <FinancialHealthWidget onClick={() => setView("analytics")} />
+
       {/* Cards promo */}
       <Card className="overflow-hidden border-0 bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -518,5 +521,67 @@ function DashboardBudgetsPreview({ onClick }: { onClick: () => void }) {
         );
       })}
     </div>
+  );
+}
+
+function FinancialHealthWidget({ onClick }: { onClick: () => void }) {
+  const { data } = useFetch<any>("/api/insights");
+  if (!data) return <Card className="p-5"><Skeleton className="h-32" /></Card>;
+
+  const { score, grade, insights, savingsRate, expenseRatio } = data;
+  const gradeColors: Record<string, string> = {
+    emerald: "from-emerald-500 to-teal-600",
+    teal: "from-teal-500 to-cyan-600",
+    amber: "from-amber-500 to-orange-600",
+    orange: "from-orange-500 to-rose-600",
+    rose: "from-rose-500 to-red-600",
+  };
+  const gradient = gradeColors[grade.color] || gradeColors.emerald;
+
+  return (
+    <Card className="overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 text-white shadow-xl">
+      <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/10 blur-2xl" />
+      <div className="relative flex flex-wrap items-center justify-between gap-6">
+        {/* Score gauge */}
+        <div className="flex items-center gap-5">
+          <div className={cn("relative grid h-24 w-24 place-items-center rounded-full bg-gradient-to-br shadow-lg", gradient)}>
+            <div className="grid h-20 w-20 place-items-center rounded-full bg-slate-900">
+              <div className="text-center">
+                <p className="text-3xl font-bold tabular-nums">{score}</p>
+                <p className="text-[10px] text-white/60">/ 100</p>
+              </div>
+            </div>
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-900 shadow">
+              {grade.letter}
+            </div>
+          </div>
+          <div>
+            <p className="text-xs text-white/60 uppercase tracking-wider">Financial Health</p>
+            <h3 className="text-xl font-bold">{grade.label}</h3>
+            <div className="mt-1 flex gap-3 text-xs text-white/70">
+              <span>Savings: <span className="font-semibold text-white">{savingsRate.toFixed(1)}%</span></span>
+              <span>Expense ratio: <span className="font-semibold text-white">{expenseRatio.toFixed(0)}%</span></span>
+            </div>
+          </div>
+        </div>
+
+        {/* Top insights */}
+        <div className="flex-1 min-w-[250px] space-y-2">
+          {insights.slice(0, 2).map((ins: any, i: number) => (
+            <div key={i} className="flex items-start gap-2 rounded-lg bg-white/10 px-3 py-2 backdrop-blur">
+              <span className="text-lg">{ins.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold">{ins.title}</p>
+                <p className="text-[11px] text-white/70 line-clamp-1">{ins.message}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <Button variant="secondary" className="bg-white/20 text-white border-0 backdrop-blur hover:bg-white/30" onClick={onClick}>
+          View Details <ChevronRight className="h-4 w-4 ml-1" />
+        </Button>
+      </div>
+    </Card>
   );
 }

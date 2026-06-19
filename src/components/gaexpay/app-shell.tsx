@@ -24,6 +24,7 @@ import { AdminView } from "./views/admin-view";
 import { ReferralView } from "./views/referral-view";
 import { WalletDetailView } from "./views/wallet-detail-view";
 import { MerchantView } from "./views/merchant-view";
+import { CommandPalette } from "./command-palette";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function AppShell() {
@@ -73,6 +74,7 @@ export function AppShell() {
         </main>
       </div>
       <AiAssistant />
+      <CommandPalette />
     </div>
   );
 }

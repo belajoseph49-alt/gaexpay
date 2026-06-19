@@ -5,6 +5,7 @@ import { TrendingUp, TrendingDown, Wallet, ArrowLeftRight, ArrowDownToLine, Arro
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFetch } from "@/hooks/use-fetch";
 import { formatMoney, CURRENCIES } from "@/lib/gaexpay";
@@ -12,6 +13,7 @@ import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 export function AnalyticsView() {
@@ -150,8 +152,134 @@ export function AnalyticsView() {
         </ResponsiveContainer>
       </Card>
 
+      {/* Financial Health Score */}
+      <FinancialHealthSection />
+
       {/* Currency converter */}
       <CurrencyConverter />
+    </div>
+  );
+}
+
+function FinancialHealthSection() {
+  const { data } = useFetch<any>("/api/insights");
+  if (!data) return <Card className="p-5"><Skeleton className="h-64" /></Card>;
+
+  const { score, grade, insights, savingsRate, expenseRatio, scoreBreakdown, income, expenses, incomeChange, expenseChange, activeDays, topCategory, categoryCount } = data;
+  const gradeColors: Record<string, string> = {
+    emerald: "from-emerald-500 to-teal-600",
+    teal: "from-teal-500 to-cyan-600",
+    amber: "from-amber-500 to-orange-600",
+    orange: "from-orange-500 to-rose-600",
+    rose: "from-rose-500 to-red-600",
+  };
+  const gradient = gradeColors[grade.color] || gradeColors.emerald;
+
+  return (
+    <div className="space-y-4">
+      <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 text-white shadow-xl">
+        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/10 blur-2xl" />
+        <div className="relative">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <div>
+              <h3 className="font-semibold text-lg">Financial Health Score</h3>
+              <p className="text-sm text-white/60">AI-powered analysis of your financial habits</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className={cn("relative grid h-28 w-28 place-items-center rounded-full bg-gradient-to-br shadow-lg", gradient)}>
+                <div className="grid h-24 w-24 place-items-center rounded-full bg-slate-900">
+                  <div className="text-center">
+                    <p className="text-4xl font-bold tabular-nums">{score}</p>
+                    <p className="text-[10px] text-white/60">/ 100</p>
+                  </div>
+                </div>
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-white px-3 py-0.5 text-sm font-bold text-slate-900 shadow">
+                  Grade {grade.letter}
+                </div>
+              </div>
+              <div>
+                <p className={cn("text-2xl font-bold")}>{grade.label}</p>
+                <p className="text-sm text-white/60">{activeDays} active days · {categoryCount} categories</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Score breakdown */}
+          <div className="grid gap-3 sm:grid-cols-5">
+            {scoreBreakdown.map((s: any) => (
+              <div key={s.label} className="rounded-lg bg-white/10 p-3 backdrop-blur">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-sm">{s.icon}</span>
+                  <span className="text-xs text-white/70">{s.label}</span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg font-bold tabular-nums">{Math.round(s.value)}</span>
+                  <span className="text-xs text-white/50">/ {s.max}</span>
+                </div>
+                <Progress value={(s.value / s.max) * 100} className="h-1 mt-1.5 bg-white/20" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
+
+      {/* Stats row */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="p-4">
+          <p className="text-xs text-muted-foreground">Monthly Income</p>
+          <p className="text-lg font-bold tabular-nums">{formatMoney(income, "NGN")}</p>
+          {incomeChange !== 0 && (
+            <p className={cn("text-xs mt-0.5", incomeChange > 0 ? "text-emerald-600" : "text-rose-600")}>
+              {incomeChange > 0 ? "↑" : "↓"} {Math.abs(incomeChange).toFixed(1)}% vs last month
+            </p>
+          )}
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs text-muted-foreground">Monthly Expenses</p>
+          <p className="text-lg font-bold tabular-nums">{formatMoney(expenses, "NGN")}</p>
+          {expenseChange !== 0 && (
+            <p className={cn("text-xs mt-0.5", expenseChange > 0 ? "text-rose-600" : "text-emerald-600")}>
+              {expenseChange > 0 ? "↑" : "↓"} {Math.abs(expenseChange).toFixed(1)}% vs last month
+            </p>
+          )}
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs text-muted-foreground">Savings Rate</p>
+          <p className={cn("text-lg font-bold tabular-nums", savingsRate >= 20 ? "text-emerald-600" : savingsRate > 0 ? "text-amber-600" : "text-rose-600")}>
+            {savingsRate.toFixed(1)}%
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">Target: 20%+</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs text-muted-foreground">Expense Ratio</p>
+          <p className={cn("text-lg font-bold tabular-nums", expenseRatio < 70 ? "text-emerald-600" : expenseRatio < 100 ? "text-amber-600" : "text-rose-600")}>
+            {expenseRatio.toFixed(0)}%
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">of income</p>
+        </Card>
+      </div>
+
+      {/* Insights */}
+      <Card className="p-5">
+        <h3 className="font-semibold mb-3">Smart Insights</h3>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {insights.map((ins: any, i: number) => (
+            <div key={i} className={cn(
+              "flex items-start gap-2 rounded-lg border p-3",
+              ins.type === "positive" ? "border-emerald-500/30 bg-emerald-500/5" :
+              ins.type === "warning" ? "border-amber-500/30 bg-amber-500/5" :
+              ins.type === "critical" ? "border-rose-500/30 bg-rose-500/5" :
+              "border-sky-500/30 bg-sky-500/5"
+            )}>
+              <span className="text-xl shrink-0">{ins.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold">{ins.title}</p>
+                <p className="text-xs text-muted-foreground">{ins.message}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
     </div>
   );
 }
