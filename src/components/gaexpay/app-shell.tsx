@@ -91,14 +91,14 @@ export function AppShell() {
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar />
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
           <AnimatePresence mode="wait">
             <motion.div
               key={view}
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.2 }}
+              exit={{ opacity: 0, y: -3 }}
+              transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
               className="mx-auto max-w-7xl px-4 py-6 lg:px-8"
             >
               {views[view] || <DashboardView />}

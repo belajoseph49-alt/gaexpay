@@ -43,73 +43,81 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* ─────────────────────────────────────────────
+   LIGHT THEME — refined, high-contrast, clean
+   Inspired by Revolut / Wise / Stripe
+   ───────────────────────────────────────────── */
 :root {
-  --radius: 0.75rem;
-  --background: oklch(0.99 0.005 145);
-  --foreground: oklch(0.18 0.02 160);
+  --radius: 0.875rem;
+  --background: oklch(0.985 0.003 155);
+  --foreground: oklch(0.16 0.015 165);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.02 160);
+  --card-foreground: oklch(0.16 0.015 165);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.02 160);
-  --primary: oklch(0.62 0.16 155);
-  --primary-foreground: oklch(0.99 0.01 145);
-  --secondary: oklch(0.96 0.02 150);
-  --secondary-foreground: oklch(0.25 0.03 160);
-  --muted: oklch(0.96 0.01 150);
-  --muted-foreground: oklch(0.52 0.02 155);
-  --accent: oklch(0.94 0.04 155);
-  --accent-foreground: oklch(0.25 0.05 160);
-  --destructive: oklch(0.58 0.22 25);
-  --border: oklch(0.91 0.01 150);
-  --input: oklch(0.91 0.01 150);
-  --ring: oklch(0.62 0.16 155);
-  --chart-1: oklch(0.62 0.16 155);
-  --chart-2: oklch(0.7 0.13 180);
-  --chart-3: oklch(0.75 0.15 90);
-  --chart-4: oklch(0.6 0.18 300);
-  --chart-5: oklch(0.65 0.2 25);
-  --sidebar: oklch(0.985 0.005 145);
-  --sidebar-foreground: oklch(0.18 0.02 160);
-  --sidebar-primary: oklch(0.62 0.16 155);
-  --sidebar-primary-foreground: oklch(0.99 0.01 145);
-  --sidebar-accent: oklch(0.94 0.04 155);
-  --sidebar-accent-foreground: oklch(0.25 0.05 160);
-  --sidebar-border: oklch(0.91 0.01 150);
-  --sidebar-ring: oklch(0.62 0.16 155);
+  --popover-foreground: oklch(0.16 0.015 165);
+  --primary: oklch(0.60 0.15 158);
+  --primary-foreground: oklch(0.99 0.005 145);
+  --secondary: oklch(0.95 0.015 150);
+  --secondary-foreground: oklch(0.22 0.02 160);
+  --muted: oklch(0.96 0.008 150);
+  --muted-foreground: oklch(0.50 0.015 155);
+  --accent: oklch(0.93 0.035 155);
+  --accent-foreground: oklch(0.22 0.04 160);
+  --destructive: oklch(0.56 0.22 25);
+  --border: oklch(0.90 0.008 150);
+  --input: oklch(0.92 0.008 150);
+  --ring: oklch(0.60 0.15 158);
+  --chart-1: oklch(0.60 0.15 158);
+  --chart-2: oklch(0.65 0.12 200);
+  --chart-3: oklch(0.72 0.14 85);
+  --chart-4: oklch(0.58 0.17 300);
+  --chart-5: oklch(0.62 0.19 25);
+  --sidebar: oklch(0.98 0.004 150);
+  --sidebar-foreground: oklch(0.16 0.015 165);
+  --sidebar-primary: oklch(0.60 0.15 158);
+  --sidebar-primary-foreground: oklch(0.99 0.005 145);
+  --sidebar-accent: oklch(0.93 0.035 155);
+  --sidebar-accent-foreground: oklch(0.22 0.04 160);
+  --sidebar-border: oklch(0.90 0.008 150);
+  --sidebar-ring: oklch(0.60 0.15 158);
 }
 
+/* ─────────────────────────────────────────────
+   DARK THEME — deep, rich, premium feel
+   Inspired by Binance / Coinbase dark mode
+   ───────────────────────────────────────────── */
 .dark {
-  --background: oklch(0.14 0.015 165);
-  --foreground: oklch(0.97 0.01 150);
-  --card: oklch(0.19 0.02 165);
-  --card-foreground: oklch(0.97 0.01 150);
-  --popover: oklch(0.19 0.02 165);
-  --popover-foreground: oklch(0.97 0.01 150);
-  --primary: oklch(0.72 0.17 158);
-  --primary-foreground: oklch(0.15 0.02 165);
-  --secondary: oklch(0.24 0.025 165);
-  --secondary-foreground: oklch(0.97 0.01 150);
-  --muted: oklch(0.24 0.02 165);
-  --muted-foreground: oklch(0.68 0.02 155);
-  --accent: oklch(0.27 0.04 160);
-  --accent-foreground: oklch(0.97 0.01 150);
-  --destructive: oklch(0.68 0.19 22);
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.72 0.17 158);
-  --chart-1: oklch(0.72 0.17 158);
-  --chart-2: oklch(0.68 0.14 190);
-  --chart-3: oklch(0.75 0.15 90);
-  --chart-4: oklch(0.62 0.19 300);
-  --chart-5: oklch(0.66 0.21 25);
-  --sidebar: oklch(0.16 0.018 165);
-  --sidebar-foreground: oklch(0.97 0.01 150);
-  --sidebar-primary: oklch(0.72 0.17 158);
-  --sidebar-primary-foreground: oklch(0.15 0.02 165);
-  --sidebar-accent: oklch(0.24 0.03 160);
-  --sidebar-accent-foreground: oklch(0.97 0.01 150);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.72 0.17 158);
+  --background: oklch(0.12 0.012 168);
+  --foreground: oklch(0.96 0.008 150);
+  --card: oklch(0.17 0.015 168);
+  --card-foreground: oklch(0.96 0.008 150);
+  --popover: oklch(0.17 0.015 168);
+  --popover-foreground: oklch(0.96 0.008 150);
+  --primary: oklch(0.70 0.16 158);
+  --primary-foreground: oklch(0.12 0.012 168);
+  --secondary: oklch(0.22 0.02 168);
+  --secondary-foreground: oklch(0.96 0.008 150);
+  --muted: oklch(0.22 0.018 168);
+  --muted-foreground: oklch(0.62 0.015 155);
+  --accent: oklch(0.25 0.035 160);
+  --accent-foreground: oklch(0.96 0.008 150);
+  --destructive: oklch(0.65 0.18 22);
+  --border: oklch(1 0 0 / 6%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: oklch(0.70 0.16 158);
+  --chart-1: oklch(0.70 0.16 158);
+  --chart-2: oklch(0.65 0.13 195);
+  --chart-3: oklch(0.72 0.14 85);
+  --chart-4: oklch(0.60 0.18 300);
+  --chart-5: oklch(0.63 0.20 25);
+  --sidebar: oklch(0.14 0.013 168);
+  --sidebar-foreground: oklch(0.96 0.008 150);
+  --sidebar-primary: oklch(0.70 0.16 158);
+  --sidebar-primary-foreground: oklch(0.12 0.012 168);
+  --sidebar-accent: oklch(0.22 0.025 160);
+  --sidebar-accent-foreground: oklch(0.96 0.008 150);
+  --sidebar-border: oklch(1 0 0 / 6%);
+  --sidebar-ring: oklch(0.70 0.16 158);
 }
 
 @layer base {
@@ -119,85 +127,123 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 }
 
-/* Custom scrollbar */
+/* ─────────────────────────────────────────────
+   SCROLLBAR — sleek, minimal
+   ───────────────────────────────────────────── */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: oklch(0.6 0.1 155 / 0.3);
+  background: oklch(0.6 0.08 155 / 0.25);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.6 0.1 155 / 0.5);
+  background: oklch(0.6 0.08 155 / 0.4);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: oklch(0.7 0.08 155 / 0.2);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.7 0.08 155 / 0.35);
 }
 
-/* Glassmorphism utility */
+/* ─────────────────────────────────────────────
+   GLASSMORPHISM — frosted glass effect
+   ───────────────────────────────────────────── */
 .glass {
-  background: oklch(1 0 0 / 0.6);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: oklch(1 0 0 / 0.55);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 .dark .glass {
-  background: oklch(0.2 0.02 165 / 0.6);
+  background: oklch(0.17 0.015 168 / 0.65);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
-/* Gradient text */
+/* ─────────────────────────────────────────────
+   GRADIENT TEXT — brand accent
+   ───────────────────────────────────────────── */
 .gradient-text {
-  background: linear-gradient(135deg, oklch(0.72 0.17 158), oklch(0.7 0.13 190));
+  background: linear-gradient(135deg, oklch(0.70 0.16 158), oklch(0.65 0.12 195));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* Animated gradient mesh background */
+/* ─────────────────────────────────────────────
+   MESH BACKGROUND — subtle ambient glow
+   ───────────────────────────────────────────── */
 .mesh-bg {
   background-image:
-    radial-gradient(at 20% 20%, oklch(0.72 0.17 158 / 0.15) 0px, transparent 50%),
-    radial-gradient(at 80% 10%, oklch(0.7 0.13 190 / 0.12) 0px, transparent 50%),
-    radial-gradient(at 50% 80%, oklch(0.75 0.15 90 / 0.1) 0px, transparent 50%);
+    radial-gradient(at 15% 15%, oklch(0.70 0.16 158 / 0.08) 0px, transparent 45%),
+    radial-gradient(at 85% 10%, oklch(0.65 0.12 195 / 0.06) 0px, transparent 45%),
+    radial-gradient(at 50% 90%, oklch(0.72 0.14 85 / 0.05) 0px, transparent 45%);
 }
 
-/* Card hover lift */
+/* ─────────────────────────────────────────────
+   CARD INTERACTIONS — smooth lift + glow
+   ───────────────────────────────────────────── */
 .card-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .card-lift:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -8px oklch(0 0 0 / 0.15);
+}
+.dark .card-lift:hover {
+  box-shadow: 0 12px 24px -8px oklch(0 0 0 / 0.4);
 }
 
-/* Shimmer animation */
+/* ─────────────────────────────────────────────
+   SHIMMER — skeleton loading animation
+   ───────────────────────────────────────────── */
 @keyframes shimmer {
   0% { background-position: -1000px 0; }
   100% { background-position: 1000px 0; }
 }
 .shimmer {
-  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.1), transparent);
+  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.08), transparent);
   background-size: 1000px 100%;
-  animation: shimmer 2s infinite;
+  animation: shimmer 1.8s infinite;
+}
+.dark .shimmer {
+  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.05), transparent);
+  background-size: 1000px 100%;
 }
 
-/* Pulse glow */
+/* ─────────────────────────────────────────────
+   PULSE GLOW — attention-drawing elements
+   ───────────────────────────────────────────── */
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 oklch(0.72 0.17 158 / 0.4); }
-  50% { box-shadow: 0 0 0 8px oklch(0.72 0.17 158 / 0); }
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.70 0.16 158 / 0.35); }
+  50% { box-shadow: 0 0 0 10px oklch(0.70 0.16 158 / 0); }
 }
 .pulse-glow {
   animation: pulse-glow 2s infinite;
 }
 
-/* Number ticker */
+/* ─────────────────────────────────────────────
+   TABULAR NUMBERS — for financial data
+   ───────────────────────────────────────────── */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
-/* Hide scrollbar utility */
+/* ─────────────────────────────────────────────
+   HIDE SCROLLBAR — for scrollable areas
+   ───────────────────────────────────────────── */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -206,41 +252,47 @@
   scrollbar-width: none;
 }
 
-/* Print styles for statement PDF */
+/* ─────────────────────────────────────────────
+   FOCUS RING — accessible, visible
+   ───────────────────────────────────────────── */
+*:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* ─────────────────────────────────────────────
+   PRINT STYLES — for statement PDF export
+   ───────────────────────────────────────────── */
 @media print {
-  /* Hide everything not in the statement */
   body * {
     visibility: hidden;
   }
-
-  /* Show only the statement content */
   .printable-statement,
   .printable-statement * {
     visibility: visible;
   }
-
-  /* Position at top of page */
   .printable-statement {
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
   }
-
-  /* Hide non-printable elements */
   .no-print {
     display: none !important;
   }
-
-  /* Ensure colors print */
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-
-  /* Page setup */
   @page {
     margin: 1.5cm;
     size: A4;
   }
+}
+
+/* ─────────────────────────────────────────────
+   SELECTION — brand-colored text selection
+   ───────────────────────────────────────────── */
+::selection {
+  background: oklch(0.70 0.16 158 / 0.2);
 }
