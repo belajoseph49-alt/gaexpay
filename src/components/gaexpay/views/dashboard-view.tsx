@@ -90,116 +90,116 @@ export function DashboardView() {
       </div>
 
       {/* Top grid */}
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-3 lg:gap-4 lg:grid-cols-3">
         {/* Balance hero card */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="lg:col-span-2"
         >
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-800 p-6 text-white shadow-xl shadow-emerald-900/20">
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-800 p-4 sm:p-6 text-white shadow-xl shadow-emerald-900/20">
             <div className="absolute inset-0 opacity-30 mesh-bg" />
             <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
             <div className="absolute -right-6 top-10 h-24 w-24 rounded-full bg-white/10 blur-xl" />
             <div className="relative">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-white/80">Total Balance ({userCurrency})</p>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-white/80">Total Balance ({userCurrency})</p>
                   <div className="mt-1 flex items-center gap-2">
-                    <h2 className="text-3xl font-bold tracking-tight tabular-nums">
-                      {hidden ? `${CURRENCY_SYMBOL[userCurrency] || ""} • • • • • •` : <AnimatedNumber value={userTotal} prefix={CURRENCY_SYMBOL[userCurrency] || ""} decimals={2} />}
+                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight tabular-nums truncate">
+                      {hidden ? `${CURRENCY_SYMBOL[userCurrency] || ""} • • • •` : <AnimatedNumber value={userTotal} prefix={CURRENCY_SYMBOL[userCurrency] || ""} decimals={2} />}
                     </h2>
-                    <button onClick={() => setHidden(!hidden)} className="text-white/70 hover:text-white">
+                    <button onClick={() => setHidden(!hidden)} className="text-white/70 hover:text-white shrink-0">
                       {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  <p className="mt-1 text-xs text-white/70">
-                    Across {wallets.length} wallets · {wallets.map((w) => w.currency).join(", ")}
+                  <p className="mt-1 text-[10px] sm:text-xs text-white/60 truncate">
+                    Across {wallets.length} wallets
                   </p>
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  <Badge className="bg-white/20 text-white border-0 backdrop-blur">
-                    <Zap className="h-3 w-3 mr-1" /> Instant
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                  <Badge className="bg-white/20 text-white border-0 backdrop-blur text-[10px]">
+                    <Zap className="h-2.5 w-2.5 mr-0.5" /> Instant
                   </Badge>
-                  <div className="flex items-center gap-1 text-xs text-white/80">
-                    <TrendingUp className="h-3 w-3" /> +12.4% this month
+                  <div className="flex items-center gap-0.5 text-[10px] sm:text-xs text-white/80">
+                    <TrendingUp className="h-3 w-3" /> +12.4%
                   </div>
                 </div>
               </div>
 
-              <div className="mt-6 flex flex-wrap gap-2">
+              <div className="mt-3 sm:mt-6 grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5 sm:gap-2">
                 <Button
                   size="sm"
                   variant="secondary"
-                  className="bg-white/20 text-white border-0 backdrop-blur hover:bg-white/30"
+                  className="bg-white/20 text-white border-0 backdrop-blur hover:bg-white/30 text-xs h-8"
                   onClick={() => setView("send")}
                 >
-                  <SendHorizontal className="h-4 w-4 mr-1.5" /> Send
+                  <SendHorizontal className="h-3.5 w-3.5 mr-1" /> Send
                 </Button>
                 <Button
                   size="sm"
                   variant="secondary"
-                  className="bg-white/20 text-white border-0 backdrop-blur hover:bg-white/30"
+                  className="bg-white/20 text-white border-0 backdrop-blur hover:bg-white/30 text-xs h-8"
                   onClick={() => setView("send")}
                 >
-                  <ArrowDownToLine className="h-4 w-4 mr-1.5" /> Request
+                  <ArrowDownToLine className="h-3.5 w-3.5 mr-1" /> Request
                 </Button>
                 <Button
                   size="sm"
                   variant="secondary"
-                  className="bg-white/20 text-white border-0 backdrop-blur hover:bg-white/30"
+                  className="bg-white/20 text-white border-0 backdrop-blur hover:bg-white/30 text-xs h-8"
                   onClick={() => setView("pay")}
                 >
-                  <QrCode className="h-4 w-4 mr-1.5" /> Scan & Pay
+                  <QrCode className="h-3.5 w-3.5 mr-1" /> Scan
                 </Button>
                 <Button
                   size="sm"
                   variant="secondary"
-                  className="bg-white/20 text-white border-0 backdrop-blur hover:bg-white/30"
+                  className="bg-white/20 text-white border-0 backdrop-blur hover:bg-white/30 text-xs h-8"
                   onClick={() => setView("wallets")}
                 >
-                  <Plus className="h-4 w-4 mr-1.5" /> Add Wallet
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Add
                 </Button>
               </div>
             </div>
           </Card>
         </motion.div>
 
-        {/* Income/Expense mini */}
-        <div className="grid grid-cols-1 gap-4">
-          <Card className="p-4 card-lift">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="grid h-9 w-9 place-items-center rounded-lg bg-emerald-500/15 text-emerald-500">
-                  <ArrowDownRight className="h-4 w-4" />
+        {/* Income/Expense mini — stack on mobile, column on desktop */}
+        <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 lg:gap-4">
+          <Card className="p-3 sm:p-4 card-lift">
+            <div className="flex items-center justify-between gap-1">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-lg bg-emerald-500/15 text-emerald-500 shrink-0">
+                  <ArrowDownRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Income (MTD)</p>
-                  <p className="text-lg font-bold tabular-nums">{fmt(income)}</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Income (MTD)</p>
+                  <p className="text-sm sm:text-lg font-bold tabular-nums truncate">{fmt(income)}</p>
                 </div>
               </div>
-              <Badge variant="outline" className="text-emerald-600 border-emerald-500/30">+8.2%</Badge>
+              <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 shrink-0 text-[9px]">+8.2%</Badge>
             </div>
           </Card>
-          <Card className="p-4 card-lift">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="grid h-9 w-9 place-items-center rounded-lg bg-rose-500/15 text-rose-500">
-                  <ArrowUpRight className="h-4 w-4" />
+          <Card className="p-3 sm:p-4 card-lift">
+            <div className="flex items-center justify-between gap-1">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-lg bg-rose-500/15 text-rose-500 shrink-0">
+                  <ArrowUpRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Spending (MTD)</p>
-                  <p className="text-lg font-bold tabular-nums">{fmt(expense)}</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Spending (MTD)</p>
+                  <p className="text-sm sm:text-lg font-bold tabular-nums truncate">{fmt(expense)}</p>
                 </div>
               </div>
-              <Badge variant="outline" className="text-rose-600 border-rose-500/30">-3.1%</Badge>
+              <Badge variant="outline" className="text-rose-600 border-rose-500/30 shrink-0 text-[9px]">-3.1%</Badge>
             </div>
           </Card>
         </div>
       </div>
 
       {/* Quick actions */}
-      <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 sm:grid-cols-6">
         {QUICK_ACTIONS.map((a) => {
           const Icon = a.icon;
           return (
@@ -209,12 +209,12 @@ export function DashboardView() {
                 setSendPrefill(a.prefill ? { recipient: a.prefill } : null);
                 setView(a.id as any);
               }}
-              className="group flex flex-col items-center gap-2"
+              className="group flex flex-col items-center gap-1.5 sm:gap-2"
             >
-              <div className={cn("grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br text-white shadow-lg transition group-hover:scale-105", a.color)}>
-                <Icon className="h-6 w-6" />
+              <div className={cn("grid h-11 w-11 sm:h-14 sm:w-14 place-items-center rounded-2xl bg-gradient-to-br text-white shadow-lg transition group-hover:scale-105", a.color)}>
+                <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
-              <span className="text-xs font-medium">{a.label}</span>
+              <span className="text-[11px] sm:text-xs font-medium">{a.label}</span>
             </button>
           );
         })}
