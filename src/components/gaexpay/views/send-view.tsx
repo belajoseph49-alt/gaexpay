@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   SendHorizontal, ArrowDownToLine, ArrowUpFromLine, QrCode, Search, UserPlus,
   Smartphone, Landmark, Wallet as WalletIcon, Check, ShieldCheck, ChevronRight,
-  ChevronLeft, Loader2, Copy, Share2, Repeat,
+  ChevronLeft, Loader2, Copy, Share2, Repeat, Contact as ContactIcon,
+  Users, UserCheck, Phone, Mail, Plus, Info,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import { useApp } from "@/lib/store";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Confetti } from "@/components/gaexpay/confetti";
+import { useContacts, type DeviceContact } from "@/hooks/use-contacts";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -50,8 +52,12 @@ export function SendView() {
 }
 
 function SendFlow() {
-  const { data: benData } = useFetch<{ beneficiaries: any[] }>("/api/beneficiaries");
+  const { data: contactsData, reload: reloadContacts } = useFetch<any>("/api/contacts");
   const { data: wData } = useFetch<{ wallets: any[] }>("/api/wallets");
+  const {
+    deviceContacts, loading: contactsLoading, supported: contactsSupported,
+    pickContacts, checkMembership, addManualContact,
+  } = useContacts();
   const [step, setStep] = useState(0);
   const [recipient, setRecipient] = useState<any>(null);
   const [amount, setAmount] = useState("");
@@ -62,9 +68,93 @@ function SendFlow() {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState<any>(null);
+  const [search, setSearch] = useState("");
+  const [showManualAdd, setShowManualAdd] = useState(false);
+  const [manualName, setManualName] = useState("");
+  const [manualPhone, setManualPhone] = useState("");
+  const [manualEmail, setManualEmail] = useState("");
+  const [checkedContacts, setCheckedContacts] = useState<any>(null);
+  const [checkingContacts, setCheckingContacts] = useState(false);
+  const [activeTab, setActiveTab] = useState<"contacts" | "gaexpay" | "beneficiaries" | "recent">("gaexpay");
 
-  const beneficiaries = benData?.beneficiaries ?? [];
+  const beneficiaries = contactsData?.beneficiaries ?? [];
+  const gaexpayMembers = contactsData?.gaexpayMembers ?? [];
+  const recentRecipients = contactsData?.recentRecipients ?? [];
   const wallets = wData?.wallets ?? [];
+
+  // Filter logic
+  const filteredBeneficiaries = search
+    ? beneficiaries.filter((b: any) =>
+        b.name?.toLowerCase().includes(search.toLowerCase()) ||
+        b.account?.toLowerCase().includes(search.toLowerCase()) ||
+        b.bank?.toLowerCase().includes(search.toLowerCase()))
+    : beneficiaries;
+
+  const filteredMembers = search
+    ? gaexpayMembers.filter((m: any) =>
+        `${m.firstName} ${m.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
+        m.phone?.includes(search) ||
+        m.email?.toLowerCase().includes(search.toLowerCase()) ||
+        m.username?.toLowerCase().includes(search.toLowerCase()))
+    : gaexpayMembers;
+
+  const filteredRecent = search
+    ? recentRecipients.filter((r: any) =>
+        r.name?.toLowerCase().includes(search.toLowerCase()) ||
+        r.account?.includes(search))
+    : recentRecipients;
+
+  const filteredDeviceContacts = search
+    ? deviceContacts.filter((c: DeviceContact) =>
+        c.name?.toLowerCase().includes(search.toLowerCase()) ||
+        c.phone?.includes(search) ||
+        c.email?.toLowerCase().includes(search.toLowerCase()))
+    : deviceContacts;
+
+  // Handle picking device contacts
+  const handlePickContacts = async () => {
+    const contacts = await pickContacts();
+    if (contacts.length === 0) {
+      if (!contactsSupported) {
+        toast.info("Contact picker not supported on this browser. Use manual entry below.");
+        setShowManualAdd(true);
+      }
+      return;
+    }
+    setCheckingContacts(true);
+    const result = await checkMembership(contacts);
+    setCheckedContacts(result);
+    setCheckingContacts(false);
+    toast.success(`${result.memberCount} of ${result.totalChecked} contacts are on GaexPay!`);
+    setActiveTab("contacts");
+  };
+
+  // Handle manual contact add
+  const handleManualAdd = () => {
+    if (!manualName.trim()) {
+      toast.error("Please enter a name");
+      return;
+    }
+    if (!manualPhone.trim() && !manualEmail.trim()) {
+      toast.error("Please enter a phone or email");
+      return;
+    }
+    addManualContact({ name: manualName.trim(), phone: manualPhone.trim() || undefined, email: manualEmail.trim() || undefined });
+    setManualName(""); setManualPhone(""); setManualEmail("");
+    setShowManualAdd(false);
+    toast.success("Contact added");
+  };
+
+  // Check device contacts for membership
+  useEffect(() => {
+    if (deviceContacts.length > 0 && !checkedContacts) {
+      setCheckingContacts(true);
+      checkMembership(deviceContacts).then((result) => {
+        setCheckedContacts(result);
+        setCheckingContacts(false);
+      });
+    }
+  }, [deviceContacts, checkedContacts, checkMembership]);
 
   const submit = async () => {
     setLoading(true);
@@ -92,6 +182,12 @@ function SendFlow() {
     setStep(0); setRecipient(null); setAmount(""); setNote(""); setOtp(""); setDone(null);
   };
 
+  const selectRecipient = (r: any) => {
+    setRecipient(r);
+    setMethod(r.method || r.type || "wallet");
+    setStep(1);
+  };
+
   return (
     <Card className="mx-auto max-w-2xl p-6">
       {/* Steps indicator */}
@@ -111,62 +207,365 @@ function SendFlow() {
       </div>
 
       <AnimatePresence mode="wait">
-        {/* Step 0: Recipient */}
+        {/* Step 0: Recipient — NEW DESIGN */}
         {step === 0 && (
           <motion.div key="s0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <h3 className="font-semibold mb-1">Who are you sending to?</h3>
-            <p className="text-sm text-muted-foreground mb-4">Choose a saved beneficiary or enter new details</p>
+            <p className="text-sm text-muted-foreground mb-4">Pick from contacts, GaexPay members, or enter new details</p>
+
+            {/* Action buttons row */}
+            <div className="mb-4 grid grid-cols-2 gap-2">
+              {/* Access phone contacts */}
+              <Button
+                variant="outline"
+                className="h-12"
+                onClick={handlePickContacts}
+                disabled={contactsLoading}
+              >
+                {contactsLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <ContactIcon className="h-4 w-4 mr-2" />
+                )}
+                {contactsSupported ? "Open Contacts" : "Add Contacts"}
+              </Button>
+
+              {/* New recipient */}
+              <Button
+                variant="outline"
+                className="h-12"
+                onClick={() => setShowManualAdd(!showManualAdd)}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                New Recipient
+              </Button>
+            </div>
+
+            {/* Manual add form */}
+            {showManualAdd && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-4 rounded-lg border bg-muted/30 p-4 space-y-3"
+              >
+                <p className="text-xs font-medium text-muted-foreground">Enter recipient details manually</p>
+                <Input placeholder="Full name" value={manualName} onChange={(e) => setManualName(e.target.value)} />
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Phone" className="pl-9" value={manualPhone} onChange={(e) => setManualPhone(e.target.value)} />
+                  </div>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Email" className="pl-9" value={manualEmail} onChange={(e) => setManualEmail(e.target.value)} />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setShowManualAdd(false)}>Cancel</Button>
+                  <Button size="sm" onClick={handleManualAdd}>
+                    <Plus className="h-3.5 w-3.5 mr-1" /> Add Contact
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Search bar */}
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search name, account, phone..." className="pl-9" />
+              <Input
+                placeholder="Search name, phone, email, account..."
+                className="pl-9"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
-            <div className="mb-3 flex gap-2 flex-wrap">
+
+            {/* Tabs: GaexPay Members | Contacts | Saved | Recent */}
+            <div className="mb-3 flex gap-1.5 flex-wrap">
               {[
-                { id: "wallet", label: "GaexPay User", icon: WalletIcon },
-                { id: "bank", label: "Bank Account", icon: Landmark },
-                { id: "momo", label: "Mobile Money", icon: Smartphone },
-              ].map((m) => {
-                const Icon = m.icon;
+                { id: "gaexpay", label: "GaexPay", icon: UserCheck, count: filteredMembers.length },
+                { id: "contacts", label: "Contacts", icon: ContactIcon, count: checkedContacts ? checkedContacts.totalChecked : deviceContacts.length },
+                { id: "beneficiaries", label: "Saved", icon: Users, count: filteredBeneficiaries.length },
+                { id: "recent", label: "Recent", icon: Repeat, count: filteredRecent.length },
+              ].map((t) => {
+                const Icon = t.icon;
+                const isActive = activeTab === t.id;
                 return (
                   <button
-                    key={m.id}
-                    onClick={() => setMethod(m.id)}
+                    key={t.id}
+                    onClick={() => setActiveTab(t.id as any)}
                     className={cn(
-                      "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition",
-                      method === m.id ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted",
+                      "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition",
+                      isActive ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground",
                     )}
                   >
-                    <Icon className="h-4 w-4" /> {m.label}
+                    <Icon className="h-3.5 w-3.5" />
+                    {t.label}
+                    {t.count > 0 && (
+                      <span className={cn(
+                        "rounded-full px-1.5 py-0.5 text-[9px] font-bold",
+                        isActive ? "bg-primary text-primary-foreground" : "bg-muted-foreground/20",
+                      )}>
+                        {t.count}
+                      </span>
+                    )}
                   </button>
                 );
               })}
             </div>
 
-            <div className="space-y-1.5 max-h-64 overflow-y-auto">
-              {beneficiaries.length === 0 && [1, 2, 3].map((i) => <Skeleton key={i} className="h-14" />)}
-              {beneficiaries.map((b) => (
-                <button
-                  key={b.id}
-                  onClick={() => { setRecipient(b); setStep(1); }}
-                  className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
-                >
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                      {b.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{b.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{b.account} · {b.bank || b.type}</p>
-                  </div>
-                  <Badge variant="outline" className="capitalize text-[10px]">{b.type}</Badge>
-                </button>
-              ))}
+            {/* Content per tab */}
+            <div className="space-y-1.5 max-h-72 overflow-y-auto overscroll-contain no-scrollbar" style={{ WebkitOverflowScrolling: "touch" }}>
+
+              {/* GaexPay Members tab */}
+              {activeTab === "gaexpay" && (
+                <>
+                  {filteredMembers.length === 0 && !contactsData && [1, 2, 3].map((i) => <Skeleton key={i} className="h-14" />)}
+                  {filteredMembers.length === 0 && contactsData && (
+                    <div className="grid place-items-center py-8 text-center">
+                      <UserCheck className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                      <p className="text-sm text-muted-foreground">No GaexPay members found</p>
+                      <p className="text-xs text-muted-foreground mt-1">Invite friends to join GaexPay!</p>
+                    </div>
+                  )}
+                  {filteredMembers.map((m: any) => (
+                    <button
+                      key={m.id}
+                      onClick={() => selectRecipient({
+                        name: `${m.firstName} ${m.lastName}`,
+                        account: m.phone,
+                        bank: "GaexPay",
+                        type: "gaexpay",
+                        method: "wallet",
+                        gaexpayUserId: m.id,
+                      })}
+                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-emerald-500/15 text-emerald-600 text-xs font-semibold">
+                          {m.firstName[0]}{m.lastName[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium truncate">{m.firstName} {m.lastName}</p>
+                          {m.kycStatus === "verified" && (
+                            <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[9px] shrink-0">
+                              <Check className="h-2.5 w-2.5 mr-0.5" /> KYC
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {m.username ? `@${m.username}` : m.phone}
+                        </p>
+                      </div>
+                      <Badge className="bg-emerald-500/10 text-emerald-600 border-0 shrink-0">
+                        <WalletIcon className="h-3 w-3 mr-0.5" /> Instant
+                      </Badge>
+                    </button>
+                  ))}
+                </>
+              )}
+
+              {/* Device Contacts tab */}
+              {activeTab === "contacts" && (
+                <>
+                  {checkingContacts && (
+                    <div className="flex items-center justify-center py-8 gap-2">
+                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                      <p className="text-sm text-muted-foreground">Checking GaexPay membership...</p>
+                    </div>
+                  )}
+                  {!checkingContacts && deviceContacts.length === 0 && (
+                    <div className="grid place-items-center py-8 text-center">
+                      <ContactIcon className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                      <p className="text-sm text-muted-foreground">No contacts imported yet</p>
+                      <Button size="sm" variant="outline" className="mt-3" onClick={handlePickContacts}>
+                        <ContactIcon className="h-4 w-4 mr-1.5" /> Import Contacts
+                      </Button>
+                    </div>
+                  )}
+                  {/* Show contacts that are GaexPay members first */}
+                  {checkedContacts?.members?.map((mc: any) => (
+                    <button
+                      key={mc.gaexpayUser.id}
+                      onClick={() => selectRecipient({
+                        name: mc.contactName,
+                        account: mc.gaexpayUser.phone,
+                        bank: "GaexPay",
+                        type: "gaexpay",
+                        method: "wallet",
+                        gaexpayUserId: mc.gaexpayUser.id,
+                      })}
+                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-emerald-500/15 text-emerald-600 text-xs font-semibold">
+                          {mc.contactName.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium truncate">{mc.contactName}</p>
+                          <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[9px] shrink-0">
+                            <UserCheck className="h-2.5 w-2.5 mr-0.5" /> GaexPay
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">{mc.phone || mc.email}</p>
+                      </div>
+                      <Badge className="bg-emerald-500/10 text-emerald-600 border-0 shrink-0">
+                        <WalletIcon className="h-3 w-3 mr-0.5" /> Instant
+                      </Badge>
+                    </button>
+                  ))}
+                  {/* Non-member contacts */}
+                  {checkedContacts?.nonMembers?.filter((nmc: any) =>
+                    !search || nmc.name?.toLowerCase().includes(search.toLowerCase()) || nmc.phone?.includes(search)
+                  ).map((nmc: any, i: number) => (
+                    <button
+                      key={i}
+                      onClick={() => selectRecipient({
+                        name: nmc.name,
+                        account: nmc.phone || nmc.email,
+                        bank: nmc.phone ? "Mobile Money" : "Email",
+                        type: nmc.phone ? "momo" : "email",
+                        method: nmc.phone ? "momo" : "wallet",
+                      })}
+                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-muted text-muted-foreground text-xs font-semibold">
+                          {nmc.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{nmc.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{nmc.phone || nmc.email}</p>
+                      </div>
+                      <Badge variant="outline" className="text-[10px] shrink-0">
+                        {nmc.phone ? <Smartphone className="h-3 w-3 mr-0.5" /> : <Mail className="h-3 w-3 mr-0.5" />}
+                        {nmc.phone ? "MoMo" : "Invite"}
+                      </Badge>
+                    </button>
+                  ))}
+                  {/* Device contacts not yet checked */}
+                  {!checkedContacts && filteredDeviceContacts.map((c, i) => (
+                    <button
+                      key={i}
+                      onClick={() => selectRecipient({
+                        name: c.name,
+                        account: c.phone || c.email,
+                        bank: c.phone ? "Mobile Money" : "Email",
+                        type: c.phone ? "momo" : "email",
+                        method: c.phone ? "momo" : "wallet",
+                      })}
+                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-muted text-muted-foreground text-xs font-semibold">
+                          {c.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{c.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{c.phone || c.email}</p>
+                      </div>
+                    </button>
+                  ))}
+                </>
+              )}
+
+              {/* Saved Beneficiaries tab */}
+              {activeTab === "beneficiaries" && (
+                <>
+                  {filteredBeneficiaries.length === 0 && contactsData && (
+                    <div className="grid place-items-center py-8 text-center">
+                      <Users className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                      <p className="text-sm text-muted-foreground">No saved beneficiaries yet</p>
+                    </div>
+                  )}
+                  {filteredBeneficiaries.length === 0 && !contactsData && [1, 2, 3].map((i) => <Skeleton key={i} className="h-14" />)}
+                  {filteredBeneficiaries.map((b: any) => (
+                    <button
+                      key={b.id}
+                      onClick={() => selectRecipient(b)}
+                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className={cn(
+                          "text-xs font-semibold",
+                          b.isGaexpayMember ? "bg-emerald-500/15 text-emerald-600" : "bg-primary/10 text-primary",
+                        )}>
+                          {b.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium truncate">{b.name}</p>
+                          {b.isGaexpayMember && (
+                            <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[9px] shrink-0">
+                              <UserCheck className="h-2.5 w-2.5 mr-0.5" /> GaexPay
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">{b.account} · {b.bank || b.type}</p>
+                      </div>
+                      <Badge variant="outline" className="capitalize text-[10px] shrink-0">{b.type}</Badge>
+                    </button>
+                  ))}
+                </>
+              )}
+
+              {/* Recent Recipients tab */}
+              {activeTab === "recent" && (
+                <>
+                  {filteredRecent.length === 0 && contactsData && (
+                    <div className="grid place-items-center py-8 text-center">
+                      <Repeat className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                      <p className="text-sm text-muted-foreground">No recent recipients</p>
+                    </div>
+                  )}
+                  {filteredRecent.map((r: any, i: number) => (
+                    <button
+                      key={i}
+                      onClick={() => selectRecipient({
+                        name: r.name,
+                        account: r.account,
+                        bank: r.bank,
+                        type: r.method,
+                        method: r.method,
+                        provider: r.provider,
+                      })}
+                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-muted text-muted-foreground text-xs font-semibold">
+                          {r.name?.split(" ").map((n: string) => n[0]).slice(0, 2).join("") || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{r.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {r.account || r.bank} · {r.method}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="capitalize text-[10px] shrink-0">
+                        <Repeat className="h-3 w-3 mr-0.5" /> Again
+                      </Badge>
+                    </button>
+                  ))}
+                </>
+              )}
             </div>
 
-            <Button variant="outline" className="mt-3 w-full" onClick={() => { setRecipient({ name: "New Recipient", account: "", bank: method === "bank" ? "Access Bank" : "", type: method }); setStep(1); }}>
-              <UserPlus className="h-4 w-4 mr-2" /> Add new recipient
-            </Button>
+            {/* Payment method info */}
+            <div className="mt-4 flex items-start gap-2 rounded-lg bg-sky-500/10 p-3 text-xs text-sky-700 dark:text-sky-400">
+              <Info className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>
+                <strong>GaexPay members</strong> get instant, free transfers. For others, choose Bank Transfer or Mobile Money — fees apply.
+              </span>
+            </div>
           </motion.div>
         )}
 
