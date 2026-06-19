@@ -25,8 +25,8 @@ export function Logo({ className, size = 32, showText = true }: { className?: st
         </svg>
       </div>
       {showText && (
-        <span className="text-lg font-bold tracking-tight">
-          Gaex<span className="text-primary">Pay</span>
+        <span className="text-lg font-bold tracking-tight" suppressHydrationWarning>
+          Gaex<span className="text-primary" suppressHydrationWarning>Pay</span>
         </span>
       )}
     </div>
