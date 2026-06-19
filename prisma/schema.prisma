@@ -347,3 +347,18 @@ model ScheduledTransfer {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
+
+model Dispute {
+  id            String   @id @default(cuid())
+  userId        String
+  transactionId String
+  transactionRef String
+  reason        String   // unauthorized | failed_not_received | wrong_amount | duplicate | merchant_issue | other
+  description   String
+  status        String   @default("open") // open | under_review | resolved | rejected | refunded
+  priority      String   @default("medium") // low | medium | high
+  resolution    String?
+  resolvedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

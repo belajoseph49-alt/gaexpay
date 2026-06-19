@@ -5,18 +5,20 @@ import { motion } from "framer-motion";
 import {
   Search, Filter, Download, ArrowDownRight, ArrowUpRight, ArrowLeftRight,
   Receipt, Smartphone, QrCode, CreditCard, Gift, Zap, TrendingUp,
-  CheckCircle2, XCircle, Clock, Flag, Repeat,
+  CheckCircle2, XCircle, Clock, Flag, Repeat, AlertTriangle, FileText, X,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFetch } from "@/hooks/use-fetch";
 import { formatMoney, formatDateTime, timeAgo } from "@/lib/gaexpay";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { useApp } from "@/lib/store";
 import { toast } from "sonner";
@@ -37,12 +39,15 @@ const STATUS_STYLES: Record<string, any> = {
 };
 
 export function TransactionsView() {
-  const { data } = useFetch<{ transactions: any[] }>("/api/transactions?limit=200");
+  const { data, reload } = useFetch<{ transactions: any[] }>("/api/transactions?limit=200");
+  const { data: disputesData, reload: reloadDisputes } = useFetch<{ disputes: any[]; open: number }>("/api/disputes");
   const { setView } = useApp();
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
   const [status, setStatus] = useState("all");
   const [selected, setSelected] = useState<any>(null);
+  const [disputeTx, setDisputeTx] = useState<any>(null);
+  const [showDisputes, setShowDisputes] = useState(false);
 
   const txs = data?.transactions ?? [];
 
@@ -84,7 +89,16 @@ export function TransactionsView() {
           <h1 className="text-2xl font-bold tracking-tight">Transactions</h1>
           <p className="text-sm text-muted-foreground">{filtered.length} transactions found</p>
         </div>
-        <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-1.5" /> Export CSV</Button>
+        <div className="flex gap-2">
+          {!!disputesData?.open && (
+            <Button variant="outline" size="sm" className="text-amber-600 border-amber-500/30" onClick={() => setShowDisputes(true)}>
+              <AlertTriangle className="h-4 w-4 mr-1.5" /> {disputesData.open} Disputes
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => window.open("/api/export?format=csv&days=90", "_blank")}>
+            <Download className="h-4 w-4 mr-1.5" /> Export CSV
+          </Button>
+        </div>
       </div>
 
       {/* Summary */}
@@ -244,10 +258,53 @@ export function TransactionsView() {
                     <Repeat className="h-4 w-4 mr-1.5" /> Send Again
                   </Button>
                 )}
-                <Button variant="outline" className="flex-1" type="button">Report Issue</Button>
+                <Button variant="outline" className="flex-1 text-amber-600 hover:bg-amber-500/10" type="button" onClick={() => {
+                  const tx = selected;
+                  setSelected(null);
+                  setTimeout(() => setDisputeTx(tx), 100);
+                }}>
+                  <AlertTriangle className="h-4 w-4 mr-1.5" /> Dispute
+                </Button>
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dispute filing dialog */}
+      <DisputeDialog
+        tx={disputeTx}
+        onClose={() => setDisputeTx(null)}
+        onSubmitted={() => { setDisputeTx(null); reloadDisputes(); reload(); }}
+      />
+
+      {/* Disputes list dialog */}
+      <Dialog open={showDisputes} onOpenChange={setShowDisputes}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>My Disputes</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            {disputesData?.disputes?.length === 0 && (
+              <div className="py-8 text-center text-sm text-muted-foreground">No disputes filed</div>
+            )}
+            {disputesData?.disputes?.map((d) => (
+              <div key={d.id} className="rounded-lg border p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-mono text-muted-foreground">{d.transactionRef}</span>
+                  <Badge variant="outline" className={cn("text-[10px]",
+                    d.status === "open" ? "text-amber-600" :
+                    d.status === "resolved" || d.status === "refunded" ? "text-emerald-600" :
+                    d.status === "rejected" ? "text-rose-600" : "text-sky-600")}>
+                    {d.status.replace("_", " ")}
+                  </Badge>
+                </div>
+                <p className="text-sm font-medium capitalize">{d.reason.replace(/_/g, " ")}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{d.description}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">Filed {timeAgo(d.createdAt)}</p>
+              </div>
+            ))}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
@@ -260,5 +317,135 @@ function DetailRow({ label, value, mono }: { label: string; value: string; mono?
       <span className="text-xs text-muted-foreground shrink-0">{label}</span>
       <span className={cn("text-sm font-medium text-right break-all", mono && "font-mono text-xs")}>{value}</span>
     </div>
+  );
+}
+
+const DISPUTE_REASONS = [
+  { id: "unauthorized", label: "Unauthorized transaction", desc: "I didn't authorize this payment" },
+  { id: "failed_not_received", label: "Payment not received", desc: "Recipient didn't get the funds" },
+  { id: "wrong_amount", label: "Wrong amount", desc: "The amount charged is incorrect" },
+  { id: "duplicate", label: "Duplicate charge", desc: "I was charged more than once" },
+  { id: "merchant_issue", label: "Merchant issue", desc: "Goods/services not delivered" },
+  { id: "other", label: "Other", desc: "Something else" },
+];
+
+function DisputeDialog({ tx, onClose, onSubmitted }: { tx: any; onClose: () => void; onSubmitted: () => void }) {
+  const [reason, setReason] = useState("unauthorized");
+  const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState("medium");
+  const [loading, setLoading] = useState(false);
+
+  if (!tx) return null;
+
+  const submit = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/disputes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transactionId: tx.id,
+          transactionRef: tx.reference,
+          reason,
+          description,
+          priority,
+        }),
+      });
+      if (res.ok) {
+        toast.success("Dispute filed successfully. We'll review it within 48 hours.");
+        onSubmitted();
+      } else {
+        toast.error("Failed to file dispute");
+      }
+    } catch {
+      toast.error("Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!tx} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-amber-500" /> File a Dispute
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Transaction</span>
+              <span className="font-mono text-xs">{tx.reference}</span>
+            </div>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-xs text-muted-foreground">Amount</span>
+              <span className="font-semibold">{formatMoney(tx.amount, tx.currency)}</span>
+            </div>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-xs text-muted-foreground">Date</span>
+              <span className="text-xs">{formatDateTime(tx.createdAt)}</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Reason</Label>
+            <div className="space-y-1.5 max-h-48 overflow-y-auto">
+              {DISPUTE_REASONS.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => setReason(r.id)}
+                  className={cn(
+                    "flex w-full items-start gap-2 rounded-lg border p-2.5 text-left transition",
+                    reason === r.id ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "hover:bg-muted",
+                  )}
+                >
+                  <div className={cn("mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full border-2", reason === r.id ? "border-primary" : "border-muted-foreground/30")}>
+                    {reason === r.id && <div className="h-2 w-2 rounded-full bg-primary" />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{r.label}</p>
+                    <p className="text-xs text-muted-foreground">{r.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Describe the issue</Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Please provide details about what happened..."
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Priority</Label>
+            <Select value={priority} onValueChange={setPriority}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-start gap-2 rounded-lg bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
+            <FileText className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>Our team will review your dispute within 48 hours. You'll receive updates via email and in-app notifications. Filing a dispute doesn't guarantee a refund.</span>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={submit} disabled={!description.trim() || loading} className="bg-amber-600 hover:bg-amber-700">
+            {loading ? "Filing..." : "File Dispute"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AnimatedNumber } from "@/components/gaexpay/animated-number";
+import { Confetti } from "@/components/gaexpay/confetti";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +38,7 @@ export function SavingsView() {
   const { data, reload } = useFetch<{ goals: any[]; totalSaved: number; totalTarget: number }>("/api/savings-goals");
   const [open, setOpen] = useState(false);
   const [contributeGoal, setContributeGoal] = useState<any>(null);
+  const [celebration, setCelebration] = useState<string | null>(null);
 
   const goals = data?.goals ?? [];
   const totalSaved = data?.totalSaved ?? 0;
@@ -55,12 +57,20 @@ export function SavingsView() {
   };
 
   const contribute = async (goalId: string, amount: number, type: "deposit" | "withdrawal") => {
-    await fetch("/api/savings-goals", {
+    const goal = goals.find((g) => g.id === goalId);
+    const res = await fetch("/api/savings-goals", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ contribution: true, goalId, amount, type }),
     });
-    toast.success(type === "deposit" ? `Added ${formatMoney(amount, "NGN")}` : `Withdrew ${formatMoney(amount, "NGN")}`);
+    const data2 = await res.json();
+    if (type === "deposit" && goal && data2.goal?.status === "completed" && goal.status !== "completed") {
+      setCelebration(goal.name);
+      setTimeout(() => setCelebration(null), 4000);
+      toast.success(`🎉 Goal "${goal.name}" completed! Congratulations!`);
+    } else {
+      toast.success(type === "deposit" ? `Added ${formatMoney(amount, "NGN")}` : `Withdrew ${formatMoney(amount, "NGN")}`);
+    }
     setContributeGoal(null);
     reload();
   };
@@ -78,6 +88,23 @@ export function SavingsView() {
 
   return (
     <div className="space-y-6">
+      <Confetti trigger={!!celebration} count={120} />
+      {celebration && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8, y: -20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          className="fixed top-1/2 left-1/2 z-[101] -translate-x-1/2 -translate-y-1/2 rounded-2xl border-0 bg-gradient-to-br from-emerald-600 to-teal-700 p-8 text-center text-white shadow-2xl"
+        >
+          <div className="text-5xl mb-3">🎉</div>
+          <h2 className="text-2xl font-bold">Goal Completed!</h2>
+          <p className="mt-1 text-white/80">You've reached your "{celebration}" target!</p>
+          <div className="mt-3 flex items-center justify-center gap-1 text-amber-300">
+            <Award className="h-5 w-5" />
+            <span className="text-sm font-medium">Achievement Unlocked</span>
+          </div>
+        </motion.div>
+      )}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Savings Goals</h1>
