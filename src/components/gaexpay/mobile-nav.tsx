@@ -58,10 +58,10 @@ export function MobileNav() {
   const { view, setView } = useApp();
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center border-b px-5">
+      <div className="flex h-16 shrink-0 items-center border-b px-5">
         <Logo />
       </div>
-      <ScrollArea className="flex-1 px-3 py-4">
+      <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 no-scrollbar" style={{ WebkitOverflowScrolling: "touch" }}>
         {NAV.map((group) => (
           <div key={group.section} className="mb-5">
             <p className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -90,7 +90,7 @@ export function MobileNav() {
             </div>
           </div>
         ))}
-      </ScrollArea>
+      </div>
     </div>
   );
 }
