@@ -5,6 +5,7 @@ import {
   Settings as SettingsIcon, User, Shield, Bell, Globe, Smartphone, Fingerprint,
   KeyRound, Mail, MessageSquare, CreditCard, Monitor, Trash2, LogOut,
   Check, ChevronRight, Moon, Sun, Laptop, ScanFace,
+  Volume2, Vibrate, BellRing,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,8 @@ export function SettingsView() {
   const [emailNotif, setEmailNotif] = useState(user?.emailNotif ?? true);
   const [pushNotif, setPushNotif] = useState(user?.pushNotif ?? true);
   const [smsNotif, setSmsNotif] = useState(user?.smsNotif ?? false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [vibrateEnabled, setVibrateEnabled] = useState(true);
 
   return (
     <div className="space-y-6">
@@ -193,6 +196,39 @@ export function SettingsView() {
                   <Switch defaultChecked={n.on} />
                 </div>
               ))}
+            </div>
+          </Card>
+
+          {/* Sound & Haptics */}
+          <Card className="p-6">
+            <h3 className="font-semibold mb-4">Sound & Haptics</h3>
+            <div className="space-y-3">
+              <ToggleRow icon={Volume2} title="Notification Sound" desc="Play sound for incoming notifications" checked={soundEnabled} onChange={(v) => { setSoundEnabled(v); toast.success(v ? "Sound enabled" : "Sound disabled"); }} />
+              <ToggleRow icon={Vibrate} title="Vibration" desc="Vibrate device on notifications (mobile)" checked={vibrateEnabled} onChange={(v) => { setVibrateEnabled(v); toast.success(v ? "Vibration enabled" : "Vibration disabled"); }} />
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary">
+                    <BellRing className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Quiet Hours</p>
+                    <p className="text-xs text-muted-foreground">Mute notifications 10 PM – 7 AM</p>
+                  </div>
+                </div>
+                <Switch defaultChecked />
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-lg bg-amber-500/15 text-amber-500">
+                    <Volume2 className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Notification Volume</p>
+                    <p className="text-xs text-muted-foreground">Adjust sound level</p>
+                  </div>
+                </div>
+                <input type="range" min="0" max="100" defaultValue="70" className="w-24 accent-primary" />
+              </div>
             </div>
           </Card>
         </TabsContent>

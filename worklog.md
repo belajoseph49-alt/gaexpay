@@ -846,3 +846,95 @@ Ran `bun run db:push` + `bun run db:generate` to sync. Wrote `prisma/seed-phase2
 - **P3**: Wire up next-intl for multi-language (8 languages declared).
 - **P3**: Add geographic spending heatmap in analytics.
 - **P3**: Add dark/light theme persistence across sessions.
+
+---
+
+## Phase 9 — Cron Round 8: Health Score History, Achievement Notifications, Sound Settings
+
+**Task ID**: 15 (webDevReview cron round)
+**Agent**: Main (Z.ai Code)
+**Date**: 2026-06-19
+
+### Current Project Status Assessment
+- Dev server running stably on port 3000 (PID 10502).
+- Lint clean (0 errors, 0 warnings).
+- QA via agent-browser confirmed all 19 views render without runtime errors.
+- No bugs found — app was stable. Proceeded to implement P2 features: Financial Health Score history chart, Achievement unlock notifications, and enhanced Sound & Haptics settings.
+
+### Work Completed This Round
+
+#### 1. Financial Health Score History Chart (P2 — New Feature)
+- **New API route** `/api/insights/history` (GET):
+  - Calculates health score for each of the last 6 months using the same 5-factor algorithm (savings rate, expense control, activity, diversity, growth).
+  - Returns: months array (label, score, savingsRate, income, expenses, activeDays, txCount), currentScore, trend (current vs previous), avgScore, bestScore, worstScore.
+- **New component** `FinancialHealthHistory` in analytics-view.tsx:
+  - Header with Avg/Best/Worst stats + trend badge (↑/↓ N pts, color-coded).
+  - Dual-line chart: Health Score (emerald, solid, 3px) + Savings Rate (amber, dashed, 2px).
+  - Tooltip showing both metrics.
+  - Legend below chart.
+  - Uses Recharts LineChart with 0-100 Y-axis domain.
+- **Verified**: API returns 6 months (Jan-Jun 2026), current score 25, trend -15 pts, avg 20, best 40, worst 0.
+
+#### 2. Achievement Unlock Notifications (P2 — New Feature)
+- **New component** `achievement-monitor.tsx`:
+  - Monitors the `/api/achievements` endpoint.
+  - Tracks previously unlocked achievement IDs in a ref.
+  - On first load: stores current unlocked set without toasting (avoid spamming on page load).
+  - When new achievements unlock: fires celebratory toast notifications with:
+    - Animated entrance (Framer Motion scale/opacity/y).
+    - Amber gradient card with achievement icon (emoji).
+    - "Achievement Unlocked!" label + title + description.
+    - 5-second duration, top-center position.
+    - Staggered timing for multiple unlocks (800ms apart).
+  - Returns null (no visual component, just side-effect monitoring).
+- **Added to app-shell**: `<AchievementMonitor />` renders globally.
+- **Verified**: Component loads without errors, monitors achievements API.
+
+#### 3. Enhanced Sound & Haptics Settings (P2 — New Feature)
+- **Updated Settings view** (Notifications tab):
+  - New "Sound & Haptics" card with 4 controls:
+    - **Notification Sound** toggle (Volume2 icon) — play sound for incoming notifications.
+    - **Vibration** toggle (Vibrate icon) — vibrate device on notifications (mobile).
+    - **Quiet Hours** toggle (BellRing icon) — mute notifications 10 PM – 7 AM.
+    - **Notification Volume** slider (Volume2 icon) — range input 0-100, default 70.
+  - State management with soundEnabled/vibrateEnabled state.
+  - Toast confirmation on toggle changes.
+- **Verified**: All 4 controls render and function in the Notifications tab.
+
+#### 4. Styling Improvements
+- Health History chart: dual-line with solid/dashed styles, color-coded stats, trend badge.
+- Achievement toast: animated amber gradient card with emoji icon.
+- Sound settings: consistent ToggleRow pattern with colored icons (primary, amber).
+- Volume slider with accent-primary styling.
+- All new UI maintains consistent emerald/teal + amber accent design language.
+
+### Verification Results
+- ✅ `bun run lint` — 0 errors, 0 warnings
+- ✅ All 19 views tested via agent-browser — no runtime errors
+- ✅ Insights History API: returns 6 months of score data, trend, avg/best/worst
+- ✅ Analytics Financial Health History chart: renders with dual-line chart, stats, trend badge
+- ✅ Achievement Monitor: loads globally, monitors for new unlocks
+- ✅ Settings Sound & Haptics: all 4 controls render and function
+- ✅ Mobile (390×844): Analytics History + Settings Sound responsive
+- ✅ Dev log: no errors/warnings
+- ✅ Server running stably
+
+### Current App Stats
+- **21 views** (unchanged, but Analytics + Settings enhanced)
+- **34 API routes** (added `/api/insights/history`)
+- **19 database models** (unchanged)
+- **New components**: AchievementMonitor, FinancialHealthHistory
+
+### Unresolved Issues / Risks
+1. **Achievement notifications**: Only fire when achievements API returns new unlocks between polls. Since achievements are computed on-the-fly (not persisted), unlocks happen when user data changes (e.g., after a transaction). The monitor polls on page load and view changes.
+2. **Health score history**: Uses historical transaction data to retroactively calculate scores. For months with no transactions, score is 0.
+3. **Sound settings**: Toggles are UI-only (no actual sound playback). In production, would integrate with Web Audio API or native push notification sounds.
+
+### Priority Recommendations for Next Phase
+- **P1**: Add PDF statement download (browser print-to-PDF or pdfkit).
+- **P2**: WebSocket real-time notifications.
+- **P2**: Add geographic spending heatmap in analytics.
+- **P2**: Add recurring transfer calendar view.
+- **P3**: Wire up next-intl for multi-language (8 languages declared).
+- **P3**: Add dark/light theme persistence across sessions.
+- **P3**: Add transaction notes/tags for better categorization.

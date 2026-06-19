@@ -12,6 +12,7 @@ import { formatMoney, CURRENCIES } from "@/lib/gaexpay";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  LineChart, Line,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -280,7 +281,67 @@ function FinancialHealthSection() {
           ))}
         </div>
       </Card>
+
+      {/* Health Score History */}
+      <FinancialHealthHistory />
     </div>
+  );
+}
+
+function FinancialHealthHistory() {
+  const { data } = useFetch<any>("/api/insights/history");
+  if (!data) return <Card className="p-5"><Skeleton className="h-64" /></Card>;
+
+  const { months, trend, avgScore, bestScore, worstScore } = data;
+  const chartData = months.map((m: any) => ({
+    label: m.label,
+    score: m.score,
+    savingsRate: m.savingsRate,
+  }));
+
+  return (
+    <Card className="p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold">Health Score History</h3>
+          <p className="text-xs text-muted-foreground">6-month trend</p>
+        </div>
+        <div className="flex items-center gap-4 text-xs">
+          <div className="text-center">
+            <p className="text-muted-foreground">Avg</p>
+            <p className="font-bold tabular-nums">{avgScore}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-muted-foreground">Best</p>
+            <p className="font-bold tabular-nums text-emerald-600">{bestScore}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-muted-foreground">Worst</p>
+            <p className="font-bold tabular-nums text-rose-600">{worstScore}</p>
+          </div>
+          <Badge variant="outline" className={cn(trend >= 0 ? "text-emerald-600 border-emerald-500/30" : "text-rose-600 border-rose-500/30")}>
+            {trend >= 0 ? "↑" : "↓"} {Math.abs(trend)} pts
+          </Badge>
+        </div>
+      </div>
+      <ResponsiveContainer width="100%" height={250}>
+        <LineChart data={chartData}>
+          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+          <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+          <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+          <Tooltip
+            contentStyle={{ borderRadius: 12, fontSize: 12 }}
+            formatter={(v: any, name: string) => name === "score" ? [`${v} / 100`, "Health Score"] : [`${v}%`, "Savings Rate"]}
+          />
+          <Line type="monotone" dataKey="score" stroke="#10b981" strokeWidth={3} dot={{ fill: "#10b981", r: 5 }} activeDot={{ r: 7 }} name="score" />
+          <Line type="monotone" dataKey="savingsRate" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" dot={{ fill: "#f59e0b", r: 3 }} name="savingsRate" />
+        </LineChart>
+      </ResponsiveContainer>
+      <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-emerald-500" /> Health Score</span>
+        <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-amber-500" style={{ borderTop: "2px dashed #f59e0b" }} /> Savings Rate %</span>
+      </div>
+    </Card>
   );
 }
 
