@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { DEMO_USER_ID } from "@/lib/gaexpay";
+import { getAuthUserId } from "@/lib/api-auth";
+import { apiError, apiCatch } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
@@ -74,119 +75,126 @@ function deterministicOffset(name: string): { dLat: number; dLng: number } {
   return { dLat, dLng };
 }
 
-export async function GET() {
-  // Fetch the demo user's profile so we can map unknown merchants to their
-  // country/city instead of using random coordinates.
-  const user = await db.user.findUnique({
-    where: { id: DEMO_USER_ID },
-    select: { country: true, city: true },
-  });
-  const userCountry = user?.country || "Nigeria";
-  const userCity = user?.city || undefined;
+export async function GET(req: Request) {
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) return apiError("Unauthorized", 401);
 
-  // Look up the centroid for the user's country. If their city is set,
-  // try to use a country centroid whose city matches.
-  const fallbackCentroid =
-    (userCity && Object.values(COUNTRY_CENTROIDS).find((c) => c.city === userCity)) ||
-    COUNTRY_CENTROIDS[userCountry] ||
-    COUNTRY_CENTROIDS.Nigeria;
+    // Fetch the user's profile so we can map unknown merchants to their
+    // country/city instead of using random coordinates.
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { country: true, city: true },
+    });
+    const userCountry = user?.country || "Nigeria";
+    const userCity = user?.city || undefined;
 
-  // Pull real debit transactions for the demo user
-  const transactions = await db.transaction.findMany({
-    where: {
-      userId: DEMO_USER_ID,
-      status: "completed",
-      direction: "debit",
-    },
-    orderBy: { createdAt: "desc" },
-    take: 200,
-    select: {
-      id: true, amount: true, currency: true, category: true,
-      counterpartyName: true, description: true, createdAt: true,
-    },
-  });
+    // Look up the centroid for the user's country. If their city is set,
+    // try to use a country centroid whose city matches.
+    const fallbackCentroid =
+      (userCity && Object.values(COUNTRY_CENTROIDS).find((c) => c.city === userCity)) ||
+      COUNTRY_CENTROIDS[userCountry] ||
+      COUNTRY_CENTROIDS.Nigeria;
 
-  // Group by counterparty and resolve location
-  const locationMap: Record<string, {
-    name: string;
-    lat: number;
-    lng: number;
-    city: string;
-    country: string;
-    totalSpent: number;
-    txCount: number;
-    category: string;
-  }> = {};
+    // Pull real debit transactions for the user
+    const transactions = await db.transaction.findMany({
+      where: {
+        userId,
+        status: "completed",
+        direction: "debit",
+      },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+      select: {
+        id: true, amount: true, currency: true, category: true,
+        counterpartyName: true, description: true, createdAt: true,
+      },
+    });
 
-  for (const t of transactions) {
-    const name = t.counterpartyName || t.description || "Unknown";
+    // Group by counterparty and resolve location
+    const locationMap: Record<string, {
+      name: string;
+      lat: number;
+      lng: number;
+      city: string;
+      country: string;
+      totalSpent: number;
+      txCount: number;
+      category: string;
+    }> = {};
 
-    // 1. Known merchant → use the hardcoded LOCATIONS map
-    // 2. Unknown merchant → fall back to the USER'S country/city (not random)
-    //    with a deterministic per-name offset so merchants in the same city
-    //    don't all stack on the same point.
-    let loc = LOCATIONS[name];
-    let source: "known" | "user-city" = "known";
-    if (!loc) {
-      const off = deterministicOffset(name);
-      loc = {
-        lat: fallbackCentroid.lat + off.dLat,
-        lng: fallbackCentroid.lng + off.dLng,
-        city: userCity || fallbackCentroid.city,
+    for (const t of transactions) {
+      const name = t.counterpartyName || t.description || "Unknown";
+
+      // 1. Known merchant → use the hardcoded LOCATIONS map
+      // 2. Unknown merchant → fall back to the USER'S country/city (not random)
+      //    with a deterministic per-name offset so merchants in the same city
+      //    don't all stack on the same point.
+      let loc = LOCATIONS[name];
+      let source: "known" | "user-city" = "known";
+      if (!loc) {
+        const off = deterministicOffset(name);
+        loc = {
+          lat: fallbackCentroid.lat + off.dLat,
+          lng: fallbackCentroid.lng + off.dLng,
+          city: userCity || fallbackCentroid.city,
+          country: userCountry,
+        };
+        source = "user-city";
+      }
+      void source; // reserved for future UI badge ("inferred location")
+
+      if (!locationMap[name]) {
+        locationMap[name] = {
+          name,
+          lat: loc.lat,
+          lng: loc.lng,
+          city: loc.city,
+          country: loc.country,
+          totalSpent: 0,
+          txCount: 0,
+          category: t.category,
+        };
+      }
+      locationMap[name].totalSpent += t.amount;
+      locationMap[name].txCount += 1;
+    }
+
+    const locations = Object.values(locationMap).sort((a, b) => b.totalSpent - a.totalSpent);
+
+    // Group by city
+    const cityMap: Record<string, { city: string; country: string; totalSpent: number; txCount: number; merchants: number }> = {};
+    for (const loc of locations) {
+      const key = `${loc.city}, ${loc.country}`;
+      if (!cityMap[key]) {
+        cityMap[key] = { city: loc.city, country: loc.country, totalSpent: 0, txCount: 0, merchants: 0 };
+      }
+      cityMap[key].totalSpent += loc.totalSpent;
+      cityMap[key].txCount += loc.txCount;
+      cityMap[key].merchants += 1;
+    }
+
+    const cities = Object.values(cityMap).sort((a, b) => b.totalSpent - a.totalSpent);
+
+    const totalSpent = locations.reduce((s, l) => s + l.totalSpent, 0);
+
+    return NextResponse.json({
+      locations,
+      cities,
+      totalSpent,
+      merchantCount: locations.length,
+      cityCount: cities.length,
+      // Include the user's profile country/city so the frontend can display
+      // the inferred-location attribution in the UI.
+      userLocation: {
         country: userCountry,
-      };
-      source = "user-city";
-    }
-    void source; // reserved for future UI badge ("inferred location")
-
-    if (!locationMap[name]) {
-      locationMap[name] = {
-        name,
-        lat: loc.lat,
-        lng: loc.lng,
-        city: loc.city,
-        country: loc.country,
-        totalSpent: 0,
-        txCount: 0,
-        category: t.category,
-      };
-    }
-    locationMap[name].totalSpent += t.amount;
-    locationMap[name].txCount += 1;
+        city: userCity || null,
+        inferredFromProfile: !userCity
+          ? Object.values(COUNTRY_CENTROIDS).some((c) => c.city === fallbackCentroid.city) && fallbackCentroid.city !== userCity
+          : false,
+      },
+    });
+  } catch (e) {
+    return apiCatch(e);
   }
-
-  const locations = Object.values(locationMap).sort((a, b) => b.totalSpent - a.totalSpent);
-
-  // Group by city
-  const cityMap: Record<string, { city: string; country: string; totalSpent: number; txCount: number; merchants: number }> = {};
-  for (const loc of locations) {
-    const key = `${loc.city}, ${loc.country}`;
-    if (!cityMap[key]) {
-      cityMap[key] = { city: loc.city, country: loc.country, totalSpent: 0, txCount: 0, merchants: 0 };
-    }
-    cityMap[key].totalSpent += loc.totalSpent;
-    cityMap[key].txCount += loc.txCount;
-    cityMap[key].merchants += 1;
-  }
-
-  const cities = Object.values(cityMap).sort((a, b) => b.totalSpent - a.totalSpent);
-
-  const totalSpent = locations.reduce((s, l) => s + l.totalSpent, 0);
-
-  return NextResponse.json({
-    locations,
-    cities,
-    totalSpent,
-    merchantCount: locations.length,
-    cityCount: cities.length,
-    // Include the user's profile country/city so the frontend can display
-    // the inferred-location attribution in the UI.
-    userLocation: {
-      country: userCountry,
-      city: userCity || null,
-      inferredFromProfile: !userCity
-        ? Object.values(COUNTRY_CENTROIDS).some((c) => c.city === fallbackCentroid.city) && fallbackCentroid.city !== userCity
-        : false,
-    },
-  });
 }

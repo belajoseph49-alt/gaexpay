@@ -1,18 +1,23 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { DEMO_USER_ID } from "@/lib/gaexpay";
+import { getAuthUserId } from "@/lib/api-auth";
+import { apiError, apiCatch } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const [user, transactions, wallets, savingsGoals, beneficiaries, referrals] = await Promise.all([
-    db.user.findUnique({ where: { id: DEMO_USER_ID } }),
-    db.transaction.findMany({ where: { userId: DEMO_USER_ID } }),
-    db.wallet.findMany({ where: { userId: DEMO_USER_ID } }),
-    db.savingsGoal.findMany({ where: { userId: DEMO_USER_ID } }),
-    db.beneficiary.findMany({ where: { userId: DEMO_USER_ID } }),
-    db.user.count({ where: { NOT: { id: DEMO_USER_ID } } }),
-  ]);
+export async function GET(req: Request) {
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) return apiError("Unauthorized", 401);
+
+    const [user, transactions, wallets, savingsGoals, beneficiaries, referrals] = await Promise.all([
+      db.user.findUnique({ where: { id: userId } }),
+      db.transaction.findMany({ where: { userId } }),
+      db.wallet.findMany({ where: { userId } }),
+      db.savingsGoal.findMany({ where: { userId } }),
+      db.beneficiary.findMany({ where: { userId } }),
+      db.user.count({ where: { NOT: { id: userId } } }),
+    ]);
 
   const totalTx = transactions.length;
   const completedTx = transactions.filter((t) => t.status === "completed").length;
@@ -105,4 +110,7 @@ export async function GET() {
       kycTier,
     },
   });
+  } catch (e) {
+    return apiCatch(e);
+  }
 }

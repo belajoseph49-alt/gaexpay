@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { DEMO_USER_ID, BANKS } from "@/lib/gaexpay";
+import { BANKS } from "@/lib/gaexpay";
+import { getAuthUserId } from "@/lib/api-auth";
+import { apiError, apiCatch } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
@@ -128,8 +130,12 @@ function formatMoney(amount: number): string {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(amount));
 }
 
-export async function GET() {
-  const now = new Date();
+export async function GET(req: Request) {
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) return apiError("Unauthorized", 401);
+
+    const now = new Date();
   const rand = seededRandom(20260619);
 
   // Use the same merchant as the merchant-dashboard route
@@ -158,7 +164,7 @@ export async function GET() {
     bankTxForAccounts,
   ] = await Promise.all([
     db.transaction.findMany({
-      where: { userId: DEMO_USER_ID, type: "payment", status: "completed" },
+      where: { userId, type: "payment", status: "completed" },
       orderBy: { createdAt: "desc" },
       take: 500,
       select: {
@@ -751,4 +757,7 @@ export async function GET() {
     recommendations,
     generatedAt: new Date().toISOString(),
   });
+  } catch (e) {
+    return apiCatch(e);
+  }
 }

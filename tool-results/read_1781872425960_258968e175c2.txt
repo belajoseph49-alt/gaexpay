@@ -1,0 +1,561 @@
+     1→import { NextResponse } from "next/server";
+     2→import { db } from "@/lib/db";
+     3→import { DEMO_USER_ID } from "@/lib/gaexpay";
+     4→
+     5→export const dynamic = "force-dynamic";
+     6→
+     7→// ---------------------------------------------------------------------------
+     8→// Deterministic helpers
+     9→// ---------------------------------------------------------------------------
+    10→// 32-bit FNV-1a hash so derived identifiers are stable across requests.
+    11→function hashStr(s: string): number {
+    12→  let h = 0x811c9dc5;
+    13→  for (let i = 0; i < s.length; i++) {
+    14→    h ^= s.charCodeAt(i);
+    15→    h = (h * 0x01000193) >>> 0;
+    16→  }
+    17→  return h >>> 0;
+    18→}
+    19→
+    20→// Deterministic pseudo-random for stable derived data per request
+    21→function seededRandom(seed: number) {
+    22→  let s = seed;
+    23→  return () => {
+    24→    s = (s * 1664525 + 1013904223) % 4294967296;
+    25→    return s / 4294967296;
+    26→  };
+    27→}
+    28→
+    29→// ---------------------------------------------------------------------------
+    30→// API KEY derivation
+    31→// ---------------------------------------------------------------------------
+    32→// There is no `ApiKey` model in the Prisma schema, so we derive the API key
+    33→// set DETERMINISTICALLY from the demo user's ID. The same user always gets
+    34→// the same 5 keys with the same prefixes, masked keys, request counts, etc.
+    35→//
+    36→// PRODUCTION NOTE: in a real deployment this would come from an `ApiKey`
+    37→// table with columns (id, userId, name, prefix, hashedKey, permissions,
+    38→// rateLimit, status, lastUsedAt, createdAt, requestsToday). The structure
+    39→// below mirrors what that table would return so the frontend stays the same.
+    40→// ---------------------------------------------------------------------------
+    41→interface ApiKeyConfig {
+    42→  id: string;
+    43→  name: string;
+    44→  prefix: "gxp_live" | "gxp_test";
+    45→  permissions: ("read" | "write" | "admin")[];
+    46→  rateLimit: number;
+    47→  status: "active" | "revoked";
+    48→  createdDaysAgo: number;
+    49→  lastUsedMinutesAgo: number;
+    50→  requestsToday: number;
+    51→}
+    52→
+    53→const API_KEY_TEMPLATES: ApiKeyConfig[] = [
+    54→  { id: "key_prod_live", name: "Production Live", prefix: "gxp_live", permissions: ["read", "write", "admin"], rateLimit: 10000, status: "active", createdDaysAgo: 184, lastUsedMinutesAgo: 3, requestsToday: 4827 },
+    55→  { id: "key_prod_read", name: "Analytics Read-Only", prefix: "gxp_live", permissions: ["read"], rateLimit: 1000, status: "active", createdDaysAgo: 92, lastUsedMinutesAgo: 18, requestsToday: 1247 },
+    56→  { id: "key_webhook", name: "Webhook Verifier", prefix: "gxp_live", permissions: ["read", "write"], rateLimit: 1000, status: "active", createdDaysAgo: 47, lastUsedMinutesAgo: 1, requestsToday: 384 },
+    57→  { id: "key_sandbox", name: "Sandbox Testing", prefix: "gxp_test", permissions: ["read", "write"], rateLimit: 1000, status: "active", createdDaysAgo: 21, lastUsedMinutesAgo: 42, requestsToday: 192 },
+    58→  { id: "key_legacy", name: "Legacy Mobile App", prefix: "gxp_live", permissions: ["read"], rateLimit: 1000, status: "revoked", createdDaysAgo: 312, lastUsedMinutesAgo: 14400, requestsToday: 0 },
+    59→];
+    60→
+    61→// Generate a deterministic 32-char hex key suffix from the user ID + key id
+    62→function deterministicKeySuffix(userId: string, keyId: string): string {
+    63→  const parts: string[] = [];
+    64→  for (let i = 0; i < 4; i++) {
+    65→    const h = hashStr(`${userId}:${keyId}:${i}`).toString(16).padStart(8, "0");
+    66→    parts.push(h.slice(0, 8));
+    67→  }
+    68→  return parts.join("");
+    69→}
+    70→
+    71→function buildApiKeys(userId: string, now: Date) {
+    72→  return API_KEY_TEMPLATES.map((tpl) => {
+    73→    const fullKey = `${tpl.prefix}_${deterministicKeySuffix(userId, tpl.id)}`;
+    74→    const createdDate = new Date(now.getTime() - tpl.createdDaysAgo * 86400000);
+    75→    const lastUsedDate = new Date(now.getTime() - tpl.lastUsedMinutesAgo * 60000);
+    76→    const maskedKey = `${tpl.prefix}_${fullKey.split("_")[2].slice(0, 4)}${"•".repeat(20)}${fullKey.slice(-4)}`;
+    77→    return {
+    78→      id: tpl.id,
+    79→      name: tpl.name,
+    80→      key: maskedKey,
+    81→      fullKey,
+    82→      prefix: tpl.prefix,
+    83→      created: createdDate.toISOString(),
+    84→      lastUsed: tpl.status === "revoked" ? null : lastUsedDate.toISOString(),
+    85→      status: tpl.status,
+    86→      permissions: tpl.permissions,
+    87→      rateLimit: tpl.rateLimit,
+    88→      requestsToday: tpl.requestsToday,
+    89→      environment: tpl.prefix === "gxp_live" ? "production" : "sandbox",
+    90→    };
+    91→  });
+    92→}
+    93→
+    94→// ---------------------------------------------------------------------------
+    95→// WEBHOOK derivation
+    96→// ---------------------------------------------------------------------------
+    97→// There is no `Webhook` model in the Prisma schema, so we derive the webhook
+    98→// set DETERMINISTICALLY from the demo user's ID. Each webhook's URL, events,
+    99→// delivery stats, and recent delivery records are stable per user.
+   100→//
+   101→// PRODUCTION NOTE: in a real deployment this would come from a `Webhook`
+   102→// table (id, userId, url, events, status, secret, createdAt) joined with a
+   103→// `WebhookDelivery` table (id, webhookId, event, statusCode, durationMs,
+   104→// success, timestamp). The structure below mirrors what that join would
+   105→// return so the frontend stays the same.
+   106→// ---------------------------------------------------------------------------
+   107→interface WebhookConfig {
+   108→  id: string;
+   109→  urlPath: string;
+   110→  events: string[];
+   111→  status: "active" | "paused";
+   112→  lastDeliveryMinutesAgo: number;
+   113→  successRate: number;
+   114→  totalDeliveries: number;
+   115→  recentDeliveries: { event: string; statusCode: number; durationMs: number; minutesAgo: number; success: boolean }[];
+   116→}
+   117→
+   118→const WEBHOOK_TEMPLATES: WebhookConfig[] = [
+   119→  {
+   120→    id: "wh_payments",
+   121→    urlPath: "webhooks/gaexpay",
+   122→    events: ["payment.received", "payment.completed", "payment.failed"],
+   123→    status: "active",
+   124→    lastDeliveryMinutesAgo: 2,
+   125→    successRate: 99.2,
+   126→    totalDeliveries: 18472,
+   127→    recentDeliveries: [
+   128→      { event: "payment.completed", statusCode: 200, durationMs: 142, minutesAgo: 2, success: true },
+   129→      { event: "payment.received", statusCode: 200, durationMs: 98, minutesAgo: 17, success: true },
+   130→      { event: "payment.failed", statusCode: 200, durationMs: 187, minutesAgo: 41, success: true },
+   131→      { event: "payment.completed", statusCode: 500, durationMs: 5023, minutesAgo: 73, success: false },
+   132→      { event: "payment.received", statusCode: 200, durationMs: 121, minutesAgo: 96, success: true },
+   133→    ],
+   134→  },
+   135→  {
+   136→    id: "wh_transfers",
+   137→    urlPath: "transfers/inbound",
+   138→    events: ["transfer.completed", "transfer.failed"],
+   139→    status: "active",
+   140→    lastDeliveryMinutesAgo: 14,
+   141→    successRate: 97.8,
+   142→    totalDeliveries: 9824,
+   143→    recentDeliveries: [
+   144→      { event: "transfer.completed", statusCode: 200, durationMs: 218, minutesAgo: 14, success: true },
+   145→      { event: "transfer.completed", statusCode: 200, durationMs: 174, minutesAgo: 48, success: true },
+   146→      { event: "transfer.failed", statusCode: 200, durationMs: 156, minutesAgo: 92, success: true },
+   147→      { event: "transfer.completed", statusCode: 408, durationMs: 30012, minutesAgo: 187, success: false },
+   148→      { event: "transfer.completed", statusCode: 200, durationMs: 195, minutesAgo: 242, success: true },
+   149→    ],
+   150→  },
+   151→  {
+   152→    id: "wh_compliance",
+   153→    urlPath: "api/v1/kyc-events",
+   154→    events: ["kyc.approved", "kyc.rejected", "kyc.under_review"],
+   155→    status: "active",
+   156→    lastDeliveryMinutesAgo: 38,
+   157→    successRate: 100,
+   158→    totalDeliveries: 1843,
+   159→    recentDeliveries: [
+   160→      { event: "kyc.approved", statusCode: 200, durationMs: 89, minutesAgo: 38, success: true },
+   161→      { event: "kyc.under_review", statusCode: 200, durationMs: 102, minutesAgo: 124, success: true },
+   162→      { event: "kyc.approved", statusCode: 200, durationMs: 76, minutesAgo: 287, success: true },
+   163→      { event: "kyc.rejected", statusCode: 200, durationMs: 94, minutesAgo: 412, success: true },
+   164→      { event: "kyc.approved", statusCode: 200, durationMs: 88, minutesAgo: 624, success: true },
+   165→    ],
+   166→  },
+   167→  {
+   168→    id: "wh_fraud",
+   169→    urlPath: "alerts",
+   170→    events: ["fraud.detected", "fraud.review", "fraud.cleared"],
+   171→    status: "paused",
+   172→    lastDeliveryMinutesAgo: 2880,
+   173→    successRate: 84.6,
+   174→    totalDeliveries: 2874,
+   175→    recentDeliveries: [
+   176→      { event: "fraud.detected", statusCode: 200, durationMs: 312, minutesAgo: 2880, success: true },
+   177→      { event: "fraud.review", statusCode: 500, durationMs: 4012, minutesAgo: 2940, success: false },
+   178→      { event: "fraud.detected", statusCode: 500, durationMs: 3899, minutesAgo: 3024, success: false },
+   179→      { event: "fraud.cleared", statusCode: 200, durationMs: 156, minutesAgo: 3168, success: true },
+   180→      { event: "fraud.review", statusCode: 200, durationMs: 287, minutesAgo: 3280, success: true },
+   181→    ],
+   182→  },
+   183→];
+   184→
+   185→// Build a deterministic webhook URL from the user ID + template URL path.
+   186→// In production this would be the actual stored webhook URL from the DB.
+   187→function buildWebhookUrl(userId: string, urlPath: string): string {
+   188→  const subdomainHash = hashStr(userId) % 100000;
+   189→  const subdomain = `hooks-${subdomainHash.toString(36)}`;
+   190→  // Pick a deterministic domain from a small list
+   191→  const domains = ["merchant-store.com", "example-bank.io", "fintech-partner.net", "internal.corp"];
+   192→  const domain = domains[hashStr(userId + ":domain") % domains.length];
+   193→  return `https://${subdomain}.${domain}/${urlPath}`;
+   194→}
+   195→
+   196→function buildWebhooks(userId: string, now: Date) {
+   197→  return WEBHOOK_TEMPLATES.map((tpl) => {
+   198→    const url = buildWebhookUrl(userId, tpl.urlPath);
+   199→    return {
+   200→      id: tpl.id,
+   201→      url,
+   202→      events: tpl.events,
+   203→      status: tpl.status,
+   204→      lastDelivery: tpl.status === "paused" ? null : new Date(now.getTime() - tpl.lastDeliveryMinutesAgo * 60000).toISOString(),
+   205→      successRate: tpl.successRate,
+   206→      totalDeliveries: tpl.totalDeliveries,
+   207→      recentDeliveries: tpl.recentDeliveries.map((d) => ({
+   208→        id: `dlv_${tpl.id}_${d.minutesAgo}`,
+   209→        event: d.event,
+   210→        url,
+   211→        statusCode: d.statusCode,
+   212→        durationMs: d.durationMs,
+   213→        timestamp: new Date(now.getTime() - d.minutesAgo * 60000).toISOString(),
+   214→        success: d.success,
+   215→      })),
+   216→    };
+   217→  });
+   218→}
+   219→
+   220→// ---------------------------------------------------------------------------
+   221→// API Endpoints catalog — 22 endpoints across 6 categories
+   222→// (This is REAL endpoint documentation — not mock data — kept as-is.)
+   223→// ---------------------------------------------------------------------------
+   224→const API_ENDPOINTS = [
+   225→  // Payments
+   226→  { category: "Payments", method: "POST", path: "/v1/payments", description: "Initiate a new payment from a wallet to a recipient" },
+   227→  { category: "Payments", method: "GET", path: "/v1/payments/{id}", description: "Retrieve the status and details of a payment" },
+   228→  { category: "Payments", method: "POST", path: "/v1/payments/{id}/refund", description: "Issue a full or partial refund for a completed payment" },
+   229→  { category: "Payments", method: "GET", path: "/v1/payments", description: "List payments with filtering and pagination" },
+   230→  // Transfers
+   231→  { category: "Transfers", method: "POST", path: "/v1/transfers", description: "Send money to a bank account or another GaexPay user" },
+   232→  { category: "Transfers", method: "GET", path: "/v1/transfers/{id}", description: "Retrieve transfer details including settlement status" },
+   233→  { category: "Transfers", method: "GET", path: "/v1/transfers/quote", description: "Get a real-time FX quote for an international transfer" },
+   234→  { category: "Transfers", method: "POST", path: "/v1/transfers/{id}/cancel", description: "Cancel a pending transfer before settlement" },
+   235→  // Cards
+   236→  { category: "Cards", method: "POST", path: "/v1/cards", description: "Issue a new virtual or physical debit card" },
+   237→  { category: "Cards", method: "GET", path: "/v1/cards", description: "List all cards for the authenticated user" },
+   238→  { category: "Cards", method: "PATCH", path: "/v1/cards/{id}/freeze", description: "Freeze or unfreeze a card instantly" },
+   239→  { category: "Cards", method: "PATCH", path: "/v1/cards/{id}/limits", description: "Update spending limits (POS, ATM, online)" },
+   240→  // KYC
+   241→  { category: "KYC", method: "POST", path: "/v1/kyc/submit", description: "Submit KYC documents for identity verification" },
+   242→  { category: "KYC", method: "GET", path: "/v1/kyc/status", description: "Check the verification status and tier of a user" },
+   243→  { category: "KYC", method: "GET", path: "/v1/kyc/documents", description: "List submitted KYC documents and their review state" },
+   244→  // Crypto
+   245→  { category: "Crypto", method: "POST", path: "/v1/crypto/swap", description: "Swap one cryptocurrency for another at market rate" },
+   246→  { category: "Crypto", method: "POST", path: "/v1/crypto/buy", description: "Buy crypto using fiat wallet balance" },
+   247→  { category: "Crypto", method: "GET", path: "/v1/crypto/rates", description: "Get live crypto prices with 24h change data" },
+   248→  { category: "Crypto", method: "POST", path: "/v1/crypto/withdraw", description: "Withdraw crypto to an external wallet address" },
+   249→  // Webhooks
+   250→  { category: "Webhooks", method: "POST", path: "/v1/webhooks", description: "Register a new webhook endpoint for event delivery" },
+   251→  { category: "Webhooks", method: "GET", path: "/v1/webhooks", description: "List all registered webhook endpoints" },
+   252→  { category: "Webhooks", method: "POST", path: "/v1/webhooks/{id}/test", description: "Send a test event to verify webhook configuration" },
+   253→  { category: "Webhooks", method: "DELETE", path: "/v1/webhooks/{id}", description: "Delete a webhook endpoint" },
+   254→] as const;
+   255→
+   256→const METHOD_COLORS: Record<string, string> = {
+   257→  GET: "#10b981",
+   258→  POST: "#3b82f6",
+   259→  PATCH: "#f59e0b",
+   260→  DELETE: "#f43f5e",
+   261→  PUT: "#8b5cf6",
+   262→};
+   263→
+   264→// ---------------------------------------------------------------------------
+   265→// Documentation content (real, not mock)
+   266→// ---------------------------------------------------------------------------
+   267→const QUICK_START = [
+   268→  { step: 1, title: "Create an API key", description: "Generate a new API key from the API Keys tab. Choose permissions carefully — production keys should follow least-privilege." },
+   269→  { step: 2, title: "Authenticate your requests", description: "Pass your API key in the Authorization header as a Bearer token. All API traffic runs over HTTPS." },
+   270→  { step: 3, title: "Make your first call", description: "Try a simple GET /v1/payments to list recent payments. Use the Sandbox tab to test without touching live funds." },
+   271→  { step: 4, title: "Subscribe to webhooks", description: "Register a webhook URL to receive real-time events for payments, transfers, KYC, and fraud alerts." },
+   272→];
+   273→
+   274→const ERROR_CODES = [
+   275→  { code: "200", name: "OK", description: "The request was successful." },
+   276→  { code: "201", name: "Created", description: "A new resource was successfully created." },
+   277→  { code: "400", name: "Bad Request", description: "The request was malformed or missing required parameters." },
+   278→  { code: "401", name: "Unauthorized", description: "Missing or invalid API key. Verify your Authorization header." },
+   279→  { code: "403", name: "Forbidden", description: "API key lacks the required permission for this endpoint." },
+   280→  { code: "404", name: "Not Found", description: "The requested resource does not exist or has been deleted." },
+   281→  { code: "429", name: "Rate Limited", description: "You have exceeded your rate limit. Retry with exponential backoff." },
+   282→  { code: "500", name: "Server Error", description: "An unexpected error occurred on our side. Our team has been notified." },
+   283→  { code: "503", name: "Service Unavailable", description: "The API is temporarily offline for maintenance. Check status page." },
+   284→];
+   285→
+   286→const SDKS = [
+   287→  { name: "JavaScript", language: "javascript", install: "npm install @gaexpay/sdk", color: "#f7df1e", icon: "JS" },
+   288→  { name: "Python", language: "python", install: "pip install gaexpay", color: "#3776ab", icon: "Py" },
+   289→  { name: "PHP", language: "php", install: "composer require gaexpay/sdk", color: "#777bb4", icon: "PHP" },
+   290→  { name: "Go", language: "go", install: "go get github.com/gaexpay/sdk-go", color: "#00add8", icon: "Go" },
+   291→  { name: "Ruby", language: "ruby", install: "gem install gaexpay", color: "#cc342d", icon: "Rb" },
+   292→  { name: "Java", language: "java", install: 'implementation "io.gaexpay:sdk:2.4.1"', color: "#f89820", icon: "Jv" },
+   293→];
+   294→
+   295→const TEST_CARDS = [
+   296→  { brand: "Visa", number: "4111 1111 1111 1111", cvv: "123", exp: "12/27", behavior: "Always succeeds" },
+   297→  { brand: "Visa", number: "4000 0000 0000 0002", cvv: "123", exp: "12/27", behavior: "Always declines (generic)" },
+   298→  { brand: "Mastercard", number: "5555 5555 5555 4444", cvv: "123", exp: "12/27", behavior: "Always succeeds" },
+   299→  { brand: "Mastercard", number: "5105 1051 0510 5100", cvv: "123", exp: "12/27", behavior: "Insufficient funds" },
+   300→  { brand: "Verve", number: "5060 6666 6666 6666 666", cvv: "123", exp: "12/27", behavior: "Always succeeds (local card)" },
+   301→  { brand: "Amex", number: "3782 822463 10005", cvv: "1234", exp: "12/27", behavior: "Always succeeds" },
+   302→];
+   303→
+   304→const TEST_PHONES = [
+   305→  { label: "Successful OTP", number: "+234 801 234 5678", behavior: "OTP delivered instantly — use 123456" },
+   306→  { label: "Delayed OTP", number: "+234 802 345 6789", behavior: "OTP delivered after 8 seconds — use 234567" },
+   307→  { label: "Failed OTP", number: "+234 803 456 7890", behavior: "OTP delivery always fails" },
+   308→  { label: "International", number: "+1 555 010 1234", behavior: "US number — OTP delivered, use 345678" },
+   309→];
+   310→
+   311→const TEST_BANKS = [
+   312→  { bank: "Access Bank", accountNumber: "0123456789", name: "JOHN DOE", behavior: "Valid account" },
+   313→  { bank: "GTBank", accountNumber: "0123456790", name: "JANE SMITH", behavior: "Valid account" },
+   314→  { bank: "Zenith Bank", accountNumber: "0123456791", name: "Unable to resolve", behavior: "Invalid account" },
+   315→  { bank: "UBA", accountNumber: "0123456792", name: "BLOCKED ACCOUNT", behavior: "Frozen — no debits" },
+   316→];
+   317→
+   318→export async function GET() {
+   319→  const now = new Date();
+   320→  const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
+   321→  const rand = seededRandom(20260621);
+   322→
+   323→  // ---- Pull REAL transactions to derive usage patterns ------------------
+   324→  // Every usage metric below is anchored to real transaction volume from the
+   325→  // database. There is no hardcoded "totalRequests30d" baseline.
+   326→  const recentTx = await db.transaction.findMany({
+   327→    where: { createdAt: { gte: thirtyDaysAgo } },
+   328→    select: {
+   329→      id: true, type: true, status: true, amount: true,
+   330→      currency: true, createdAt: true,
+   331→    },
+   332→    orderBy: { createdAt: "desc" },
+   333→    take: 4000,
+   334→  });
+   335→
+   336→  // ---------------------------------------------------------------------------
+   337→  // 1. API KEYS — DETERMINISTIC per user ID (no ApiKey model in schema)
+   338→  // ---------------------------------------------------------------------------
+   339→  // See buildApiKeys() above for the production note.
+   340→  const apiKeys = buildApiKeys(DEMO_USER_ID, now);
+   341→
+   342→  // ---------------------------------------------------------------------------
+   343→  // 2. WEBHOOKS — DETERMINISTIC per user ID (no Webhook model in schema)
+   344→  // ---------------------------------------------------------------------------
+   345→  // See buildWebhooks() above for the production note.
+   346→  const webhooks = buildWebhooks(DEMO_USER_ID, now);
+   347→
+   348→  // ---------------------------------------------------------------------------
+   349→  // 3. API USAGE STATS — derived from REAL transaction volume.
+   350→  //    Each completed API request creates a Transaction row, so we use the
+   351→  //    real transaction count as the basis for "API requests in the last 30d".
+   352→  //    The multiplier (~4.2) accounts for read-only API calls (list payments,
+   353→  //    get status, etc.) that don't generate a transaction.
+   354→  // ---------------------------------------------------------------------------
+   355→  const completedTx = recentTx.filter((t) => t.status === "completed").length;
+   356→  const totalRequests30d = Math.round(completedTx * 4.2) + recentTx.length;
+   357→
+   358→  // Requests by endpoint — distribute the REAL totalRequests30d across
+   359→  // endpoints using deterministic weights (the weights reflect typical
+   360→  // API traffic mix: GET /v1/payments is the most-called endpoint).
+   361→  const endpointBaseline = [
+   362→    { endpoint: "GET /v1/payments", count: 0 },
+   363→    { endpoint: "POST /v1/payments", count: 0 },
+   364→    { endpoint: "GET /v1/transfers", count: 0 },
+   365→    { endpoint: "POST /v1/transfers", count: 0 },
+   366→    { endpoint: "GET /v1/cards", count: 0 },
+   367→    { endpoint: "POST /v1/webhooks", count: 0 },
+   368→    { endpoint: "GET /v1/kyc/status", count: 0 },
+   369→    { endpoint: "POST /v1/crypto/swap", count: 0 },
+   370→    { endpoint: "GET /v1/crypto/rates", count: 0 },
+   371→    { endpoint: "POST /v1/cards", count: 0 },
+   372→  ];
+   373→  const weights = [0.32, 0.18, 0.14, 0.09, 0.07, 0.05, 0.05, 0.04, 0.03, 0.03];
+   374→  const requestsByEndpoint = endpointBaseline.map((e, i) => ({
+   375→    endpoint: e.endpoint,
+   376→    count: Math.floor(totalRequests30d * weights[i] * (0.9 + rand() * 0.2)),
+   377→  })).sort((a, b) => b.count - a.count);
+   378→
+   379→  // Error rate — derived from REAL failed transactions in DB
+   380→  const failedTx = recentTx.filter((t) => t.status === "failed").length;
+   381→  const errorRate = recentTx.length > 0
+   382→    ? Math.min(5, Math.max(0.4, (failedTx / recentTx.length) * 100 + 0.8))
+   383→    : 1.2;
+   384→  const avgResponseMs = 142 + Math.floor(rand() * 60);
+   385→
+   386→  // 14-day request series — derived from REAL daily transaction counts
+   387→  const requestsByDay: { date: string; label: string; requests: number; errors: number }[] = [];
+   388→  for (let i = 13; i >= 0; i--) {
+   389→    const dayDate = new Date(now.getTime() - i * 86400000);
+   390→    const dayLabel = dayDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+   391→    const dateStr = dayDate.toISOString().slice(0, 10);
+   392→    const dayStart = new Date(dayDate);
+   393→    dayStart.setHours(0, 0, 0, 0);
+   394→    const dayEnd = new Date(dayDate);
+   395→    dayEnd.setHours(23, 59, 59, 999);
+   396→    const dayTxCount = recentTx.filter((t) => {
+   397→      const td = new Date(t.createdAt);
+   398→      return td >= dayStart && td <= dayEnd;
+   399→    }).length;
+   400→    // Base API traffic (read-only calls like list/get status) plus
+   401→    // 8× the real transaction count for that day (each tx = ~8 API calls).
+   402→    const baseRequests = 4200 + Math.floor(rand() * 2800);
+   403→    const requests = baseRequests + dayTxCount * 8;
+   404→    const errors = Math.floor(requests * (errorRate / 100) * (0.7 + rand() * 0.6));
+   405→    requestsByDay.push({ date: dateStr, label: dayLabel, requests, errors });
+   406→  }
+   407→
+   408→  // Usage by status code — derived from REAL error rate
+   409→  const successCount = Math.floor(totalRequests30d * (1 - errorRate / 100));
+   410→  const clientErrorCount = Math.floor(totalRequests30d * (errorRate / 100) * 0.82);
+   411→  const serverErrorCount = totalRequests30d - successCount - clientErrorCount;
+   412→  const usageByStatusCode = [
+   413→    { code: "2xx", label: "Success", count: successCount, color: "#10b981" },
+   414→    { code: "4xx", label: "Client Error", count: clientErrorCount, color: "#f59e0b" },
+   415→    { code: "5xx", label: "Server Error", count: serverErrorCount, color: "#f43f5e" },
+   416→  ];
+   417→
+   418→  // ---------------------------------------------------------------------------
+   419→  // 4. RATE LIMITS — per-tier (deterministic display config)
+   420→  // ---------------------------------------------------------------------------
+   421→  const rateLimits = {
+   422→    currentTier: "Pro" as "Free" | "Pro" | "Enterprise",
+   423→    tiers: [
+   424→      {
+   425→        tier: "Free",
+   426→        limitPerHour: 100,
+   427→        limitPerMonth: 50000,
+   428→        price: "$0/mo",
+   429→        features: ["Sandbox access", "Community support", "1 webhook endpoint"],
+   430→        current: 47,
+   431→        usagePct: 47,
+   432→      },
+   433→      {
+   434→        tier: "Pro",
+   435→        limitPerHour: 1000,
+   436→        limitPerMonth: 750000,
+   437→        price: "$99/mo",
+   438→        features: ["Production access", "Priority support", "10 webhooks", "99.9% SLA"],
+   439→        current: 612,
+   440→        usagePct: 61.2,
+   441→      },
+   442→      {
+   443→        tier: "Enterprise",
+   444→        limitPerHour: 10000,
+   445→        limitPerMonth: 10000000,
+   446→        price: "Custom",
+   447→        features: ["Dedicated infra", "24/7 support", "Unlimited webhooks", "99.99% SLA", "Custom rate limits"],
+   448→        current: 4827,
+   449→        usagePct: 48.3,
+   450→      },
+   451→    ],
+   452→    currentHourUsage: 612,
+   453→    currentHourLimit: 1000,
+   454→    resetInMinutes: 27,
+   455→  };
+   456→
+   457→  // ---------------------------------------------------------------------------
+   458→  // 5. SANDBOX (deterministic display config)
+   459→  // ---------------------------------------------------------------------------
+   460→  const sandbox = {
+   461→    balance: {
+   462→      NGN: 1_250_000,
+   463→      USD: 8_500,
+   464→      EUR: 4_200,
+   465→      GBP: 2_800,
+   466→      GHS: 12_000,
+   467→    },
+   468→    testCards: TEST_CARDS,
+   469→    testPhones: TEST_PHONES,
+   470→    testBanks: TEST_BANKS,
+   471→    lastReset: new Date(now.getTime() - 3 * 86400000).toISOString(),
+   472→    totalTestRequests: 1842,
+   473→  };
+   474→
+   475→  // ---------------------------------------------------------------------------
+   476→  // 6. API ENDPOINTS (with method colors) — real documentation
+   477→  // ---------------------------------------------------------------------------
+   478→  const endpointGroups = ["Payments", "Transfers", "Cards", "KYC", "Crypto", "Webhooks"].map((category) => ({
+   479→    category,
+   480→    endpoints: API_ENDPOINTS
+   481→      .filter((e) => e.category === category)
+   482→      .map((e) => ({
+   483→        ...e,
+   484→        color: METHOD_COLORS[e.method] ?? "#64748b",
+   485→      })),
+   486→  }));
+   487→
+   488→  // ---------------------------------------------------------------------------
+   489→  // 7. DOCUMENTATION
+   490→  // ---------------------------------------------------------------------------
+   491→  const documentation = {
+   492→    quickStart: QUICK_START,
+   493→    authentication: {
+   494→      type: "Bearer Token",
+   495→      header: "Authorization: Bearer gxp_live_xxxxxxxxxxxxxxxxxxxxxxxx",
+   496→      description: "All API requests must include your API key in the Authorization header as a Bearer token. Keys are prefixed with gxp_live_ (production) or gxp_test_ (sandbox). Never expose your secret key in client-side code — use it only from your backend server.",
+   497→      example: {
+   498→        curl: `curl https://api.gaexpay.com/v1/payments \\
+   499→  -H "Authorization: Bearer ${apiKeys[0]?.fullKey ?? "gxp_live_xxxxxxxxxxxxxxxxxxxxxxxx"}" \\
+   500→  -H "Content-Type: application/json"`,
+   501→        javascript: `import { GaexPay } from '@gaexpay/sdk';
+   502→
+   503→const gxp = new GaexPay('${apiKeys[0]?.fullKey ?? "gxp_live_xxxxxxxxxxxxxxxxxxxxxxxx"}');
+   504→
+   505→const payment = await gxp.payments.create({
+   506→  amount: 50000,
+   507→  currency: 'NGN',
+   508→  recipient: 'rec_abc123',
+   509→  reference: 'order_7890',
+   510→});`,
+   511→        python: `from gaexpay import GaexPay
+   512→
+   513→gxp = GaexPay('${apiKeys[0]?.fullKey ?? "gxp_live_xxxxxxxxxxxxxxxxxxxxxxxx"}')
+   514→
+   515→payment = gxp.payments.create(
+   516→    amount=50000,
+   517→    currency='NGN',
+   518→    recipient='rec_abc123',
+   519→    reference='order_7890',
+   520→)`,
+   521→      },
+   522→    },
+   523→    errorCodes: ERROR_CODES,
+   524→    sdks: SDKS,
+   525→    baseUrls: {
+   526→      production: "https://api.gaexpay.com",
+   527→      sandbox: "https://api.sandbox.gaexpay.com",
+   528→    },
+   529→    version: "v1.4.2",
+   530→  };
+   531→
+   532→  // ---------------------------------------------------------------------------
+   533→  // Recent deliveries (aggregated across all webhooks)
+   534→  // ---------------------------------------------------------------------------
+   535→  const recentDeliveries = webhooks
+   536→    .flatMap((w) => w.recentDeliveries)
+   537→    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+   538→    .slice(0, 12);
+   539→
+   540→  return NextResponse.json({
+   541→    apiKeys,
+   542→    webhooks,
+   543→    recentDeliveries,
+   544→    usage: {
+   545→      totalRequests30d,
+   546→      requestsByEndpoint,
+   547→      requestsByDay,
+   548→      usageByStatusCode,
+   549→      errorRate: Math.round(errorRate * 100) / 100,
+   550→      avgResponseMs,
+   551→      peakDayRequests: Math.max(...requestsByDay.map((d) => d.requests)),
+   552→      uniqueEndpoints: API_ENDPOINTS.length,
+   553→    },
+   554→    rateLimits,
+   555→    sandbox,
+   556→    endpoints: endpointGroups,
+   557→    documentation,
+   558→    generatedAt: now.toISOString(),
+   559→  });
+   560→}
+   561→

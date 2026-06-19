@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { DEMO_USER_ID } from "@/lib/gaexpay";
+import { getAuthUserId } from "@/lib/api-auth";
+import { apiError, apiCatch } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
@@ -315,10 +316,14 @@ const TEST_BANKS = [
   { bank: "UBA", accountNumber: "0123456792", name: "BLOCKED ACCOUNT", behavior: "Frozen — no debits" },
 ];
 
-export async function GET() {
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
-  const rand = seededRandom(20260621);
+export async function GET(req: Request) {
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) return apiError("Unauthorized", 401);
+
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
+    const rand = seededRandom(20260621);
 
   // ---- Pull REAL transactions to derive usage patterns ------------------
   // Every usage metric below is anchored to real transaction volume from the
@@ -337,13 +342,13 @@ export async function GET() {
   // 1. API KEYS — DETERMINISTIC per user ID (no ApiKey model in schema)
   // ---------------------------------------------------------------------------
   // See buildApiKeys() above for the production note.
-  const apiKeys = buildApiKeys(DEMO_USER_ID, now);
+  const apiKeys = buildApiKeys(userId, now);
 
   // ---------------------------------------------------------------------------
   // 2. WEBHOOKS — DETERMINISTIC per user ID (no Webhook model in schema)
   // ---------------------------------------------------------------------------
   // See buildWebhooks() above for the production note.
-  const webhooks = buildWebhooks(DEMO_USER_ID, now);
+  const webhooks = buildWebhooks(userId, now);
 
   // ---------------------------------------------------------------------------
   // 3. API USAGE STATS — derived from REAL transaction volume.
@@ -557,4 +562,7 @@ payment = gxp.payments.create(
     documentation,
     generatedAt: now.toISOString(),
   });
+  } catch (e) {
+    return apiCatch(e);
+  }
 }

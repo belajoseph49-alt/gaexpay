@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCryptoRates, FIAT_USD_RATE } from "@/lib/coingecko";
 import { BANKS } from "@/lib/gaexpay";
+import { getAuthUserId } from "@/lib/api-auth";
+import { apiError, apiCatch } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
@@ -138,8 +140,13 @@ function hotWalletAddress(code: string): string {
   return `0x${h}...hot`;
 }
 
-export async function GET() {
-  const now = new Date();
+export async function GET(req: Request) {
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) return apiError("Unauthorized", 401);
+    void userId; // treasury is admin/staff-facing; userId used for audit attribution later
+
+    const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
   const rand = seededRandom(20260621);
 
@@ -658,4 +665,7 @@ export async function GET() {
     allocation: allocationBreakdown,
     generatedAt: now.toISOString(),
   });
+  } catch (e) {
+    return apiCatch(e);
+  }
 }

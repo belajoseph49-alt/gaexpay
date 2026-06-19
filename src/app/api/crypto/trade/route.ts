@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { DEMO_USER_ID, CRYPTOCURRENCIES } from "@/lib/gaexpay";
+import { CRYPTOCURRENCIES } from "@/lib/gaexpay";
 import { getCryptoRates, FIAT_USD_RATE } from "@/lib/coingecko";
+import { getAuthUserId, getClientIdentifier } from "@/lib/api-auth";
+import { tradeSchema, formatZodError } from "@/lib/validations";
+import { rateLimitSensitive } from "@/lib/rate-limit";
+import { apiError, apiCatch } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
@@ -27,14 +31,6 @@ class HttpError extends Error {
   }
 }
 
-interface TradeRequestBody {
-  action: "buy" | "sell";
-  crypto: string;
-  fiatCurrency: string;
-  amount: number;
-  amountType: "fiat" | "crypto";
-}
-
 /**
  * POST /api/crypto/trade
  *
@@ -49,45 +45,62 @@ interface TradeRequestBody {
  * for atomicity. Fiat/crypto wallets are created on the fly if missing (so a
  * BUY into a brand-new crypto works, and a SELL into an unused fiat works).
  *
- * Body:
- *   {
- *     action: "buy" | "sell",
- *     crypto: "BTC",
- *     fiatCurrency: "NGN",
- *     amount: number,
- *     amountType: "fiat" | "crypto"
- *   }
+ * Security hardening:
+ *   - `getAuthUserId` — 401 in production without a valid token
+ *   - `tradeSchema` (zod) — rejects malformed action/crypto/amount
+ *   - `rateLimitSensitive` — 10 trades / minute / identifier
+ *   - All error paths through `apiCatch` — no internals leaked to client
  */
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as TradeRequestBody;
-    const { action, crypto, fiatCurrency, amount, amountType } = body;
-
-    // ---------- Validation ----------
-    if (!action || (action !== "buy" && action !== "sell")) {
-      return NextResponse.json({ error: "action must be 'buy' or 'sell'" }, { status: 400 });
+    // ---------- Auth ----------
+    const userId = getAuthUserId(req);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const cryptoUpper = String(crypto || "").toUpperCase();
+
+    // ---------- Rate limit ----------
+    const identifier = getClientIdentifier(req, userId);
+    const rl = rateLimitSensitive(identifier);
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: "Too many trade requests. Please slow down." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(Math.max(1, Math.ceil(rl.retryAfterMs / 1000))) },
+        },
+      );
+    }
+
+    // ---------- Parse + validate body ----------
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return apiError("Invalid JSON body", 400);
+    }
+    const parsed = tradeSchema.safeParse(body);
+    if (!parsed.success) {
+      return apiError(formatZodError(parsed.error), 400);
+    }
+    const { action, amount, amountType } = parsed.data;
+    const cryptoUpper = parsed.data.crypto.toUpperCase();
+    const fiatUpper = parsed.data.fiatCurrency.toUpperCase();
+
+    // ---------- Crypto/fiat allow-list ----------
     const cryptoMeta = CRYPTOCURRENCIES.find((c) => c.code === cryptoUpper);
     if (!cryptoMeta) {
-      return NextResponse.json({ error: "Unsupported cryptocurrency" }, { status: 400 });
+      return apiError("Unsupported cryptocurrency", 400);
     }
-    const fiatUpper = String(fiatCurrency || "").toUpperCase();
     if (!FIAT_USD_RATE[fiatUpper]) {
-      return NextResponse.json({ error: "Unsupported fiat currency" }, { status: 400 });
-    }
-    if (!amount || amount <= 0) {
-      return NextResponse.json({ error: "amount must be > 0" }, { status: 400 });
-    }
-    if (amountType !== "fiat" && amountType !== "crypto") {
-      return NextResponse.json({ error: "amountType must be 'fiat' or 'crypto'" }, { status: 400 });
+      return apiError("Unsupported fiat currency", 400);
     }
 
     // ---------- Real prices ----------
     const { rates, priceMap } = await getCryptoRates();
     const cryptoPriceUSD = priceMap[cryptoUpper];
     if (!cryptoPriceUSD || cryptoPriceUSD <= 0) {
-      return NextResponse.json({ error: "Price feed unavailable" }, { status: 500 });
+      return apiError("Price feed unavailable", 503);
     }
 
     // Use CoinGecko's direct fiat price when available (more accurate than
@@ -152,12 +165,12 @@ export async function POST(req: Request) {
     const result = await db.$transaction(async (tx) => {
       // 1. Find (or create) the fiat wallet
       let fiatWallet = await tx.wallet.findFirst({
-        where: { userId: DEMO_USER_ID, currency: fiatUpper, type: "primary" },
+        where: { userId, currency: fiatUpper, type: "primary" },
       });
       if (!fiatWallet) {
         fiatWallet = await tx.wallet.create({
           data: {
-            userId: DEMO_USER_ID,
+            userId,
             currency: fiatUpper,
             label: `${fiatUpper} Wallet`,
             type: "primary",
@@ -171,12 +184,12 @@ export async function POST(req: Request) {
 
       // 2. Find (or create) the crypto wallet
       let cryptoWallet = await tx.wallet.findFirst({
-        where: { userId: DEMO_USER_ID, currency: cryptoUpper, type: "crypto" },
+        where: { userId, currency: cryptoUpper, type: "crypto" },
       });
       if (!cryptoWallet) {
         cryptoWallet = await tx.wallet.create({
           data: {
-            userId: DEMO_USER_ID,
+            userId,
             currency: cryptoUpper,
             balance: 0,
             ledgerBalance: 0,
@@ -234,8 +247,8 @@ export async function POST(req: Request) {
       const txRecord = await tx.transaction.create({
         data: {
           reference: txRef,
-          userId: DEMO_USER_ID,
-          senderId: DEMO_USER_ID,
+          userId,
+          senderId: userId,
           type: "exchange",
           direction,
           status: "completed",
@@ -289,7 +302,7 @@ export async function POST(req: Request) {
     // ---------- Notification ----------
     await db.notification.create({
       data: {
-        userId: DEMO_USER_ID,
+        userId,
         title:
           action === "buy" ? "Crypto purchase completed" : "Crypto sale completed",
         message:
@@ -327,14 +340,11 @@ export async function POST(req: Request) {
       completedAt: result.txRecord.completedAt,
       source: "CoinGecko",
     });
-  } catch (e: any) {
+  } catch (e) {
     if (e instanceof HttpError) {
-      return NextResponse.json({ error: e.message }, { status: e.status });
+      return apiError(e.message, e.status);
     }
-    return NextResponse.json(
-      { error: e?.message || "Trade failed" },
-      { status: 500 },
-    );
+    return apiCatch(e);
   }
 }
 
@@ -344,49 +354,58 @@ export async function POST(req: Request) {
  * executing a trade. Used by the Buy/Sell UI's live preview card.
  */
 export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const crypto = (url.searchParams.get("crypto") || "BTC").toUpperCase();
-  const fiat = (url.searchParams.get("fiat") || "NGN").toUpperCase();
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const cryptoMeta = CRYPTOCURRENCIES.find((c) => c.code === crypto);
-  const fiatPerUsd = FIAT_USD_RATE[fiat];
-  if (!cryptoMeta || !fiatPerUsd) {
-    return NextResponse.json({ error: "Invalid crypto or fiat" }, { status: 400 });
+    const url = new URL(req.url);
+    const crypto = (url.searchParams.get("crypto") || "BTC").toUpperCase();
+    const fiat = (url.searchParams.get("fiat") || "NGN").toUpperCase();
+
+    const cryptoMeta = CRYPTOCURRENCIES.find((c) => c.code === crypto);
+    const fiatPerUsd = FIAT_USD_RATE[fiat];
+    if (!cryptoMeta || !fiatPerUsd) {
+      return apiError("Invalid crypto or fiat", 400);
+    }
+
+    const { rates, priceMap } = await getCryptoRates();
+    const cryptoPriceUSD = priceMap[crypto] ?? 0;
+    if (cryptoPriceUSD <= 0) {
+      return apiError("Price feed unavailable", 503);
+    }
+    const cryptoRate = rates.find((r) => r.code === crypto);
+    const directFiatPrice = cryptoRate?.prices?.[fiat];
+    const marketRate =
+      typeof directFiatPrice === "number" && directFiatPrice > 0
+        ? directFiatPrice
+        : cryptoPriceUSD * fiatPerUsd;
+
+    // Pull live wallet balances so the UI's "available" reflects prior trades.
+    const [fiatWallet, cryptoWallet] = await Promise.all([
+      db.wallet.findFirst({
+        where: { userId, currency: fiat, type: "primary" },
+      }),
+      db.wallet.findFirst({
+        where: { userId, currency: crypto, type: "crypto" },
+      }),
+    ]);
+
+    return NextResponse.json({
+      crypto,
+      cryptoName: cryptoMeta.name,
+      fiat,
+      marketRate,
+      cryptoPriceUSD,
+      fiatPerUsd,
+      buyFeePct: BUY_FEE_PCT * 100,
+      sellFeePct: SELL_FEE_PCT * 100,
+      availableFiatBalance: fiatWallet?.balance ?? 0,
+      availableCryptoBalance: cryptoWallet?.balance ?? 0,
+      source: "CoinGecko",
+    });
+  } catch (e) {
+    return apiCatch(e);
   }
-
-  const { rates, priceMap } = await getCryptoRates();
-  const cryptoPriceUSD = priceMap[crypto] ?? 0;
-  if (cryptoPriceUSD <= 0) {
-    return NextResponse.json({ error: "Price feed unavailable" }, { status: 500 });
-  }
-  const cryptoRate = rates.find((r) => r.code === crypto);
-  const directFiatPrice = cryptoRate?.prices?.[fiat];
-  const marketRate =
-    typeof directFiatPrice === "number" && directFiatPrice > 0
-      ? directFiatPrice
-      : cryptoPriceUSD * fiatPerUsd;
-
-  // Pull live wallet balances so the UI's "available" reflects prior trades.
-  const [fiatWallet, cryptoWallet] = await Promise.all([
-    db.wallet.findFirst({
-      where: { userId: DEMO_USER_ID, currency: fiat, type: "primary" },
-    }),
-    db.wallet.findFirst({
-      where: { userId: DEMO_USER_ID, currency: crypto, type: "crypto" },
-    }),
-  ]);
-
-  return NextResponse.json({
-    crypto,
-    cryptoName: cryptoMeta.name,
-    fiat,
-    marketRate,
-    cryptoPriceUSD,
-    fiatPerUsd,
-    buyFeePct: BUY_FEE_PCT * 100,
-    sellFeePct: SELL_FEE_PCT * 100,
-    availableFiatBalance: fiatWallet?.balance ?? 0,
-    availableCryptoBalance: cryptoWallet?.balance ?? 0,
-    source: "CoinGecko",
-  });
 }

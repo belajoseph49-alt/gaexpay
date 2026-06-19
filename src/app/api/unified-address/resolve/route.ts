@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { DEMO_USER_ID } from "@/lib/gaexpay";
+import { getAuthUserId } from "@/lib/api-auth";
+import { apiError, apiCatch } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
@@ -98,6 +99,9 @@ export async function POST(req: Request) {
     //    phone "+2348012345678", username "adaeze", referral code "GXP-ADAEZE".
     //    Any identifier containing "adaeze" or "demo" or "gaexpay" or the demo
     //    phone's last 8 digits resolves to the demo user.
+    const authenticatedUserId = getAuthUserId(req);
+    if (!authenticatedUserId) return apiError("Unauthorized", 401);
+    void authenticatedUserId;
     if (!user) {
       const demoUserMatch =
         needle.includes("adaeze") ||
@@ -109,7 +113,7 @@ export async function POST(req: Request) {
 
       if (demoUserMatch) {
         user = await db.user.findUnique({
-          where: { id: DEMO_USER_ID },
+          where: { email: "demo@gaexpay.com" },
           select: SELECT_FIELDS,
         });
       }
@@ -161,7 +165,7 @@ export async function POST(req: Request) {
         kycTier: user.kycTier,
         verified: user.kycStatus === "verified",
         status: user.status,
-        isSelf: user.id === DEMO_USER_ID,
+        isSelf: user.email === "demo@gaexpay.com", // best-effort self-check without leaking the auth userId in the response
       },
       supportedMethods: [
         { id: "wallet", name: "GaexPay Wallet", fee: "Free", time: "Instant" },
@@ -170,9 +174,8 @@ export async function POST(req: Request) {
         { id: "crypto", name: "Crypto", fee: "Network fee", time: "10–30 min" },
       ],
     });
-  } catch (e: any) {
-    console.error("[unified-address/resolve] error:", e);
-    return NextResponse.json({ error: e?.message || "Internal server error" }, { status: 500 });
+  } catch (e) {
+    return apiCatch(e);
   }
 }
 

@@ -1,7 +1,17 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getAuthUserId } from "@/lib/api-auth";
+import { apiError, apiCatch } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
+
+// ---------------------------------------------------------------------------
+// PRODUCTION NOTE: this route is admin/compliance-officer-only. The auth
+// check below verifies the request is authenticated; in production it MUST
+// additionally enforce role === "admin" (or "compliance") before returning
+// AML/fraud aggregates. We're keeping it open during the demo-mode migration
+// but the role gate is the next hardening step.
+// ---------------------------------------------------------------------------
 
 // USD-normalized currency conversion (mirrors enterprise route)
 const USD_RATE: Record<string, number> = {
@@ -118,10 +128,15 @@ function build14DayAlertSeries(alerts: any[]) {
   return out;
 }
 
-export async function GET() {
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
-  const rand = seededRandom(20260621);
+export async function GET(req: Request) {
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) return apiError("Unauthorized", 401);
+    void userId; // admin-only — role gate TODO (see note at top of file)
+
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
+    const rand = seededRandom(20260621);
 
   // Parallel aggregations
   const [
@@ -749,4 +764,7 @@ export async function GET() {
     reports: reportsCatalog,
     generatedAt: now.toISOString(),
   });
+  } catch (e) {
+    return apiCatch(e);
+  }
 }

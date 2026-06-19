@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { db } from "@/lib/db";
-import { DEMO_USER_ID } from "@/lib/gaexpay";
+import { getAuthUserId } from "@/lib/api-auth";
+import { apiError, apiCatch } from "@/lib/api-error";
 import { getCryptoRates, FIAT_USD_RATE } from "@/lib/coingecko";
 
 export const dynamic = "force-dynamic";
@@ -67,79 +68,80 @@ function depositAddress(userId: string, currency: string): string {
   }
 }
 
-/** Fetch the demo user's crypto wallets from the DB; seed on first access. */
-async function getCryptoWallets() {
-  let wallets = await db.wallet.findMany({
-    where: { userId: DEMO_USER_ID, type: "crypto" },
-    orderBy: { currency: "asc" },
-  });
-
-  if (wallets.length === 0) {
-    // Seed on first access — keeps the route self-bootstrapping.
-    await db.wallet.createMany({
-      data: SEED_CRYPTOS.map((w) => ({
-        userId: DEMO_USER_ID,
-        currency: w.code,
-        balance: w.balance,
-        ledgerBalance: w.balance,
-        type: "crypto",
-        label: "Crypto Wallet",
-        isDefault: false,
-        status: "active",
-      })),
-    });
-    wallets = await db.wallet.findMany({
-      where: { userId: DEMO_USER_ID, type: "crypto" },
-      orderBy: { currency: "asc" },
-    });
-  }
-
-  return wallets;
-}
-
 /**
  * GET /api/crypto/wallets
  *
- * Returns the demo user's crypto wallet balances with REAL CoinGecko prices,
- * deterministic deposit addresses, USD + NGN portfolio values, and 24h change.
+ * Returns the authenticated user's crypto wallet balances with REAL CoinGecko
+ * prices, deterministic deposit addresses, USD + NGN portfolio values, and
+ * 24h change. Seeded on first access if the user has no crypto wallets.
  */
-export async function GET() {
-  const wallets = await getCryptoWallets();
+export async function GET(req: Request) {
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) return apiError("Unauthorized", 401);
 
-  const { rates, priceMap } = await getCryptoRates();
-  const NGN_PER_USD = FIAT_USD_RATE.NGN;
+    let wallets = await db.wallet.findMany({
+      where: { userId, type: "crypto" },
+      orderBy: { currency: "asc" },
+    });
 
-  const walletsWithDetails = wallets.map((w) => {
-    const priceUSD = priceMap[w.currency] ?? 0;
-    const rateMeta = rates.find((r) => r.code === w.currency);
-    const valueUSD = w.balance * priceUSD;
-    const valueNGN = valueUSD * NGN_PER_USD;
-    return {
-      id: w.id,
-      code: w.currency,
-      name: rateMeta?.name ?? w.currency,
-      symbol: rateMeta?.symbol ?? "",
-      icon: rateMeta?.icon ?? "",
-      color: rateMeta?.color ?? "",
-      network: rateMeta?.network ?? "",
-      type: rateMeta?.type ?? "",
-      balance: w.balance,
-      ledgerBalance: w.ledgerBalance,
-      address: depositAddress(DEMO_USER_ID, w.currency),
-      priceUSD,
-      valueUSD,
-      valueNGN,
-      change24h: rateMeta?.change24h ?? 0,
-    };
-  });
+    if (wallets.length === 0) {
+      // Seed on first access — keeps the route self-bootstrapping.
+      await db.wallet.createMany({
+        data: SEED_CRYPTOS.map((w) => ({
+          userId,
+          currency: w.code,
+          balance: w.balance,
+          ledgerBalance: w.balance,
+          type: "crypto",
+          label: "Crypto Wallet",
+          isDefault: false,
+          status: "active",
+        })),
+      });
+      wallets = await db.wallet.findMany({
+        where: { userId, type: "crypto" },
+        orderBy: { currency: "asc" },
+      });
+    }
 
-  const totalValueUSD = walletsWithDetails.reduce((s, w) => s + w.valueUSD, 0);
-  const totalValueNGN = walletsWithDetails.reduce((s, w) => s + w.valueNGN, 0);
+    const { rates, priceMap } = await getCryptoRates();
+    const NGN_PER_USD = FIAT_USD_RATE.NGN;
 
-  return NextResponse.json({
-    wallets: walletsWithDetails,
-    totalValueUSD,
-    totalValueNGN,
-    source: "CoinGecko",
-  });
+    const walletsWithDetails = wallets.map((w) => {
+      const priceUSD = priceMap[w.currency] ?? 0;
+      const rateMeta = rates.find((r) => r.code === w.currency);
+      const valueUSD = w.balance * priceUSD;
+      const valueNGN = valueUSD * NGN_PER_USD;
+      return {
+        id: w.id,
+        code: w.currency,
+        name: rateMeta?.name ?? w.currency,
+        symbol: rateMeta?.symbol ?? "",
+        icon: rateMeta?.icon ?? "",
+        color: rateMeta?.color ?? "",
+        network: rateMeta?.network ?? "",
+        type: rateMeta?.type ?? "",
+        balance: w.balance,
+        ledgerBalance: w.ledgerBalance,
+        address: depositAddress(userId, w.currency),
+        priceUSD,
+        valueUSD,
+        valueNGN,
+        change24h: rateMeta?.change24h ?? 0,
+      };
+    });
+
+    const totalValueUSD = walletsWithDetails.reduce((s, w) => s + w.valueUSD, 0);
+    const totalValueNGN = walletsWithDetails.reduce((s, w) => s + w.valueNGN, 0);
+
+    return NextResponse.json({
+      wallets: walletsWithDetails,
+      totalValueUSD,
+      totalValueNGN,
+      source: "CoinGecko",
+    });
+  } catch (e) {
+    return apiCatch(e);
+  }
 }

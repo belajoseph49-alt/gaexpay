@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { DEMO_USER_ID } from "@/lib/gaexpay";
 import QRCode from "qrcode";
+import { getAuthUserId } from "@/lib/api-auth";
+import { apiError, apiCatch } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
@@ -165,10 +166,13 @@ const SUPPORTED_PAYMENT_METHODS = [
   },
 ];
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const userId = getAuthUserId(req);
+    if (!userId) return apiError("Unauthorized", 401);
+
     const user = await db.user.findUnique({
-      where: { id: DEMO_USER_ID },
+      where: { id: userId },
       select: {
         id: true,
         email: true,
@@ -238,7 +242,7 @@ export async function GET() {
     // Fetch recent incoming payments (credits)
     const recentIncoming = await db.transaction.findMany({
       where: {
-        userId: DEMO_USER_ID,
+        userId,
         direction: "credit",
       },
       orderBy: { createdAt: "desc" },
@@ -324,8 +328,7 @@ export async function GET() {
         supportedCountries: 40,
       },
     });
-  } catch (e: any) {
-    console.error("[unified-address] GET error:", e);
-    return NextResponse.json({ error: e?.message || "Internal server error" }, { status: 500 });
+  } catch (e) {
+    return apiCatch(e);
   }
 }

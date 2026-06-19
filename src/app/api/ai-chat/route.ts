@@ -1,11 +1,30 @@
 import { NextResponse } from "next/server";
 import ZAI from "z-ai-web-dev-sdk";
+import { getAuthUserId } from "@/lib/api-auth";
+import { apiError } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * POST /api/ai-chat — chat with Gaxie AI.
+ *
+ * Authenticated so anonymous attackers can't burn our LLM tokens. The catch
+ * block returns a graceful "I'm having trouble" reply (200) so the UI never
+ * shows a hard error; underlying exceptions are logged server-side via apiCatch.
+ */
 export async function POST(req: Request) {
   try {
-    const { messages } = await req.json();
+    const userId = getAuthUserId(req);
+    if (!userId) return apiError("Unauthorized", 401);
+
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return apiError("Invalid JSON body", 400);
+    }
+    const b = (body ?? {}) as { messages?: { role: string; content: string }[] };
+    const { messages } = b;
 
     const systemPrompt = `You are Gaxie, the friendly AI assistant for GaexPay, a cross-platform African fintech wallet app.
 You help users with:
@@ -26,7 +45,7 @@ Today's date: ${new Date().toDateString()}.`;
     const completion = await zai.chat.completions.create({
       messages: [
         { role: "system", content: systemPrompt },
-        ...(messages || []).map((m: any) => ({ role: m.role, content: m.content })),
+        ...(messages || []).map((m) => ({ role: m.role, content: m.content })),
       ],
     });
 
@@ -36,7 +55,9 @@ Today's date: ${new Date().toDateString()}.`;
 
     return NextResponse.json({ reply });
   } catch (e) {
-    console.error("AI chat error:", e);
+    // Surface a graceful reply (200) so the chat UI never hard-errors, but
+    // log the underlying issue server-side for debugging.
+    console.error("[ai-chat] error:", e);
     return NextResponse.json(
       { reply: "I'm having trouble connecting right now. Please try again in a moment, or contact our human support team." },
       { status: 200 },

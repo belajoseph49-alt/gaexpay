@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { DEMO_USER_ID, CRYPTOCURRENCIES } from "@/lib/gaexpay";
+import { CRYPTOCURRENCIES } from "@/lib/gaexpay";
 import { getCryptoRates, FIAT_USD_RATE } from "@/lib/coingecko";
+import { getAuthUserId, getClientIdentifier } from "@/lib/api-auth";
+import { cashoutSchema, formatZodError } from "@/lib/validations";
+import { rateLimitSensitive } from "@/lib/rate-limit";
+import { apiError, apiCatch } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
@@ -26,12 +30,6 @@ class HttpError extends Error {
   }
 }
 
-interface CashoutRequestBody {
-  crypto: string;
-  fiatCurrency: string;
-  amount: number;
-}
-
 /**
  * POST /api/crypto/cashout
  *
@@ -43,6 +41,12 @@ interface CashoutRequestBody {
  * wrapped in `db.$transaction` so a failure mid-way rolls back the entire
  * cashout (no orphan debits/credits).
  *
+ * Security hardening:
+ *   - `getAuthUserId` — 401 in production without a valid token
+ *   - `cashoutSchema` (zod) — rejects bad crypto/fiat/amount
+ *   - `rateLimitSensitive` — 10 cashouts / minute / identifier
+ *   - All error paths through `apiCatch` — no internals leaked to client
+ *
  * Body:
  *   {
  *     crypto: "BTC",
@@ -52,42 +56,54 @@ interface CashoutRequestBody {
  */
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as CashoutRequestBody;
-    const { crypto, fiatCurrency, amount } = body;
+    // ---------- Auth ----------
+    const userId = getAuthUserId(req);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    // ---------- Validation ----------
-    const cryptoUpper = String(crypto || "").toUpperCase();
-    const fiatUpper = String(fiatCurrency || "").toUpperCase();
-    const numericAmount = Number(amount);
+    // ---------- Rate limit ----------
+    const identifier = getClientIdentifier(req, userId);
+    const rl = rateLimitSensitive(identifier);
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: "Too many cashout requests. Please slow down." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(Math.max(1, Math.ceil(rl.retryAfterMs / 1000))) },
+        },
+      );
+    }
 
+    // ---------- Parse + validate body ----------
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return apiError("Invalid JSON body", 400);
+    }
+    const parsed = cashoutSchema.safeParse(body);
+    if (!parsed.success) {
+      return apiError(formatZodError(parsed.error), 400);
+    }
+    const { amount } = parsed.data;
+    const cryptoUpper = parsed.data.crypto.toUpperCase();
+    const fiatUpper = parsed.data.fiatCurrency.toUpperCase();
+
+    // ---------- Crypto/fiat allow-list ----------
     const cryptoMeta = CRYPTOCURRENCIES.find((c) => c.code === cryptoUpper);
     if (!cryptoMeta) {
-      return NextResponse.json(
-        { error: "Unsupported cryptocurrency" },
-        { status: 400 },
-      );
+      return apiError("Unsupported cryptocurrency", 400);
     }
     if (!FIAT_USD_RATE[fiatUpper]) {
-      return NextResponse.json(
-        { error: "Unsupported fiat currency" },
-        { status: 400 },
-      );
-    }
-    if (!isFinite(numericAmount) || numericAmount <= 0) {
-      return NextResponse.json(
-        { error: "amount must be greater than 0" },
-        { status: 400 },
-      );
+      return apiError("Unsupported fiat currency", 400);
     }
 
     // ---------- Real prices ----------
     const { rates, priceMap } = await getCryptoRates();
     const cryptoPriceUSD = priceMap[cryptoUpper];
     if (!cryptoPriceUSD || cryptoPriceUSD <= 0) {
-      return NextResponse.json(
-        { error: "Price feed unavailable" },
-        { status: 500 },
-      );
+      return apiError("Price feed unavailable", 503);
     }
     const cryptoRate = rates.find((r) => r.code === cryptoUpper);
     const fiatPerUsd = FIAT_USD_RATE[fiatUpper];
@@ -101,12 +117,12 @@ export async function POST(req: Request) {
     // ---------- Compute economics ----------
     // Fee is in crypto: we deduct 1.0% of `amount` as the cashout fee.
     // The user receives the full market value of the *remaining* crypto in fiat.
-    const feeCrypto = numericAmount * CASHOUT_FEE_PCT;
-    const cryptoDebited = numericAmount; // total crypto removed from wallet (incl. fee)
-    const cryptoConverted = numericAmount - feeCrypto; // crypto that actually gets converted
+    const feeCrypto = amount * CASHOUT_FEE_PCT;
+    const cryptoDebited = amount; // total crypto removed from wallet (incl. fee)
+    const cryptoConverted = amount - feeCrypto; // crypto that actually gets converted
     const fiatCredited = cryptoConverted * realRate;
     const feeFiatValue = feeCrypto * realRate; // for display only
-    const netRate = numericAmount > 0 ? fiatCredited / numericAmount : 0;
+    const netRate = amount > 0 ? fiatCredited / amount : 0;
 
     // ---------- Atomic cashout ----------
     const cryptoRef = ref();
@@ -116,35 +132,29 @@ export async function POST(req: Request) {
       // 1. Re-fetch the crypto wallet inside the transaction (serializable
       //    isolation on SQLite) and verify the user actually has the balance.
       const cryptoWallet = await tx.wallet.findFirst({
-        where: { userId: DEMO_USER_ID, currency: cryptoUpper, type: "crypto" },
+        where: { userId, currency: cryptoUpper, type: "crypto" },
       });
       if (!cryptoWallet) {
-        throw new HttpError(
-          400,
-          `You don't have a ${cryptoUpper} wallet to cash out from`,
-        );
+        throw new HttpError(400, `You don't have a ${cryptoUpper} wallet to cash out from`);
       }
-      if (cryptoWallet.balance < numericAmount) {
-        throw new HttpError(
-          400,
-          `Insufficient ${cryptoUpper} balance (available: ${cryptoWallet.balance})`,
-        );
+      if (cryptoWallet.balance < amount) {
+        throw new HttpError(400, `Insufficient ${cryptoUpper} balance (available: ${cryptoWallet.balance})`);
       }
 
       // 2. Decrement the crypto wallet
       const updatedCryptoWallet = await tx.wallet.update({
         where: { id: cryptoWallet.id },
-        data: { balance: { decrement: numericAmount } },
+        data: { balance: { decrement: amount } },
       });
 
       // 3. Find or create the destination fiat wallet
       let fiatWallet = await tx.wallet.findFirst({
-        where: { userId: DEMO_USER_ID, currency: fiatUpper, type: "primary" },
+        where: { userId, currency: fiatUpper, type: "primary" },
       });
       if (!fiatWallet) {
         fiatWallet = await tx.wallet.create({
           data: {
-            userId: DEMO_USER_ID,
+            userId,
             currency: fiatUpper,
             label: `${fiatUpper} Wallet`,
             type: "primary",
@@ -166,15 +176,15 @@ export async function POST(req: Request) {
       const cryptoTx = await tx.transaction.create({
         data: {
           reference: cryptoRef,
-          userId: DEMO_USER_ID,
-          senderId: DEMO_USER_ID,
+          userId,
+          senderId: userId,
           type: "exchange",
           direction: "debit",
           status: "completed",
-          amount: numericAmount,
+          amount,
           fee: feeCrypto,
           currency: cryptoUpper,
-          description: `Cashed out ${numericAmount} ${cryptoUpper} to ${fiatUpper}`,
+          description: `Cashed out ${amount} ${cryptoUpper} to ${fiatUpper}`,
           category: "investment",
           counterpartyName: `GaexPay Cashout → ${fiatUpper}`,
           method: "wallet",
@@ -186,7 +196,7 @@ export async function POST(req: Request) {
             crypto: cryptoUpper,
             cryptoName: cryptoMeta.name,
             fiatCurrency: fiatUpper,
-            amount: numericAmount,
+            amount,
             marketRate: realRate,
             cryptoPriceUSD,
             fiatPerUsd,
@@ -205,8 +215,8 @@ export async function POST(req: Request) {
       const fiatTx = await tx.transaction.create({
         data: {
           reference: fiatRef,
-          userId: DEMO_USER_ID,
-          senderId: DEMO_USER_ID,
+          userId,
+          senderId: userId,
           type: "exchange",
           direction: "credit",
           status: "completed",
@@ -225,7 +235,7 @@ export async function POST(req: Request) {
             crypto: cryptoUpper,
             cryptoName: cryptoMeta.name,
             fiatCurrency: fiatUpper,
-            amount: numericAmount,
+            amount,
             marketRate: realRate,
             cryptoPriceUSD,
             fiatPerUsd,
@@ -252,9 +262,9 @@ export async function POST(req: Request) {
     // ---------- Notification (outside the financial transaction) ----------
     await db.notification.create({
       data: {
-        userId: DEMO_USER_ID,
+        userId,
         title: "Crypto cashout completed",
-        message: `Cashed out ${numericAmount} ${cryptoUpper} → ${fiatCredited.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${fiatUpper} (1.0% fee in crypto).`,
+        message: `Cashed out ${amount} ${cryptoUpper} → ${fiatCredited.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${fiatUpper} (1.0% fee in crypto).`,
         type: "transaction",
         channel: "push",
         actionUrl: "/transactions",
@@ -262,7 +272,7 @@ export async function POST(req: Request) {
           kind: "crypto-cashout",
           crypto: cryptoUpper,
           fiatCurrency: fiatUpper,
-          cryptoDebited: numericAmount,
+          cryptoDebited: amount,
           fiatCredited,
           reference: result.cryptoTx.reference,
         }),
@@ -278,7 +288,7 @@ export async function POST(req: Request) {
       crypto: cryptoUpper,
       cryptoName: cryptoMeta.name,
       fiatCurrency: fiatUpper,
-      amount: numericAmount,
+      amount,
       cryptoDebited,
       cryptoConverted,
       fiatCredited,
@@ -294,14 +304,11 @@ export async function POST(req: Request) {
       completedAt: result.cryptoTx.completedAt,
       source: "CoinGecko",
     });
-  } catch (e: any) {
+  } catch (e) {
     if (e instanceof HttpError) {
-      return NextResponse.json({ error: e.message }, { status: e.status });
+      return apiError(e.message, e.status);
     }
-    return NextResponse.json(
-      { error: e?.message || "Cashout failed" },
-      { status: 500 },
-    );
+    return apiCatch(e);
   }
 }
 
@@ -311,52 +318,55 @@ export async function POST(req: Request) {
  * without executing a cashout. Used by the UI's live preview.
  */
 export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const crypto = (url.searchParams.get("crypto") || "BTC").toUpperCase();
-  const fiat = (url.searchParams.get("fiat") || "NGN").toUpperCase();
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const cryptoMeta = CRYPTOCURRENCIES.find((c) => c.code === crypto);
-  const fiatPerUsd = FIAT_USD_RATE[fiat];
-  if (!cryptoMeta || !fiatPerUsd) {
-    return NextResponse.json(
-      { error: "Invalid crypto or fiat" },
-      { status: 400 },
-    );
+    const url = new URL(req.url);
+    const crypto = (url.searchParams.get("crypto") || "BTC").toUpperCase();
+    const fiat = (url.searchParams.get("fiat") || "NGN").toUpperCase();
+
+    const cryptoMeta = CRYPTOCURRENCIES.find((c) => c.code === crypto);
+    const fiatPerUsd = FIAT_USD_RATE[fiat];
+    if (!cryptoMeta || !fiatPerUsd) {
+      return apiError("Invalid crypto or fiat", 400);
+    }
+
+    const { rates, priceMap } = await getCryptoRates();
+    const cryptoPriceUSD = priceMap[crypto] ?? 0;
+    if (cryptoPriceUSD <= 0) {
+      return apiError("Price feed unavailable", 503);
+    }
+    const cryptoRate = rates.find((r) => r.code === crypto);
+    const directFiatPrice = cryptoRate?.prices?.[fiat];
+    const realRate =
+      typeof directFiatPrice === "number" && directFiatPrice > 0
+        ? directFiatPrice
+        : cryptoPriceUSD * fiatPerUsd;
+
+    // Pull the available balance from the DB so the UI shows the LIVE remaining
+    // balance after previous cashouts, not a stale constant.
+    const cryptoWallet = await db.wallet.findFirst({
+      where: { userId, currency: crypto, type: "crypto" },
+    });
+    const available = cryptoWallet?.balance ?? 0;
+
+    return NextResponse.json({
+      crypto,
+      cryptoName: cryptoMeta.name,
+      fiat,
+      marketRate: realRate,
+      netRate: realRate * (1 - CASHOUT_FEE_PCT),
+      cryptoPriceUSD,
+      fiatPerUsd,
+      feePct: CASHOUT_FEE_PCT * 100,
+      availableBalance: available,
+      change24h: cryptoRate?.change24h ?? 0,
+      source: "CoinGecko",
+    });
+  } catch (e) {
+    return apiCatch(e);
   }
-
-  const { rates, priceMap } = await getCryptoRates();
-  const cryptoPriceUSD = priceMap[crypto] ?? 0;
-  if (cryptoPriceUSD <= 0) {
-    return NextResponse.json(
-      { error: "Price feed unavailable" },
-      { status: 500 },
-    );
-  }
-  const cryptoRate = rates.find((r) => r.code === crypto);
-  const directFiatPrice = cryptoRate?.prices?.[fiat];
-  const realRate =
-    typeof directFiatPrice === "number" && directFiatPrice > 0
-      ? directFiatPrice
-      : cryptoPriceUSD * fiatPerUsd;
-
-  // Pull the available balance from the DB so the UI shows the LIVE remaining
-  // balance after previous cashouts, not a stale constant.
-  const cryptoWallet = await db.wallet.findFirst({
-    where: { userId: DEMO_USER_ID, currency: crypto, type: "crypto" },
-  });
-  const available = cryptoWallet?.balance ?? 0;
-
-  return NextResponse.json({
-    crypto,
-    cryptoName: cryptoMeta.name,
-    fiat,
-    marketRate: realRate,
-    netRate: realRate * (1 - CASHOUT_FEE_PCT),
-    cryptoPriceUSD,
-    fiatPerUsd,
-    feePct: CASHOUT_FEE_PCT * 100,
-    availableBalance: available,
-    change24h: cryptoRate?.change24h ?? 0,
-    source: "CoinGecko",
-  });
 }

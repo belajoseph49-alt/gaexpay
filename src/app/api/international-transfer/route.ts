@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { DEMO_USER_ID, COUNTRIES, CURRENCY_SYMBOL } from "@/lib/gaexpay";
+import { COUNTRIES, CURRENCY_SYMBOL } from "@/lib/gaexpay";
+import { getAuthUserId, getClientIdentifier } from "@/lib/api-auth";
+import { rateLimitSensitive } from "@/lib/rate-limit";
+import { apiError, apiCatch } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +63,35 @@ function transferFee(method: string, amountUsd: number): { feeUsd: number; feePc
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    // ---------- Auth ----------
+    const userId = getAuthUserId(req);
+    if (!userId) return apiError("Unauthorized", 401);
+
+    // ---------- Rate limit (money-moving) ----------
+    const identifier = getClientIdentifier(req, userId);
+    const rl = rateLimitSensitive(identifier);
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: "Too many requests. Please slow down." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(Math.max(1, Math.ceil(rl.retryAfterMs / 1000))) },
+        },
+      );
+    }
+
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return apiError("Invalid JSON body", 400);
+    }
+    const b = (body ?? {}) as {
+      recipientName?: string; recipientAccount?: string; recipientBank?: string;
+      recipientCountry?: string; senderCountry?: string; amount?: number | string;
+      fromCurrency?: string; toCurrency?: string; method?: string; provider?: string;
+      note?: string; purpose?: string;
+    };
     const {
       recipientName,
       recipientAccount,
@@ -74,29 +105,29 @@ export async function POST(req: Request) {
       provider,
       note,
       purpose = "other",
-    } = body;
+    } = b;
 
     // Validate required fields
     if (!recipientName || !recipientAccount || !recipientCountry || !amount || !fromCurrency || !toCurrency) {
-      return NextResponse.json(
-        { error: "Missing required fields: recipientName, recipientAccount, recipientCountry, amount, fromCurrency, toCurrency" },
-        { status: 400 },
+      return apiError(
+        "Missing required fields: recipientName, recipientAccount, recipientCountry, amount, fromCurrency, toCurrency",
+        400,
       );
     }
 
     const amt = Number(amount);
     if (!isFinite(amt) || amt <= 0) {
-      return NextResponse.json({ error: "Amount must be a positive number" }, { status: 400 });
+      return apiError("Amount must be a positive number", 400);
     }
 
     if (!["bank", "momo", "wallet"].includes(method)) {
-      return NextResponse.json({ error: "Method must be one of: bank, momo, wallet" }, { status: 400 });
+      return apiError("Method must be one of: bank, momo, wallet", 400);
     }
 
     const senderCountryObj = COUNTRIES.find((c) => c.code === senderCountry);
     const recipientCountryObj = COUNTRIES.find((c) => c.code === recipientCountry);
     if (!recipientCountryObj) {
-      return NextResponse.json({ error: `Unsupported recipient country: ${recipientCountry}` }, { status: 400 });
+      return apiError(`Unsupported recipient country: ${recipientCountry}`, 400);
     }
 
     // Compute FX
@@ -123,12 +154,18 @@ export async function POST(req: Request) {
           ? provider || "Mobile Money"
           : "GaexPay Wallet";
 
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      null;
+    const userAgent = req.headers.get("user-agent") || null;
+
     // Persist a Transaction record (type: transfer, category: p2p)
     const tx = await db.transaction.create({
       data: {
         reference,
-        userId: DEMO_USER_ID,
-        senderId: DEMO_USER_ID,
+        userId,
+        senderId: userId,
         type: "transfer",
         direction: "debit",
         status: delivery.instant ? "completed" : "pending",
@@ -177,7 +214,7 @@ export async function POST(req: Request) {
     // Create a notification
     await db.notification.create({
       data: {
-        userId: DEMO_USER_ID,
+        userId,
         title: delivery.instant ? "International transfer sent" : "International transfer initiated",
         message: `${CURRENCY_SYMBOL[fromCurrency] ?? ""}${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${fromCurrency} → ${CURRENCY_SYMBOL[toCurrency] ?? ""}${convertedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${toCurrency} to ${recipientName} (${recipientCountryObj.name}). ${delivery.instant ? "Delivered instantly." : `Estimated delivery: ${delivery.label}.`}`,
         type: "transaction",
@@ -191,11 +228,13 @@ export async function POST(req: Request) {
     try {
       await db.auditLog.create({
         data: {
-          userId: DEMO_USER_ID,
+          userId,
           actor: "user",
           action: "international_transfer",
           entity: "Transaction",
           entityId: tx.id,
+          ip,
+          userAgent,
           severity: "info",
           details: JSON.stringify({
             reference,
@@ -261,47 +300,54 @@ export async function POST(req: Request) {
         createdAt: tx.createdAt,
       },
     });
-  } catch (e: any) {
-    console.error("[international-transfer] error:", e);
-    return NextResponse.json({ error: e?.message || "Internal server error" }, { status: 500 });
+  } catch (e) {
+    return apiCatch(e);
   }
 }
 
-// GET — lightweight quote helper (no DB writes) used for live previews
+// GET — lightweight quote helper (no DB writes) used for live previews.
+// Still requires auth so anonymous attackers can't probe live FX rates.
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const from = (searchParams.get("from") || "USD").toUpperCase();
-  const to = (searchParams.get("to") || "NGN").toUpperCase();
-  const amount = Number(searchParams.get("amount") || 100);
-  const method = (searchParams.get("method") || "bank") as "bank" | "momo" | "wallet";
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) return apiError("Unauthorized", 401);
 
-  const { mid, rate, marginPct } = computeRate(from, to);
-  const fromUsd = USD_RATES[from] ?? 1;
-  const amountUsd = amount / fromUsd;
-  const feeInfo = transferFee(method, amountUsd);
-  const feeInFromCurrency = feeInfo.feeUsd * fromUsd;
-  const converted = amount * rate;
-  const delivery = deliveryEstimate(method);
+    const { searchParams } = new URL(req.url);
+    const from = (searchParams.get("from") || "USD").toUpperCase();
+    const to = (searchParams.get("to") || "NGN").toUpperCase();
+    const amount = Number(searchParams.get("amount") || 100);
+    const method = (searchParams.get("method") || "bank") as "bank" | "momo" | "wallet";
 
-  return NextResponse.json({
-    from,
-    to,
-    amount,
-    midRate: mid,
-    exchangeRate: rate,
-    marginPct,
-    convertedAmount: converted,
-    fee: {
-      amount: feeInFromCurrency,
-      amountUsd: feeInfo.feeUsd,
-      pct: feeInfo.feePct,
-      flatUsd: feeInfo.flatUsd,
-      note: feeInfo.note,
-    },
-    total: amount + feeInFromCurrency,
-    totalUsd: amountUsd + feeInfo.feeUsd,
-    delivery,
-    method,
-    timestamp: new Date().toISOString(),
-  });
+    const { mid, rate, marginPct } = computeRate(from, to);
+    const fromUsd = USD_RATES[from] ?? 1;
+    const amountUsd = amount / fromUsd;
+    const feeInfo = transferFee(method, amountUsd);
+    const feeInFromCurrency = feeInfo.feeUsd * fromUsd;
+    const converted = amount * rate;
+    const delivery = deliveryEstimate(method);
+
+    return NextResponse.json({
+      from,
+      to,
+      amount,
+      midRate: mid,
+      exchangeRate: rate,
+      marginPct,
+      convertedAmount: converted,
+      fee: {
+        amount: feeInFromCurrency,
+        amountUsd: feeInfo.feeUsd,
+        pct: feeInfo.feePct,
+        flatUsd: feeInfo.flatUsd,
+        note: feeInfo.note,
+      },
+      total: amount + feeInFromCurrency,
+      totalUsd: amountUsd + feeInfo.feeUsd,
+      delivery,
+      method,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (e) {
+    return apiCatch(e);
+  }
 }

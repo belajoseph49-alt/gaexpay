@@ -1,13 +1,18 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { DEMO_USER_ID } from "@/lib/gaexpay";
+import { getAuthUserId } from "@/lib/api-auth";
+import { apiError, apiCatch } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+/** GET /api/me — current authenticated user's profile. */
+export async function GET(req: Request) {
   try {
+    const userId = getAuthUserId(req);
+    if (!userId) return apiError("Unauthorized", 401);
+
     const user = await db.user.findUnique({
-      where: { id: DEMO_USER_ID },
+      where: { id: userId },
       select: {
         id: true, email: true, phone: true, firstName: true, lastName: true,
         username: true, country: true, city: true, address: true, dob: true,
@@ -19,11 +24,9 @@ export async function GET() {
         lastLoginAt: true, createdAt: true,
       },
     });
-    if (!user) {
-      return NextResponse.json({ error: "User not found. Run seed." }, { status: 404 });
-    }
+    if (!user) return apiError("User not found", 404);
     return NextResponse.json({ user });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    return apiCatch(e);
   }
 }
