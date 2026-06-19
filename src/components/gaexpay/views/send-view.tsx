@@ -221,13 +221,13 @@ function SendFlow() {
                 className="h-12"
                 onClick={handlePickContacts}
                 disabled={contactsLoading}
+                suppressHydrationWarning
               >
-                {contactsLoading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <ContactIcon className="h-4 w-4 mr-2" />
-                )}
-                {contactsSupported ? "Open Contacts" : "Add Contacts"}
+                <span className="flex items-center justify-center" suppressHydrationWarning>
+                  <Loader2 className={cn("h-4 w-4 mr-2", contactsLoading ? "animate-spin" : "hidden")} />
+                  <ContactIcon className={cn("h-4 w-4 mr-2", contactsLoading ? "hidden" : "")} />
+                  Contacts
+                </span>
               </Button>
 
               {/* New recipient */}
@@ -235,9 +235,12 @@ function SendFlow() {
                 variant="outline"
                 className="h-12"
                 onClick={() => setShowManualAdd(!showManualAdd)}
+                suppressHydrationWarning
               >
-                <UserPlus className="h-4 w-4 mr-2" />
-                New Recipient
+                <span className="flex items-center justify-center" suppressHydrationWarning>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  New Recipient
+                </span>
               </Button>
             </div>
 
