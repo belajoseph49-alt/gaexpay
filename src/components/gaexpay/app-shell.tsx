@@ -8,6 +8,7 @@ import { DashboardView } from "./views/dashboard-view";
 import { WalletsView } from "./views/wallets-view";
 import { SendView } from "./views/send-view";
 import { TransactionsView } from "./views/transactions-view";
+import { InternationalTransferView } from "./views/international-transfer-view";
 import { CardsView } from "./views/cards-view";
 import { PayView } from "./views/pay-view";
 import { SavingsView } from "./views/savings-view";
@@ -18,10 +19,12 @@ import { CalendarView } from "./views/calendar-view";
 import { SpendingMapView } from "./views/spending-map-view";
 import { ExchangeView } from "./views/exchange-view";
 import { CryptoView } from "./views/crypto-view";
+import { CryptoSwapView } from "./views/crypto-swap-view";
 import { StatementView } from "./views/statement-view";
 import { AchievementsView } from "./views/achievements-view";
 import { MerchantQRView } from "./views/merchant-qr-view";
 import { KycView } from "./views/kyc-view";
+import { SecurityView } from "./views/security-view";
 import { SettingsView } from "./views/settings-view";
 import { SupportView } from "./views/support-view";
 import { AdminView } from "./views/admin-view";
@@ -41,6 +44,7 @@ export function AppShell() {
     wallets: <WalletsView />,
     "wallet-detail": <WalletDetailView />,
     send: <SendView />,
+    international: <InternationalTransferView />,
     transactions: <TransactionsView />,
     cards: <CardsView />,
     pay: <PayView />,
@@ -52,11 +56,13 @@ export function AppShell() {
     "spending-map": <SpendingMapView />,
     exchange: <ExchangeView />,
     crypto: <CryptoView />,
+    "crypto-swap": <CryptoSwapView />,
     statement: <StatementView />,
     achievements: <AchievementsView />,
     merchant: <MerchantView />,
     "merchant-qr": <MerchantQRView />,
     kyc: <KycView />,
+    security: <SecurityView />,
     settings: <SettingsView />,
     support: <SupportView />,
     admin: <AdminView />,

@@ -1229,3 +1229,168 @@ The user requested:
 - **65+ banks** across all countries
 - **12 mobile money providers**
 - **29 bill categories** (utilities, taxes, customs, education, financial, transport, health, entertainment, other)
+
+---
+Task ID: 19-A
+Agent: Subagent (Crypto Swap)
+Task: Create Crypto Swap/Trading view
+
+Work Log:
+- Read worklog.md, store.ts, gaexpay.ts, existing crypto API routes, crypto-view.tsx, exchange-view.tsx, app-shell.tsx, sidebar.tsx, mobile-nav.tsx, prisma schema for Transaction model, and recharts usage in dashboard-view to align with the project's design language.
+- Created `src/app/api/crypto/swap/route.ts` with both POST (executes swap + writes Transaction record type="exchange" method="wallet") and GET (quote-only) handlers. Computes live rate from USD prices with ±1% fluctuation, 0.3% swap fee, per-network gas fee, 0.5% slippage tolerance, price-impact heuristic. Persists Transaction (category="investment", provider="gaexpay-swap", full metadata JSON) + user Notification. Returns reference, rate, convertedAmount, minReceived, networkFee, priceImpact.
+- Added `"crypto-swap"` to the `View` union in `src/lib/store.ts`.
+- Created `src/components/gaexpay/views/crypto-swap-view.tsx` (≈500 LOC): Uniswap-style dark gradient hero card with From/To inputs, rotating ArrowDown swap button (Framer Motion whileTap/whileHover + spin during quote fetch), live rate row polled every 15s via the new GET endpoint, Flip button, price-impact warning banner when impact > 0.3%, animated CTA swap button with loading/idle states (AnimatePresence), detail tiles for minimum received / price impact / swap fee / network fee. Right column: Recharts AreaChart with 7-day (28-point) deterministic price simulation for the selected `from` crypto (emerald when up, rose when down), scrollable wallet-balances picker that doubles as a quick asset switcher, and a non-custodial security note. Includes asset-picker Dialog (all 15 CRYPTOCURRENCIES) and Success Dialog with full transaction details. Imports CRYPTOCURRENCIES from "@/lib/gaexpay". Uses Skeleton loading states. Responsive `lg:grid-cols-[1.05fr_0.95fr]`.
+- Wired up `CryptoSwapView` in `app-shell.tsx` (import + `"crypto-swap": <CryptoSwapView />` entry in views map).
+- Added `{ id: "crypto-swap", label: "Crypto Swap", icon: Repeat }` nav item immediately after "Crypto Wallets" in both `sidebar.tsx` and `mobile-nav.tsx` (imported `Repeat` from lucide-react).
+- Ran `bun run lint` → clean, no errors.
+- Verified endpoints against the live dev server: GET /api/crypto/swap?from=BTC&to=ETH → 200 with rate/fees; POST /api/crypto/swap {fromCrypto:BTC,toCrypto:ETH,amount:0.05} → 200 with success:true, reference, convertedAmount, minReceived, priceImpactPct. Dev server compiled new files without errors.
+
+Stage Summary:
+- Crypto Swap/Trading view is live and reachable from both desktop sidebar and mobile nav under "Crypto Swap" (Repeat icon, positioned right after "Crypto Wallets").
+- Backend POST /api/crypto/swap executes a swap and writes an exchange/wallet Transaction + Notification to Prisma, mirroring the existing exchange route's audit pattern. GET /api/crypto/swap returns a live quote for client polling.
+- UI fully matches existing design system (emerald/teal accent, dark gradient hero card, Framer Motion micro-animations, Recharts area chart, Skeleton states, Dialog-based asset picker + success modal) and is responsive on mobile + desktop.
+- No regressions: ESLint clean, dev server compiles cleanly, all pre-existing routes still serve 200.
+
+---
+Task ID: 19-B
+Agent: Subagent (Security Center)
+Task: Create Security Center view
+
+Work Log:
+- Read worklog.md, store.ts, app-shell.tsx, sidebar.tsx, mobile-nav.tsx, gaexpay.ts, prisma/schema.prisma, dev.log, and reference views (kyc-view, admin-view, dashboard-view, settings-view) to align with the project's design language (emerald/teal accent, dark gradient hero cards, Framer Motion micro-animations, AnimatedNumber, Skeleton states, card-lift hover).
+- Created `src/app/api/security/overview/route.ts` (GET, ~340 LOC): Runs 5 parallel Prisma queries (user, devices, security+auth audit logs, fraud-flagged transactions, 30-day blocked-login count). Computes a weighted 0-100 security score from 6 components (MFA 20 / Biometric 15 / Password freshness 15 / Trusted devices 10 / Fraud activity 20 / KYC tier 20) with per-component pass/warn/fail status. Returns grade A/B/C/D/F, encryption status (AES-256-GCM, TLS 1.3, E2E, 90-day key rotation, HSM-backed vault), compliance matrix (PCI-DSS L1, AML FATF/NFIU, GDPR, ISO 27001:2022, SOC 2 Type II), last login (with audit-log fallback), last password change + age in days, 2FA method, biometric status, device list/active/trusted counts, fraud alerts list + recent (30d) count, blocked login attempts, 12 most-recent security events, and dynamically-generated actionable recommendations.
+- Created `src/components/gaexpay/views/security-view.tsx` (~620 LOC) with sections:
+  1. Header + Refresh button
+  2. Hero gradient card (color shifts by grade: emerald/teal/amber/orange/rose) containing a 220px SVG circular gauge with animated gradient stroke + SVG glow filter, large grade letter, AnimatedNumber score "/100", summary copy, encryption pills (AES-256-GCM, TLS 1.3, E2E, key rotation), and 4 quick-stat pills (Active Devices, Blocked Logins, Fraud Alerts, KYC Tier).
+  3. Score Breakdown card — 6 mini-cards with status badge + Progress bar per component.
+  4. Protection Layers grid — 6 feature cards (End-to-End Encryption, 2FA, Biometric, PCI-DSS, AML, AI Fraud Detection) with active/disabled badges and card-lift hover.
+  5. Two-column: Active Devices list with revoke button (calls DELETE /api/devices?id=, toast feedback, AnimatePresence on remove) | Security Activity vertical timeline (12 events with rail + severity badges, action-aware icons).
+  6. Two-column: Fraud Alerts (risk-score bar colored by risk level + amount via formatMoney) | Recommendations (severity-colored cards with "Take action" link).
+  7. 4 meta cards (Last Login, Password Age, 2FA Method, Encrypted Channel).
+  8. Compliance footer — 5 certifications (PCI-DSS, AML, GDPR, ISO 27001, SOC 2).
+  - Custom `CircularGauge` component using SVG with linear gradient + filter glow.
+  - `gradeColor()` helper mapping grade → ring/text/glow/bg classes.
+  - Skeleton loading state mirroring final layout (gradient hero skeleton + grid skeletons).
+  - Fully responsive (sm/lg grid breakpoints), uses Framer Motion `initial/animate/transition` on every section, `AnimatePresence` + `layout` for device revoke animation.
+- Added `"security"` to the `View` union in `src/lib/store.ts` (between `kyc` and `settings`).
+- Wired `SecurityView` import + `"security": <SecurityView />` entry in `src/components/gaexpay/app-shell.tsx`.
+- Added `{ id: "security", label: "Security Center", icon: Shield }` nav item under the "Account" section (immediately after KYC) in both `src/components/gaexpay/sidebar.tsx` and `src/components/gaexpay/mobile-nav.tsx`. Imported `Shield` from lucide-react in both.
+- Cleaned up unused lucide-react imports (Eye, TrendingUp, TrendingDown, Cpu, Zap, ChevronRight) and unused Avatar/AvatarFallback imports for code quality.
+- Ran `bun run lint` → 0 errors, 0 warnings.
+- Verified `GET /api/security/overview` returns HTTP 200 in ~40ms with: score=88, grade=B, 6 breakdown components, 3 devices (2 trusted), 5 fraud alerts (3 recent), 7 blocked login attempts (30d), 12 security events, 2 dynamic recommendations (review untrusted devices + review flagged transactions). lastLoginAt falls back to most-recent `login` audit log when user.lastLoginAt is null.
+- Checked dev.log after each change — no runtime errors, Fast Refresh stable, all pre-existing routes still serve 200.
+
+Stage Summary:
+- Security Center view is live and reachable from both desktop sidebar and mobile nav under "Security Center" (Shield icon, positioned right after "Identity (KYC)" in the Account section).
+- Backend `GET /api/security/overview` returns a comprehensive payload (score, grade, breakdown, encryption, compliance, devices, fraud alerts, security events, recommendations, login metadata) computed from real Prisma data (User, Device, AuditLog, Transaction).
+- UI fully matches the project's design system (emerald/teal accent, gradient hero card, Framer Motion micro-animations, AnimatedNumber, Skeleton states, card-lift hover, max-height scroll areas) and is responsive on mobile + desktop.
+- Interactive features work: device revoke (DELETE /api/devices?id=...) with toast + AnimatePresence exit, refresh button reloads data.
+- No regressions: ESLint clean, dev server compiles cleanly, all pre-existing routes still serve 200.
+- App stats: 25 views (added Security Center), 41 API routes (added /api/security/overview), 19 database models (unchanged).
+
+---
+Task ID: 19-C
+Agent: Subagent (International Transfer)
+Task: Create International Transfer/Remittance view
+
+Work Log:
+- Read worklog.md, store.ts, app-shell.tsx, sidebar.tsx, mobile-nav.tsx, gaexpay.ts (COUNTRIES/BANKS/MOBILE_MONEY_PROVIDERS/CURRENCIES/CURRENCY_SYMBOL), prisma/schema.prisma (Transaction model fields: counterpartyName/counterpartyAccount/counterpartyBank/method/provider/metadata/riskScore), animated-number.tsx, use-fetch.ts, and reference views (send-view, crypto-swap-view, security-view) to align with the project's design language (emerald/teal accent, dark gradient cards, Framer Motion micro-animations, AnimatedNumber, Skeleton states, card-lift hover, max-height scroll areas).
+- Created `src/app/api/international-transfer/route.ts` (~245 LOC):
+  - **POST**: Accepts recipientName, recipientAccount, recipientBank, recipientCountry, senderCountry, amount, fromCurrency, toCurrency, method (bank/momo/wallet), provider, note, purpose. Validates required fields + method whitelist. Looks up COUNTRIES for both sender & recipient (with name/flag/currency/phonePrefix). Computes mid-market rate via USD-intermediary using a 32-currency fallback table (USD_RATES), applies a 0.8% FX margin to derive customer rate. Computes transfer fee per method (bank: 1.5% + $5 capped $50; momo: 1% + $0.50 capped $20; wallet: 0.5% + $0.25) in `fromCurrency`. Derives delivery estimate (bank: 1–3 days/pending; momo/wallet: instant/completed). Persists a Transaction (type="transfer", category="p2p", method, counterpartyName/Account/Bank, provider, fee, riskScore ~4% chance 0.7 else 0.08, completedAt set only when instant, full metadata JSON including international:true flag + recipientFlag + FX details + delivery windows). Creates a Notification (title/message vary by instant vs pending, type="transaction", actionUrl to transactions). Best-effort AuditLog write (action="international_transfer", severity="info"). Returns full transfer summary including reference, rates, fees (in fromCurrency and USD), totals, delivery, status, sender & recipient country objects.
+  - **GET** (quote helper, no DB writes): Accepts `from`, `to`, `amount`, `method` query params and returns the same FX/fee/delivery payload used by the live preview card in the UI. Powers the 30s auto-refresh in the wizard.
+- Added `"international"` to the `View` union in `src/lib/store.ts` (immediately after `"send"`).
+- Created `src/components/gaexpay/views/international-transfer-view.tsx` (~830 LOC):
+  - **Header strip** with title, Cross-Border badge, and quick links to Live Rates (Exchange view) + Local Transfer (Send view).
+  - **4-step wizard** with animated stepper header (numbered circles + connecting bars, emerald fill when complete):
+    - **Step 1 — Recipient Details**: destination country picker button (opens Country Picker Dialog with searchable 2–3 col flag grid filtering by name/code/currency), method selector (3-up grid: Bank Transfer / Mobile Money / GaexPay Wallet with gradient icons + delivery + fee note), recipient full name (User icon), account/phone/wallet ID input (icon switches between Phone and Banknote based on method), bank Select (shows "Popular in {country}" section first using COUNTRY_POPULAR_BANKS lookup for ~25 countries, then all 65+ BANKS), mobile money provider grid (filtered to providers serving the recipient country via MOBILE_MONEY_PROVIDERS[].countries).
+    - **Step 2 — Amount & Currency**: large amount input with from-currency Select (all 32 CURRENCIES), quick-pick chips (100/500/1000/5000), live rate pill (1 FROM = X.XXXX TO with animated spinning RefreshCw + pulsing "LIVE" badge), recipient-gets display using AnimatedNumber with to-currency Select, purpose selector (8 purposes: family, business, education, investment, salary, rent, medical, other with emoji icons), optional note input. Auto-sets toCurrency from recipient country on country change. Auto-sets sender currency to NGN on mount.
+    - **Step 3 — Review**: recipient block (Avatar with initials, name, country flag/name, method badge), full cost breakdown (You send, Exchange rate line, Transfer fee %, FX margin, Total cost, ≈ in USD, Recipient receives accent row), delivery + purpose tiles, AES-256-GCM security note with Lock icon. Confirm & Send button with loading state.
+    - **Step 4 — Confirmation**: Confetti, spring-animated emerald check circle, "Transfer delivered!" / "Transfer initiated!" headline, recipient name + amount → converted amount, large reference number with status badge (Completed/Pending) + delivery badge, full receipt (recipient, account/IBAN/phone/wallet, bank, method, sent, rate, fee, total, recipient receives, date), 3-up action grid: Copy reference (clipboard), Share (Web Share API with clipboard fallback), New transfer (reset).
+  - **Live Rate card** (right column): gradient overlay, from/to currency tiles with flags + currency codes, pulsing LIVE pill with arrow, mid-market vs applied rate display, You send / They get tiles (They get highlighted in emerald), delivery estimate footer.
+  - **Cost Breakdown card**: amount sent, transfer fee (amber), FX margin (orange), total cost (bold + ≈ USD), recipient receives (emerald), plus hidden-fee transparency note.
+  - **Why GaexPay card**: 4 marketing bullets (200+ countries, instant delivery, bank-grade security, best rates) with icon tiles + hover scale.
+  - **Recent International Transfers card**: fetches `/api/transactions?type=transfer&limit=15`, client-filters to those with `metadata.international === true`, shows up to 6 in a scrollable list (max-h-96) with flag avatar, recipient name, country + method, amount in rose, time-ago, and status badge. Empty state with Globe2 icon + call-to-action. Skeleton loaders while fetching. AnimatePresence on each row.
+  - Uses Framer Motion AnimatePresence for step transitions (x: 24 → 0, exit x: -24), spring scale on success check, layout animation on recent transfer rows.
+  - Country picker Dialog with search input, responsive 2/3-col grid, flag + name + currency + code, hover ring in emerald.
+  - Fully responsive: `lg:grid-cols-[1.05fr_0.95fr]` two-column on desktop, single-column stacked on mobile.
+  - Live quote auto-fetches 250ms after input change (debounced) and re-fetches every 30s while amount > 0.
+- Wired `InternationalTransferView` in `app-shell.tsx` (import + `"international": <InternationalTransferView />` entry in views map, immediately after `send`).
+- Added `{ id: "international", label: "International Transfer", icon: Globe }` nav item under the "Main" section immediately after "Send & Receive" in both `sidebar.tsx` and `mobile-nav.tsx`. Imported `Globe` from lucide-react in both files.
+- Ran `bun run lint` → 0 errors, 0 warnings.
+- Verified endpoints against the live dev server:
+  - GET /api/international-transfer?from=USD&to=NGN&amount=100&method=bank → 200 with midRate=1540, exchangeRate=1527.68 (0.8% margin), convertedAmount=152768, fee=$6.50 (1.5% + $5), total=$106.50, delivery=1–3 business days.
+  - POST /api/international-transfer (bank, USD→XOF, $250 to Aminata Diallo / Côte d'Ivoire) → 200, reference=GXPINTMQKBTBG3JPG2, status=pending, appliedRate=600.16, convertedAmount=150040 XOF, fee=$8.75.
+  - POST /api/international-transfer (momo, USD→KES, $75 to John Mwangi / Kenya via M-PESA) → 200, status=completed (instant), fee=$1.25.
+  - GET /api/transactions?type=transfer&limit=15 → returns both new international transactions (filterable by metadata.international=true), confirm UI's Recent International Transfers section will render correctly.
+- Checked dev.log after each change — no runtime errors, Fast Refresh stable, all pre-existing routes still serve 200.
+
+Stage Summary:
+- International Transfer/Remittance view is live and reachable from both desktop sidebar and mobile nav under "International Transfer" (Globe icon, positioned right after "Send & Receive").
+- Backend POST /api/international-transfer executes a cross-border transfer with full FX/fee/delivery calculation and writes a Transaction (type="transfer", category="p2p", method, counterparty info, full metadata JSON with international:true flag) + Notification + best-effort AuditLog. GET /api/international-transfer returns a live quote for client polling.
+- Multi-step wizard (Recipient → Amount → Review → Confirmation) covers all countries (COUNTRIES), all banks (BANKS with country-popular prefiltering), all mobile money providers (MOBILE_MONEY_PROVIDERS filtered by recipient country), and all 32 fiat currencies. Live exchange rate with 0.8% margin, transparent fee breakdown per method, delivery estimate per method, purpose selection, security note, and full receipt with share/copy actions.
+- UI fully matches the project's design system (emerald/teal accent, gradient cards, Framer Motion step transitions, AnimatedNumber, Skeleton states, max-height scroll areas with no-scrollbar, country picker Dialog) and is responsive on mobile + desktop.
+- No regressions: ESLint clean, dev server compiles cleanly, all pre-existing routes still serve 200.
+- App stats: 26 views (added International Transfer), 42 API routes (added /api/international-transfer with POST + GET), 19 database models (unchanged).
+
+---
+
+## Phase 13 — Crypto Swap, Security Center, International Transfer
+
+**Task ID**: 19 (3 parallel subagents deployed)
+**Agent**: Main + 3 subagents
+**Date**: 2026-06-19
+
+### Work Completed
+
+#### 1. Crypto Swap/Trading View (Subagent A — Task 19-A)
+- **New API** `/api/crypto/swap` (GET + POST): Quote endpoint with live rates, swap execution with 0.3% fee, network fees, slippage, price impact. Creates Transaction + Notification.
+- **New view** `crypto-swap-view.tsx`: Uniswap-style swap interface with:
+  - Dark gradient hero card with From/To swap inputs
+  - Rotating swap button (Framer Motion)
+  - Live rate polling (every 15s)
+  - Price impact warning banner
+  - Recharts AreaChart with 7-day price simulation
+  - Asset picker dialog (15 cryptos)
+  - Success dialog with transaction details
+  - Minimum received / price impact / swap fee / network fee tiles
+- **Added to navigation**: "Crypto Swap" with Repeat icon, after "Crypto Wallets"
+
+#### 2. Security Center View (Subagent B — Task 19-B)
+- **New API** `/api/security/overview` (GET): Returns security score (0-100), grade, 6-component breakdown, encryption status, compliance matrix (PCI-DSS, AML, GDPR, ISO 27001, SOC 2), devices, fraud alerts, security events, recommendations.
+- **New view** `security-view.tsx`: 8 sections:
+  - Security score hero with SVG circular gauge (animated gradient stroke + glow filter)
+  - Score breakdown (6 components with Progress bars)
+  - Protection layers (E2E Encryption, 2FA, Biometric, PCI-DSS, AML, AI Fraud Detection)
+  - Active devices list with revoke button
+  - Security activity timeline (12 events)
+  - Fraud alerts with risk score bars
+  - Recommendations (severity-colored)
+  - Compliance footer (5 certifications)
+- **Bug fix**: `EventIcon` function received undefined `action` → added null guard `const act = action || ""`
+- **Added to navigation**: "Security Center" with Shield icon, under "Account" section
+
+#### 3. International Transfer View (Subagent C — Task 19-C)
+- **New API** `/api/international-transfer` (GET + POST): Quote endpoint with FX rates (0.8% margin), transfer fees per method (bank 1.5%+$5, momo 1%+$0.50, wallet 0.5%+$0.25), delivery estimates. POST creates Transaction + Notification + AuditLog.
+- **New view** `international-transfer-view.tsx`: 4-step wizard:
+  - Step 1: Recipient details (searchable country picker with 40 countries, method selector, bank/provider dropdowns filtered by country)
+  - Step 2: Amount & currency (live rate, fee breakdown, purpose selector)
+  - Step 3: Review (full summary, security note)
+  - Step 4: Confirmation (confetti, reference number, receipt, copy/share)
+  - Right column: Live rate card, cost breakdown, recent transfers
+- **Added to navigation**: "International Transfer" with Globe icon, after "Send & Receive"
+
+### Verification Results
+- ✅ `bun run lint` — 0 errors, 0 warnings
+- ✅ All 25 views tested via agent-browser — no runtime errors
+- ✅ Crypto Swap API: 0.001 BTC → 0.0195 ETH (rate 19.61, fee 0.000003 BTC)
+- ✅ Security API: Score 88/100, Grade B, 12 security events, 5 fraud alerts
+- ✅ International Transfer API: USD→XAF quote, bank transfer POST creates transaction
+- ✅ Security Center bug fixed (EventIcon null guard)
+- ✅ Dev log: no errors
+- ✅ Server running stably
+
+### Current App Stats
+- **25 views** (added Crypto Swap, Security Center, International Transfer)
+- **43 API routes** (added `/api/crypto/swap`, `/api/security/overview`, `/api/international-transfer`)
+- **19 database models** (unchanged)
+- **3 new subagents deployed in parallel** for feature development

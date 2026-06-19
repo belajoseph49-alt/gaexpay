@@ -2,8 +2,8 @@
 
 import {
   LayoutDashboard, Wallet, SendHorizontal, ArrowLeftRight, CreditCard,
-  QrCode, BarChart3, ShieldCheck, Settings, LifeBuoy, Users, Gift,
-  Sparkles, PiggyBank, Wallet2, CalendarClock, Store, ArrowLeftRight as Exchange, FileText, Trophy, Calendar, MapPin, Bitcoin,
+  QrCode, BarChart3, ShieldCheck, Shield, Settings, LifeBuoy, Users, Gift,
+  Sparkles, PiggyBank, Wallet2, CalendarClock, Store, ArrowLeftRight as Exchange, FileText, Trophy, Calendar, MapPin, Bitcoin, Repeat, Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp, type View } from "@/lib/store";
@@ -17,6 +17,7 @@ const NAV: { section: string; items: { id: View; label: string; icon: any; badge
       { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
       { id: "wallets", label: "Wallets", icon: Wallet },
       { id: "send", label: "Send & Receive", icon: SendHorizontal },
+      { id: "international", label: "International Transfer", icon: Globe },
       { id: "transactions", label: "Transactions", icon: ArrowLeftRight },
       { id: "cards", label: "Cards", icon: CreditCard },
       { id: "pay", label: "Pay & Bills", icon: QrCode },
@@ -26,6 +27,7 @@ const NAV: { section: string; items: { id: View; label: string; icon: any; badge
       { id: "calendar", label: "Calendar", icon: Calendar },
       { id: "exchange", label: "Exchange", icon: Exchange },
       { id: "crypto", label: "Crypto Wallets", icon: Bitcoin },
+      { id: "crypto-swap", label: "Crypto Swap", icon: Repeat },
       { id: "analytics", label: "Analytics", icon: BarChart3 },
       { id: "spending-map", label: "Spending Map", icon: MapPin },
       { id: "statement", label: "Statements", icon: FileText },
@@ -41,6 +43,7 @@ const NAV: { section: string; items: { id: View; label: string; icon: any; badge
     section: "Account",
     items: [
       { id: "kyc", label: "Identity (KYC)", icon: ShieldCheck },
+      { id: "security", label: "Security Center", icon: Shield },
       { id: "achievements", label: "Achievements", icon: Trophy },
       { id: "referral", label: "Referral & Rewards", icon: Gift },
       { id: "settings", label: "Settings", icon: Settings },
