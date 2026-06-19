@@ -3,7 +3,7 @@
 import {
   LayoutDashboard, Wallet, SendHorizontal, ArrowLeftRight, CreditCard,
   QrCode, BarChart3, ShieldCheck, Shield, Settings, LifeBuoy, Users, Gift,
-  PiggyBank, Wallet2, CalendarClock, Store, FileText, Trophy, Calendar, MapPin, Bitcoin, Repeat, Globe, DollarSign, AtSign, Banknote,
+  PiggyBank, Wallet2, CalendarClock, Store, FileText, Trophy, Calendar, MapPin, Bitcoin, Repeat, Globe, DollarSign, AtSign, Banknote, Building2, Briefcase, Landmark, Code2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp, type View } from "@/lib/store";
@@ -35,6 +35,7 @@ const NAV: { section: string; items: { id: View; label: string; icon: any }[] }[
   ]},
   { section: "Business", items: [
     { id: "merchant", label: "Merchant Dashboard", icon: Store },
+    { id: "business-pro", label: "Business Pro", icon: Briefcase },
   ]},
   { section: "Account", items: [
     { id: "kyc", label: "Identity (KYC)", icon: ShieldCheck },
@@ -46,6 +47,10 @@ const NAV: { section: string; items: { id: View; label: string; icon: any }[] }[
   ]},
   { section: "Platform", items: [
     { id: "admin", label: "Admin Console", icon: Users },
+    { id: "enterprise-admin", label: "Enterprise Admin", icon: Building2 },
+    { id: "compliance", label: "AML & Compliance", icon: ShieldCheck },
+    { id: "treasury", label: "Treasury", icon: Landmark },
+    { id: "developer", label: "Developer Portal", icon: Code2 },
   ]},
 ];
 

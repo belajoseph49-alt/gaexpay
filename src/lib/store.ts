@@ -27,11 +27,16 @@ export type View =
   | "achievements"
   | "merchant"
   | "merchant-qr"
+  | "business-pro"
   | "kyc"
   | "security"
   | "settings"
   | "support"
   | "admin"
+  | "enterprise-admin"
+  | "compliance"
+  | "treasury"
+  | "developer"
   | "referral";
 
 interface AppState {

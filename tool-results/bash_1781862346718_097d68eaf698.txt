@@ -1,0 +1,200 @@
+    - 3 summary cards (Outstanding [amber ring], Overdue [rose ring with count badge], Paid This Month [emerald ring]) each with AnimatedNumber.
+    - Invoice list (max-h-420px scrollable, no-scrollbar) — each row has status-colored icon tile (paid=emerald CheckCircle2, pending=amber Clock, overdue=rose AlertTriangle), customer name + status badge + invoice ID + items count + due date, amount + VAT compact, View button.
+    - "Create Invoice" Dialog with form fields: customer name, amount, due date, line items textarea, notes — validates required fields, shows toast on submit, resets form.
+  - **Staff tab**:
+    - Staff performance bar chart (teal gradient bars, name initials on X axis, dark tooltip).
+    - Team roster list — each staff card has gradient avatar (initials), name + role badge, rating stars + sales count + avg ticket, revenue generated, target attainment Progress bar (green when ≥100%, amber 85-99%, rose <85%).
+    - "Add Staff" Dialog with form fields: name, role (Select dropdown with 5 role options), email — validates required name, shows toast on submit.
+  - **Settlements tab**:
+    - 3 balance cards: Available Balance (emerald gradient card with Settle Now button), Pending Settlements (amber ring with next settlement date), Settled This Month (emerald ring).
+    - Settlement history table (7 columns: date, reference+ID, bank with masked account, amount, fee, net, status badge with colored dot) — supports horizontal scroll on mobile.
+    - "Settle Now" Dialog with amount input + quick-percentage buttons (Max/50%/25%) + bank account Select dropdown (3 banks with masked account + primary tag) — validates amount > 0 and ≤ available balance, shows toast on submit.
+  - **Insights tab**:
+    - AI Business Insights hero (dark gradient `emerald-900 → slate-900 → teal-900` with Sparkles icon tile).
+    - 6 insight cards in 2-col grid, each color-coded by type (positive=emerald TrendingUp, warning=amber AlertTriangle, info=sky Lightbulb) with title, message, key metric in footer.
+    - Customer Retention Metrics card (6 RetentionCard tiles: New Customers, Returning, Retention Rate, Churn Rate, Avg Lifetime Value, Avg Orders/Customer) with colored icon tiles.
+    - Growth Recommendations list (5 prioritized actions with priority badge color-coded, icon tile, impact/effort/timeline subtitle, Plan button).
+  - **Skeleton & loading**: `BusinessProSkeleton` component (hero + 4 KPI + tab list + 2 chart skeletons); `useFetch<BusinessProData>` with `loading || !data` gate; Framer Motion staggered entry (delay × index), opacity/y transitions; AnimatedNumber for all numeric KPIs/totals/balances; Recharts dark tooltips (`background: #0f172a`, `border: 1px solid #1e293b`); Responsive (`sm:grid-cols-2/3`, `lg:grid-cols-4`); `no-scrollbar` for scrollable lists; `card-lift` for hover elevation; max-h with overflow-y-auto on long lists.
+- Wired navigation:
+  - Added `"business-pro"` to the `View` union in `src/lib/store.ts` (immediately after `"merchant-qr"`).
+  - Added `import { BusinessProView }` + `"business-pro": <BusinessProView />` entry in `src/components/gaexpay/app-shell.tsx` (after `merchant-qr`).
+  - Added `Briefcase` to lucide-react imports + `{ id: "business-pro", label: "Business Pro", icon: Briefcase, badge: "Pro" }` nav item to the "Business" section in both `sidebar.tsx` (with "Pro" badge) and `mobile-nav.tsx` (no badge), positioned immediately after the existing "Merchant Dashboard" entry.
+- Ran `bun run lint` → **0 errors, 0 warnings** (exit 0) on first run, no fixes needed.
+- Verified `GET /api/business-pro` against live dev server (HTTP 200, ~10ms):
+  - **KPIs**: todayRevenue=0, todayOrders=0, weekRevenue=₦475,302, weekOrders=2, monthRevenue=₦548,868, monthOrders=3, yearRevenue=₦2,528,157, yearOrders=21, totalRevenue=₦2,528,157, totalOrders=21, avgOrderValue=₦120,388, refundRate=0.4%, customerCount=11, repeatCustomerRate=54.5%, newCustomers30d=4.
+  - **revenueTrend**: 14 entries (Jun 6 → Jun 19), real daily buckets from payment timestamps.
+  - **salesByCategory**: 7 categories with colors.
+  - **salesByMethod**: 5 channels (QR/Card/Bank/MoMo/Crypto) with colors.
+  - **topProducts**: 10 products with growth %, sorted by revenue desc.
+  - **topCustomers**: 10 customers with rank/orderCount/totalSpend/lastOrderDate.
+  - **heatmap**: 168 entries (7×24), each with day/hour/value/revenue.
+  - **staff**: 5 members with salesCount/revenue/rating/target/attainment/avgTicket.
+  - **invoices.summary**: outstanding=₦1,232,000, overdue=₦370,000, paidThisMonth=₦321,000, totalCount=5, pendingCount=3, overdueCount=1.
+  - **settlements.summary**: availableBalance=₦246,991, pendingSettlements=₦529,000, settledThisMonth=₦1,995,000, nextSettlementDate=2026-06-21.
+  - **insights**: 6 tips (positive/warning/info color-coded).
+  - **retention**: newCustomers30d=4, returningCustomers30d=6, churnRate=4%, retentionRate=96%, avgLifetimeValue=₦505,631, avgOrdersPerCustomer=1.9.
+  - **recommendations**: 5 prioritized growth actions.
+- Checked dev.log after each change — no new runtime errors. The pre-existing "router state header" warnings are unrelated to my changes (caused by prior curl tests with malformed headers, not by the Business Pro view or API). `GET /api/business-pro 200 in 10ms` and `GET / 200 in 276ms` confirm stable compilation.
+- Confirmed `merchant-view.tsx` was NOT modified (empty git diff).
+
+Stage Summary:
+- Business Pro Dashboard is live and reachable from both desktop sidebar and mobile nav under "Business → Business Pro" (Briefcase icon, "Pro" badge on desktop), positioned immediately after "Merchant Dashboard".
+- The single `/api/business-pro` GET endpoint aggregates real payment transactions for `DEMO_USER_ID` (today/week/month/year revenue, order counts, AOV, refund rate, customer count, repeat rate, 14-day trend, top 10 customers) and layers in deterministic-seeded mock data for products (10), staff (5), invoices (5), settlements (6), AI insights (6), retention metrics (6), and growth recommendations (5). Heatmap combines real hourly buckets with a realistic business-hour intensity profile (168 cells total).
+- The frontend view (`business-pro-view.tsx`, ~970 LOC) renders 5 tabs — Dashboard, Invoices, Staff, Settlements, Insights — each with rich charts (Recharts area/bar/pie), AnimatedNumber KPIs, Framer Motion staggered entry, dark-gradient hero cards (emerald/teal accent), responsive grid layouts, scrollable lists with `no-scrollbar`, card-lift hover effects, full skeleton loading states, dialogs for creating invoices / adding staff / settling to bank, a 7×24 hourly heatmap with intensity-colored cells and hover tooltips, and a customer retention metrics grid.
+- No regressions: ESLint clean (0 errors, 0 warnings), dev server compiles cleanly, all pre-existing routes still serve 200, the original `merchant-view.tsx` and the `/api/merchant-dashboard` API were NOT modified.
+- App stats: 30 views (added Business Pro), 48 API routes (added `/api/business-pro` GET), 19 database models (unchanged), 1 comprehensive Business Pro merchant dashboard with 5 tabs and 30+ data widgets.
+
+---
+
+Task ID: 21-C
+Agent: Senior Compliance & Security Engineer (AML & Compliance Center)
+Date: 2026-06-19
+
+Task: Build a comprehensive AML & Compliance Center with sanctions screening, transaction monitoring rules, KYC review queue, risk scoring, and regulatory reporting.
+
+Work Log:
+- Read prior worklog (Phases 1–14, Tasks 1–21-B) to understand the established design system: emerald/teal accent, dark gradient hero cards (slate-900 → emerald-950 → slate-900 with glow blobs), Framer Motion staggered entry, AnimatedNumber for all numeric KPIs, Recharts dark tooltips (background #0f172a, border #1e293b), `useFetch` hook pattern, `db` Prisma client import, `DEMO_USER_ID` constant, full shadcn/ui component set. Existing `security-view.tsx` and existing `/api/admin/fraud` route — both preserved untouched per spec (created NEW view + NEW API instead).
+- Created `src/app/api/compliance/route.ts` (~580 LOC, GET only, force-dynamic):
+  - **Single comprehensive payload** returning 7 top-level sections: `aml`, `sanctions`, `kycQueue`, `risk`, `rules`, `metrics`, `reports`.
+  - **Parallel DB queries** in one Promise.all (9 queries): allUsers (select, top 2000), flaggedTx (fraudFlag OR status=flagged OR riskScore ≥ 0.55, top 200, include user), allKycDocs (top 200, include user), recentScreenedTx (last 30d, top 1000), pendingKycCount, verifiedKycCount, rejectedKycCount, sanctionsAuditCount, amlAuditCount.
+  - **USD-normalization** via 30+ fiat + 14 crypto rate table (mirrors enterprise route).
+  - **AML Dashboard**: maps each flagged tx → AML alert (id `ALR-XXXXXXXX`, type from `alertTypeForTx`, severity from `severityForTx`, status derived from ageHours + severity + seeded randomness). Alert types: structuring, velocity, high-risk-geo, unusual-pattern, peeling. Computes `totalAlerts`, `alertsBySeverity` (high/medium/low), `alertsByType` (5 buckets), `alertTrend14d` (14 entries), `recentAlerts` (top 10), `sarFiled`, `falsePositiveRate`.
+  - **Sanctions Screening**: `totalScreened` = 30d tx count, `hitsFound` = tx with riskScore ≥ 0.85 OR counterparty name matches /sanction|ofac|blocked|pep/i, `blockedTransactions` = fraudFlag AND riskScore ≥ 0.85. Four screening lists (OFAC SDN 9542 entities, UN Consolidated 1024, EU FSF 2187, NFIU Local 487) with last-updated timestamps and per-list hit counts. `recentScreened` (top 12 by risk score, with listMatched). `blockedEntities` (3-6 mock entries: Bilad Al-Rafidain Trading LLC, Yevgeny Volkov, Khartoum Exchange House, Mahmoud Al-Bashir, Mirage Holdings Ltd, Joseph Kabila Trust — each with country/type/reason/source).
+  - **KYC Queue**: `pendingReviews` = user count kycStatus=pending, `approvedToday` = 12% of verified, `rejectedToday` = 25% of rejected, `avgReviewTime` = `4h 17m` baseline + seeded variance, `queueByTier` (3 buckets Tier 1/2/3 with derived counts), `pendingList` from KycDocument table where status=pending (max 12, with userName/email/country/documentType/tier/submittedAt/daysInQueue/riskFlag for high-risk jurisdiction).
+  - **Risk Distribution**: `usersByRisk` derived per-user (critical if suspended OR maxRisk ≥ 0.9; high if maxRisk ≥ 0.7 OR kycTier<1; medium if maxRisk ≥ 0.4 OR kycTier<2; low otherwise). `txByRiskBucket` = 5 buckets (Minimal 0–20, Low 21–40, Moderate 41–60, High 61–80, Critical 81–100) with colors.
+  - **Transaction Monitoring Rules**: 8 rules catalog (Transactions > ₦1M igh/Threshold], Velocity > 10 tx/day edium/Velocity], High-risk countries igh/Geographic], Structuring pattern igh/Pattern], Round amounts [low/Pattern], Unusual hours edium/Behavioral], New recipient large amount edium/Behavioral], Multiple failed attempts edium/Authentication]). Each rule's `triggeredCount` derived from real tx (large ≥$1000, round multiples of ₦100k, sanctioned countries, structuring 3+ same-day sub-$500 tx, velocity 10+ tx, hours 02–05, failed status, new recipient ≥$500). `lastTriggered` = latest matching tx or seeded fallback. 6 of 8 enabled by default (Round amounts and New recipient large disabled for variety).
+  - **Compliance Metrics**: `ctrFiled` (≥$10k tx × 0.4), `sarFiled` (AML SARs + 15% of total alerts), `complianceRate` (verified/total users × 100), `auditScore` (clamp 82–98 = complianceRate × 0.85 + 12), `passRate` (1 − hitsFound/totalScreened × 100).
+  - **Regulatory Reports**: 8 reports (RPT-CTR-2026-06 filed Jun 16, RPT-SAR-2026-12 filed Jun 11, RPT-CTR-2026-05 filed May 28, RPT-AUD-2026-Q1 filed May 5, RPT-SAR-2026-11 filed May 15, RPT-CTR-2026-04 filed Apr 28, RPT-COMPL-Q2 draft, RPT-SAR-2026-13 under_review) — each with type/title/period/status/filedDate/regulator/count.
+  - Cold-cache response ~18ms against live dev server.
+- Created `src/components/gaexpay/views/compliance-view.tsx` (~1180 LOC):
+  - **Header**: ShieldCheck icon tile (emerald→teal gradient) + title + Live badge (pulsing dot) + L4 Restricted badge (Lock icon, rose) + Export button.
+  - **Tabs**: AML Dashboard | Sanctions | KYC Queue | Rules | Reports — each with icon prefix and badge counts (AML shows totalAlerts rose badge, KYC shows pendingReviews amber badge).
+  - **AML Dashboard tab**:
+    - Alert summary hero (dark gradient `slate-900 → rose-950/40 → slate-900` with rose/amber glow blobs) — 4 HeroStat tiles (Total Alerts, High Severity rose, Medium Severity amber, Low Severity sky) with AnimatedNumber; SAR Filed + False Positive Rate strip (violet + slate mini cards).
+    - Alerts by Type bar chart (rose→amber gradient bars, XAxis labels angled −15°, 5-bucket % share grid below).
+    - Alert Trend (14d) area chart (rose gradient fill).
+    - Recent alerts table (8 columns: Alert ID+ref, User avatar+name+country, Type badge, Amount NGN+USD, Risk score with colored dot, Status badge with colored dot, Triggered timeAgo, Review + SAR action buttons).
+  - **Sanctions tab**:
+    - Screening stats hero (dark gradient `slate-900 → emerald-950 → slate-900`) — 3 HeroStat tiles (Total Screened, Hits Found amber, Blocked Transactions rose) with AnimatedNumber.
+    - Screening Lists Status card — 4 list cards (OFAC SDN, UN Consolidated, EU FSF, NFIU) with Landmark icon, Active badge (pulsing), entities count, hits count, last updated timeAgo.
+    - Recent Screened Transactions table (6 columns: User+country, Counterparty+ref, Amount NGN+USD, Risk dot+score, List matched, Status badge) — max 12 rows.
+    - Blocked Entities list (max-h-400px scrollable, no-scrollbar) — each entry with icon (Users for individual / Landmark for entity), name, reason, country/type/source badges.
+  - **KYC Queue tab**:
+    - 4 summary cards (Pending Reviews amber, Approved Today emerald, Rejected Today rose, Avg Review Time sky) each with AnimatedNumber + ring.
+    - Queue by Verification Tier bar chart (teal gradient bars, 3-tier % share grid below).
+    - Pending KYC Reviews list (max-h-480px scrollable, no-scrollbar) — each row with avatar, name + tier upgrade badge + high-risk jurisdiction badge, email, document type/country/days-in-queue metadata, View Docs + Approve (emerald) + Reject (rose) action buttons.
+  - **Rules tab**:
+    - Rules summary hero (dark gradient `slate-900 → teal-950/40 → slate-900`) — 3 HeroStat tiles (Active Rules count X/Y, Total Triggers 30d, Risk Threshold value).
+    - Risk Score Threshold slider card (Slider 20–100 step 5, with permissive/recommended/strict labels, Apply button).
+    - 8 rule toggle cards in 2-col grid (Switch component top-right) — each card shows Crosshair icon tile (severity-colored), rule name + category + severity label, description, 2 stat tiles (Triggered count + Last triggered timeAgo), threshold indicator when applicable (₦X / N tx/day / N attempts/hr / N sub-threshold tx). Disabled rules show reduced opacity.
+  - **Reports tab**:
+    - 4 compliance metrics cards (CTR Filed emerald, SAR Filed rose, Compliance Rate sky with Healthy/Watch/At Risk badge, Audit Score violet with A+/A/B grade badge) each with AnimatedNumber + ring.
+    - Regulatory Reports table (7 columns: Report ID mono, Type with colored icon, Title+period+records count, Regulator, Status badge, Filed date, Download/Preview button) — 8 rows.
+    - Generate Report Dialog (Select for type: CTR/SAR/Audit/Compliance; Select for period: MTD/last month/QTD/last quarter/YTD; dynamic report-include list per type; Generate button → toast).
+    - User Risk Distribution pie chart (4 slices: Low emerald, Medium amber, High orange, Critical rose, 4-tile legend grid).
+    - Transactions by Risk Score bar chart (5 colored buckets using API-provided colors) + Sanctions Pass Rate footer card.
+  - **Skeleton & loading**: `ComplianceSkeleton` component (hero + tab list + 4 KPI + 2 chart skeletons); `useFetch<ComplianceData>` with `loading || !data` gate; Framer Motion staggered entry (delay × index, opacity/y transitions); AnimatedNumber for all numeric KPIs/totals/percentages; Recharts dark tooltips; Responsive (`sm:grid-cols-2/3/4`, `lg:grid-cols-2/3/4`); `no-scrollbar` for all scrollable lists; `card-lift` for hover elevation; max-h with overflow-y-auto on long lists.
+- Wired navigation:
+  - Added `"compliance"` to the `View` union in `src/lib/store.ts` (immediately after `"enterprise-admin"`).
+  - Added `import { ComplianceView }` + `"compliance": <ComplianceView />` entry in `src/components/gaexpay/app-shell.tsx` (after `enterprise-admin`).
+  - Added `{ id: "compliance", label: "AML & Compliance", icon: ShieldCheck, badge: "L4" }` nav item to the "Platform" section in both `sidebar.tsx` (with "L4" badge) and `mobile-nav.tsx` (no badge), positioned immediately after the existing "Enterprise Admin" entry. ShieldCheck was already imported in both files (used by the existing "Identity (KYC)" entry), so no new icon import was needed.
+- Ran `bun run lint` → **0 errors, 0 warnings** (exit 0). Removed 5 unused lucide-react imports (TrendingDown, Cpu, Banknote, Calendar, ChevronRight) for code cleanliness — re-ran lint to confirm still 0 errors.
+- Verified `GET /api/compliance` against live dev server (HTTP 200, ~18ms):
+  - **AML**: totalAlerts=2–3, alertsBySeverity (high=1, medium=1–2, low=0), alertsByType across 5 types, alertTrend14d=14 entries, recentAlerts up to 10 with full alert shape, sarFiled=0, falsePositiveRate=100%.
+  - **Sanctions**: totalScreened=81–82, hitsFound=0, blockedTransactions=0, 4 screening lists with entity counts (9542/1024/2187/487), recentScreened=12 rows sorted by risk score, blockedEntities=3 entities.
+  - **KYC Queue**: pendingReviews=4, approvedToday=1, rejectedToday=0, avgReviewTime=`4h 17m`, queueByTier (Tier 1: 2, Tier 2: 2, Tier 3: 1), pendingList=1 submission with full user/doc metadata.
+  - **Risk**: usersByRisk (low=5, medium=5, high=1, critical=3), txByRiskBucket 5 buckets totaling 81 tx.
+  - **Rules**: 8 rules — 6 enabled (Transactions > ₦1M, Velocity > 10 tx/day, High-risk countries, Structuring pattern, Unusual hours, Multiple failed attempts), 2 disabled (Round amounts, New recipient large amount), with real triggered counts (Velocity=82, Structuring=41, New recipient large=25, Large txn=23, Unusual hours=13, Failed attempts=4, High-risk countries=0, Round amounts=0).
+  - **Metrics**: ctrFiled=7, sarFiled=2, complianceRate=42.9%, auditScore=82, totalScreened=82, passRate=100%.
+  - **Reports**: 8 reports (5 filed, 1 draft, 1 under_review, 1 audit filed) across 4 types (CTR×3, SAR×3, Audit×1, Compliance×1).
+- Confirmed API contract shape via Python script — all 8 top-level keys present, 8 monitoring rules, 8 reports, all sub-fields validated.
+- Checked dev.log after each change — clean compilation (`✓ Compiled in 113ms` / `464ms`), `GET /api/compliance 200 in 17-20ms`, `GET / 200 in 28-283ms`, no runtime errors.
+- Confirmed `security-view.tsx` was NOT modified (not in `git status` modified list).
+
+Stage Summary:
+- AML & Compliance Center is live and reachable from both desktop sidebar and mobile nav under "Platform → AML & Compliance" (ShieldCheck icon, "L4" badge on desktop), positioned immediately after "Enterprise Admin".
+- The single `/api/compliance` GET endpoint aggregates 9 parallel database queries (users, flagged transactions, KYC documents, recent transactions, KYC counts, audit log counts) and returns a comprehensive payload with 7 sections: AML dashboard (alerts by severity/type, 14-day trend, recent alerts, SAR count, false positive rate), sanctions screening (screened/hits/blocked + 4 watchlists OFAC/UN/EU/NFIU + 12 recent screened tx + 3-6 blocked entities), KYC queue (stats + 3-tier distribution + pending submissions with approve/reject metadata), risk distribution (users by 4 risk levels + tx by 5 risk buckets), 8 transaction monitoring rules (with real trigger counts + last-triggered timestamps + enable/disable state + threshold values), compliance metrics (CTR/SAR counts, compliance rate, audit score, pass rate), and 8 regulatory reports (CTR/SAR/Audit/Compliance with filed/draft/under_review statuses).
+- The frontend view (`compliance-view.tsx`, ~1180 LOC) renders 5 tabs — AML Dashboard, Sanctions, KYC Queue, Rules, Reports — each with rich charts (Recharts area/bar/pie), AnimatedNumber KPIs, Framer Motion staggered entry, dark-gradient hero cards (emerald/teal + rose/amber accent for severity), responsive grid layouts, scrollable lists with `no-scrollbar`, `card-lift` hover effects, full skeleton loading states, Switch toggles for monitoring rules, Slider for risk threshold, Dialog for generating new regulatory reports (CTR/SAR/Audit/Compliance with 5 reporting periods and dynamic inclusion lists), and approve/reject action buttons on the KYC queue.
+- No regressions: ESLint clean (0 errors, 0 warnings), dev server compiles cleanly, all pre-existing routes still serve 200, the original `security-view.tsx` and the `/api/admin/fraud` API were NOT modified.
+- App stats: 30 views (added AML & Compliance Center), 48 API routes (added `/api/compliance` GET), 19 database models (unchanged), 1 comprehensive compliance center with 5 tabs, 8 monitoring rules, 4 sanctions lists, and 30+ data widgets.
+
+
+---
+
+Task ID: 21-D
+Agent: Senior Treasury Engineer (Treasury & Liquidity Management)
+Date: 2026-06-19
+
+Task: Build a Treasury & Liquidity Management dashboard for managing multi-currency reserves, FX exposure, settlement accounts, and liquidity positions.
+
+Work Log:
+- Read prior worklog (Phases 1–14, Tasks 1–21-C) to understand the established design system: emerald/teal accent, dark gradient hero cards (slate-900 → emerald-950/40 → slate-900 with glow blobs), Framer Motion staggered entry, AnimatedNumber for all numeric KPIs, Recharts dark tooltips (background #0f172a, border #1e293b), `useFetch` hook pattern, `db` Prisma client import, `DEMO_USER_ID` constant, full shadcn/ui component set, `PolarAngleAxis` import required by `RadialBarChart` for gauge rendering. Existing `compliance-view.tsx` and existing `/api/compliance` route — both preserved untouched per spec (created NEW view + NEW API instead). Read `src/lib/coingecko.ts` to confirm `getCryptoRates()` returns `{rates, priceMap, timestamp}` with live BTC/ETH/USDT/USDC + PI static price (PI = $47.35 pre-mainnet).
+- Created `src/app/api/treasury/route.ts` (~510 LOC, GET only, force-dynamic):
+  - **Single comprehensive payload** returning 9 top-level sections: `totalReserves`, `liquidity`, `fxExposure`, `settlementAccounts`, `currencyReserves`, `cashFlow`, `rebalancing`, `cryptoReserves`, `allocation`, plus `generatedAt`.
+  - **Parallel DB queries** in one Promise.all (2 queries): `recentTx` (last 30d transactions, top 4000, select all settlement-relevant fields) and `allWallets` (all wallet balances + ledger). Plus `getCryptoRates()` from CoinGecko (60s cached, single-flight).
+  - **Total Reserves**: aggregates treasury-managed reserve holdings (seeded per-currency balances at settlement banks: NGN 4.25B, USD 2.84M, EUR 845k, GBP 412k, GHS 1.85M, KES 92.5M, XAF 412M, XOF 385M, ZAR 5.65M) + 35% of real customer wallet float (liquidity buffer). Returns `totalUSD` ($13.67M), `totalNGN` (₦20.99B), `fiatUSD` ($10.58M), `cryptoUSD` ($3.09M), `change24hPct` (-2% to +4% seeded), `breakdownByCurrency` (9 fiat entries: NGN, USD, EUR, GBP, GHS, KES, XAF, XOF, ZAR).
+  - **Liquidity Position**: `availableUSD` ($11.05M = total − locked), `lockedUSD` ($2.62M = 18–22% of total, seeded range), `pendingSettlementsUSD` (real, from pending tx), `pendingSettlementsCount`, `reserveRatio` = Available / (CustomerLiabilities × 3.5% daily stress factor), capped to 60–220% (returns 220% healthy), `customerLiabilitiesUSD` (real wallet float in USD), `total30dOutflowUSD` (real), `status` (healthy/watch/critical).
+  - **FX Exposure**: `netPositions` derived from real 30d transactions (per-currency net USD inflow/outflow, sorted by absolute magnitude, marked long/short); `exposureByPair` (6 pairs: USD/NGN $65M hedged/$35M unhedged 65% hedge ratio, EUR/NGN, GBP/NGN, GHS/NGN 0% hedged, KES/NGN 35%, ZAR/NGN 0%); `hedgedUSD` ($87M), `unhedgedUSD` ($54.4M), `totalExposureUSD` ($141.4M), `overallHedgeRatio` (61.5%); each pair includes hedging instruments list (Forward, NDF, Option) and exposure intensity (0–1 for heatmap coloring).
+  - **Settlement Accounts**: 8 hardcoded nostro + operating accounts (Access Bank Nigeria NGN, Citibank N.Y. USD, Standard Chartered London GBP, Deutsche Bank Frankfurt EUR, GCB Bank Ghana GHS, KCB Bank Kenya KES, Ecobank Cameroun XAF, Standard Bank SA ZAR). Each with `bank`, `accountNumber`, `swift`, `currency`, `label`, `balance`, `balanceUSD`, `available`, `locked`, `status` (active/low-balance/frozen/monitoring — 5 active, 1 monitoring, 1 low-balance, 1 frozen for demo variety), `lastReconciled`.
+  - **Currency Reserves**: 9 fiat currencies with `threshold` (per-currency minimum reserve), `ratio` (balance/threshold), `status` (healthy ≥1.2×, low 1.0–1.2×, critical <1.0×), `utilizationPct`. Tuned thresholds to produce 7 healthy (NGN 2.13×, USD 2.52×, EUR 1.69×, GBP 1.65×, GHS 1.85×, KES 1.86×, ZAR 1.88×), 1 low (XAF 1.18×), 1 critical (XOF 0.59×) for realistic dashboard demo.
+  - **30-day Cash Flow**: 30 daily buckets computed from real completed transactions (inflow = sum of credit direction tx, outflow = sum of debit direction tx, net = inflow − outflow, all USD-normalized). Each entry: `{ date: "YYYY-MM-DD", label: "Jun 19", inflow: number, outflow: number, net: number }`. Returns `totalInflow30d`, `totalOutflow30d`, `netCashFlow30d`, `avgDailyInflow`, `avgDailyOutflow`.
+  - **Rebalancing Recommendations**: Built dynamically from currency reserve statuses + FX exposure gaps. Generates `top-up` recommendations (high priority for critical currencies like XOF $1.63M, medium for low currencies like XAF $292k), `reduce` recommendations (low priority for over-allocated currencies >2.5× threshold — sweeps excess to USD or NGN if source is USD), `hedge` recommendations (medium/high priority for unhedged pairs <30% hedge ratio with >$1M exposure — GHS/NGN $1.6M, ZAR/NGN $950k). Each recommendation includes `sourceCurrency`, `targetCurrency`, `amountUSD`, `amountSource`, `amountTarget`, `reason`, `priority`, `estimatedCompletion` (T+0/T+1/T+2). Returns 5 recommendations of mixed types/priorities.
+  - **Crypto Reserves**: 5 cryptos (BTC 12.85 units @ $62.4k = $801k, ETH 184.29 @ $1.69k = $312k, USDT 485k @ $1 = $484k, USDC 312.5k @ $1 = $312k, PI 25k @ $47.35 = $1.18M). Each entry uses **real CoinGecko live prices** via `getCryptoRates()` and includes `change24h` (real), `coldWallet` (bc1qxy2k...treasury / 0x9d3c...cold), `hotWallet` (0x4f2a...hot), `network`, `color`, `icon`. Total crypto USD value: $3.09M.
+  - **Allocation**: 14 items (9 fiat + 5 crypto) sorted by USD value descending, each with `pct` of total reserves for pie chart rendering.
+  - Cold-cache response ~430ms (CoinGecko fetch + DB queries) — warm cache ~13ms.
+- Created `src/components/gaexpay/views/treasury-view.tsx` (~1450 LOC):
+  - **Header**: Landmark icon tile (emerald→teal gradient) + title + Live badge (pulsing dot) + L4 Treasury badge (Lock icon, rose) + Refresh button (calls `reload()`) + Export button (toast).
+  - **Tabs**: Overview | Reserves | FX Exposure | Cash Flow | Settlements — each with icon prefix. Reserves tab shows rose badge count for non-healthy currencies.
+  - **Overview tab**:
+    - **Total Reserves Hero** (dark gradient `slate-900 → emerald-950/50 → slate-900` with emerald/teal glow blobs) — 2-column layout: left side shows `Wallet` icon tile + "Total Treasury Reserves" label + AnimatedNumber $13.67M USD (4xl-5xl font) + AnimatedNumber ₦20.99B NGN equivalent + 24h change badge (emerald/rose based on sign) + fiat/crypto split + 6 mini breakdown bars (per-currency USD value vs max); right side shows RadialBarChart gauge (full circle, emerald gradient fill, PolarAngleAxis domain [0, 220]) with reserve coverage ratio % overlaid in center + status badge (Healthy/Watch/Critical) below.
+    - **Liquidity Position** 4 cards (Available emerald, Locked amber, Pending Settlements sky, Reserve Ratio color-coded emerald/amber/rose) — each with icon tile, AnimatedNumber USD value, NGN equivalent, footer context. Uses `LiquidityCard` helper component with `isPercent` prop for ratio card.
+    - **Reserve Allocation pie chart** (inner radius 55, outer 95) — 14 slices with ALLOCATION_COLORS palette (emerald/teal/cyan/sky/amber/orange/red/pink/violet/purple/magenta/lime/green/yellow), scrollable legend grid below (no-scrollbar, max-h-32) showing each asset code + pct.
+    - **Rebalancing Recommendations** card — scrollable list (max-h-340px, no-scrollbar) of recommendation cards, each with type icon (Plus emerald / Minus amber / Shield violet / ArrowLeftRight sky), source→target currency, type badge, priority badge, USD amount (emerald), reason (line-clamp-2), estimated completion time, Execute button (toasts order queued). Empty state shows CheckCircle2 icon + "All reserves within optimal range".
+    - **Crypto Reserves grid** (sm:2, lg:5 cols) — each card shows crypto symbol tile (colored), code + network, 24h change badge (emerald up / rose down), holdings amount (4 decimals), USD value (emerald, large), unit price, allocation % of crypto reserves, progress bar.
+  - **Reserves tab**:
+    - Reserves hero (dark gradient) — 4 HeroStat tiles (Total Reserves emerald, Fiat teal, Crypto amber, Currencies Tracked sky).
+    - **Currency Reserves table** (7 columns: Currency flag+code+name, Balance symbol+number+code, USD Value + NGN equivalent, Threshold min, Coverage progress bar + ratio×, Status badge with colored dot, Action button). Action button label/color varies by status: critical → "Top-up now" (rose), low → "Top-up" (amber), ratio>2.5 → "Reduce" (amber), else → "Rebalance" (emerald). All buttons trigger toast on click. Filter badges show healthy/low/critical counts at top.
+    - **Crypto Reserve Holdings grid** (sm:2, lg:3 cols) — each card shows crypto symbol tile (colored), code + name, 24h change badge, Holdings/Unit Price 2-col grid, USD Value (large emerald), cold wallet (Snowflake icon, monospace), hot wallet (Flame icon orange, monospace).
+  - **FX Exposure tab**:
+    - Exposure hero (dark gradient `slate-900 → teal-950/40 → slate-900`) — 4 HeroStat tiles (Total Exposure teal, Hedged emerald, Unhedged amber, Overall Hedge Ratio violet).
+    - **Net Position by Currency bar chart** (lg:col-span-3) — emerald→teal gradient for long bars, rose→orange gradient for short bars, XAxis currency codes, YAxis USD compact formatter, dark tooltip with direction.
+    - **Hedged vs Unhedged pie chart** (lg:col-span-2) — 2 slices (Hedged emerald, Unhedged rose), inner radius 60, outer 90, 2-tile legend grid below with USD values + percentages.
+    - **Exposure Heatmap by Currency Pair** — 6 colored cards (sm:2, lg:3 cols). Background color intensity scales with exposure magnitude (rgba with intensity 0–1). Border color & hedge badge color depend on hedge ratio (≥50% emerald, 25–50% amber, <25% rose). Each card shows pair name, hedge ratio badge, total exposure (large), emerald/rose hedge progress bar split, hedged/unhedged USD values, hedging instrument chips (Forward, NDF, Option).
+    - **Net Position Detail table** (5 columns: Currency, Direction badge (Long emerald up / Short rose down), Net USD signed, Net NGN signed, Magnitude progress bar). 9 rows sorted by absolute magnitude.
+  - **Cash Flow tab**:
+    - Cash flow hero (dark gradient) — 4 HeroStat tiles (Total Inflow emerald, Total Outflow amber, Net Cash Flow teal, Avg Daily Inflow sky).
+    - **30-Day Cash Flow area chart** — Inflow area (emerald gradient fill), Outflow area (rose gradient fill), XAxis labels (every 2-3 days), YAxis USD compact formatter, inflow/outflow legend badges above chart.
+    - **Daily Net Cash Flow bar chart** — Each day's net value as a single bar (emerald if positive, rose if negative), 30 bars total.
+    - **Daily Flow Detail table** — scrollable (max-h-96, no-scrollbar, sticky header) showing date, inflow (emerald), outflow (rose), net (signed, emerald/rose), and a green flow bar visualizing inflow magnitude vs max.
+  - **Settlements tab**:
+    - Settlement hero (dark gradient) — 4 HeroStat tiles (Total Balance teal, Available emerald, Locked amber, Active Accounts sky).
+    - **Settlement Accounts grid** (lg:2 cols) — 8 cards, each with: Building2 icon tile (emerald→teal gradient), bank name + label, status badge (Active emerald / Monitoring sky / Low Balance amber / Frozen slate), 2-col grid (Account Number monospace, SWIFT+Currency), Balance (large) + USD equivalent + Available (emerald) + Locked (amber), Available/Locked progress bar with % labels, last reconciled timeAgo, Ledger + Transfer buttons (Transfer disabled for frozen accounts, both trigger toast).
+  - **Skeleton & loading**: `TreasurySkeleton` component (hero + tab list + 4 KPI + 2 chart skeletons); `useFetch<TreasuryData>` with `loading || !data` gate; Framer Motion staggered entry (delay × index, opacity/y transitions); AnimatedNumber for all numeric KPIs/totals/percentages; Recharts dark tooltips (background #0f172a, border #1e293b, color #fff); Responsive (`sm:grid-cols-2/3/4/5`, `lg:grid-cols-2/3/4/5`); `no-scrollbar` for all scrollable lists; `card-lift` for hover elevation on cards and recommendation entries; max-h with overflow-y-auto on long lists.
+  - Helpers: `fmtNum`, `fmtUSD` (compact + full), `fmtNGN` (compact + full), `timeAgoShort`, status/priority/type config maps, ALLOCATION_COLORS palette (14 colors), HeroStat component (gradient bg white/5, ring white/10, colored icon tile, AnimatedNumber), LiquidityCard component (gradient bg, isPercent prop, footer node).
+- Wired navigation:
+  - Added `"treasury"` to the `View` union in `src/lib/store.ts` (immediately after `"compliance"`).
+  - Added `import { TreasuryView }` + `"treasury": <TreasuryView />` entry in `src/components/gaexpay/app-shell.tsx` (after `compliance`).
+  - Added `Landmark` to the lucide-react import in both `sidebar.tsx` and `mobile-nav.tsx`.
+  - Added `{ id: "treasury", label: "Treasury", icon: Landmark, badge: "L4" }` nav item to the "Platform" section in both `sidebar.tsx` (with "L4" badge) and `mobile-nav.tsx` (no badge), positioned immediately after the existing "AML & Compliance" entry.
+- Cleaned up unused imports: removed `useState`, `Progress`, `PiggyBank`, `Zap`, `Target`, `BanknoteIcon`, `Radio`, `ArrowRightCircle`, `ArrowRightLeft`, `Legend` (replaced by `PolarAngleAxis`) from treasury-view.tsx for code cleanliness.
+- Ran `bun run lint` → **0 errors, 0 warnings** (exit 0). Initial run flagged `PolarAngleAxis is not defined` (react/jsx-no-undef) — fixed by adding to recharts import. Re-ran lint to confirm clean.
+- Verified `GET /api/treasury` against live dev server (HTTP 200, ~13ms warm / ~430ms cold with CoinGecko fetch):
+  - **Total Reserves**: totalUSD=$13,673,763, totalNGN=₦20,989,225,722, fiatUSD=$10,579,453, cryptoUSD=$3,094,310, change24hPct=-0.46%, breakdownByCurrency=9 entries (NGN/USD/EUR/GBP/GHS/KES/XAF/XOF/ZAR).
+  - **Liquidity**: availableUSD=$11,054,465, lockedUSD=$2,619,298, pendingSettlementsUSD=$250, pendingSettlementsCount=1, reserveRatio=220 (capped, healthy), customerLiabilitiesUSD=$14,353,840, total30dOutflowUSD=$1,499,776, status=healthy.
+  - **FX Exposure**: 9 netPositions (GBP long, KES short, EUR short, ZAR long, GHS long, USD short, XOF long, XAF long, NGN short) sorted by absolute magnitude; 6 exposureByPair (USD/NGN 65% hedged, EUR/NGN 62.5%, GBP/NGN 66.7%, GHS/NGN 0%, KES/NGN 34.9%, ZAR/NGN 0%); hedgedUSD=$87M, unhedgedUSD=$54.4M, totalExposureUSD=$141.4M, overallHedgeRatio=61.5%.
+  - **Settlement Accounts**: 8 accounts (Access Bank NGN active, Citibank USD active, Standard Chartered GBP monitoring, Deutsche Bank EUR active, GCB GHS active, KCB KES active, Ecobank XAF low-balance, Standard Bank SA frozen).
+  - **Currency Reserves**: 9 currencies — NGN 2.13× healthy, USD 2.52× healthy, EUR 1.69× healthy, GBP 1.65× healthy, GHS 1.85× healthy, KES 1.86× healthy, XAF 1.18× low, XOF 0.59× critical, ZAR 1.88× healthy.
+  - **Cash Flow**: 30 daily buckets; totalInflow30d=$623,740, totalOutflow30d=$1,499,776, netCashFlow30d=-$876,036, avgDailyInflow=$20,791, avgDailyOutflow=$49,992.
+  - **Rebalancing**: 5 recommendations — top-up USD→XAF $292k medium, top-up USD→XOF $1.63M high, reduce USD→NGN $1.53M low, hedge NGN→GHS $1.6M medium, hedge NGN→ZAR $950k medium.
+  - **Crypto Reserves**: 5 cryptos with live CoinGecko prices — BTC 12.85 @ $62,400 = $801,671 (24h -2.84%), ETH 184.29 @ $1,692.36 = $311,890 (-2.96%), USDT 485,000 @ $0.9991 = $484,553 (-0.01%), USDC 312,500 @ $0.9998 = $312,445 (+0.01%), PI 25,000 @ $47.35 = $1,183,750 (0%).
+  - **Allocation**: 14 items (9 fiat + 5 crypto) sorted by USD value, each with pct of total.
+- Checked dev.log after each change — clean compilation (`✓ Compiled in 126ms` / `151ms` / `127ms`), `GET /api/treasury 200 in 13-432ms`, `GET / 200 in 28-326ms`, no runtime errors. CoinGecko fetch single-flight cached for 60s.
+- Confirmed `compliance-view.tsx` was NOT modified (only added Landmark to sidebar.tsx and mobile-nav.tsx imports).
+- Fixed `reduce` recommendation bug: source currency "USD" was producing USD→USD recommendation; updated logic to sweep USD excess to NGN operating reserve, and non-USD excess to USD for yield deployment.
+
+Stage Summary:
+- Treasury & Liquidity Management dashboard is live and reachable from both desktop sidebar and mobile nav under "Platform → Treasury" (Landmark icon, "L4" badge on desktop), positioned immediately after "AML & Compliance".
+- The single `/api/treasury` GET endpoint aggregates 2 parallel database queries (30-day transactions + all wallet balances) + 1 live CoinGecko price fetch (60s cached, single-flight) and returns a comprehensive payload with 9 sections: total reserves ($13.67M USD / ₦20.99B NGN across 9 fiat + 5 crypto), liquidity position (available/locked/pending/reserve ratio with realistic stress-factor formula), FX exposure (9 net positions + 6 hedged pairs + 61.5% overall hedge ratio), 8 settlement accounts (Access/Citi/StanChart/Deutsche/GCB/KCB/Ecobank/Standard Bank with 4 status types), 9 currency reserves (7 healthy, 1 low XAF, 1 critical XOF with per-currency thresholds + ratios), 30-day cash flow series (real daily buckets), 5 rebalancing recommendations (top-up/reduce/hedge with mixed priorities), 5 crypto reserves with live CoinGecko BTC/ETH/USDT/USDC + PI prices, and 14-item allocation breakdown.
+- The frontend view (`treasury-view.tsx`, ~1450 LOC) renders 5 tabs — Overview (hero + liquidity cards + allocation pie + recommendations + crypto grid), Reserves (hero + currency table + crypto detail grid), FX Exposure (hero + net position bar + hedged pie + exposure heatmap + detail table), Cash Flow (hero + inflow/outflow area chart + daily net bar + scrollable daily table), Settlements (hero + 8 account cards with transfer buttons) — each with rich charts (Recharts Area/Bar/Pie/RadialBar), AnimatedNumber KPIs, Framer Motion staggered entry, dark-gradient hero cards (emerald/teal accent + rose/amber for risk), responsive grid layouts (`sm:grid-cols-2/3/4/5`, `lg:grid-cols-2/3/4/5`), scrollable lists with `no-scrollbar`, `card-lift` hover effects, full skeleton loading states, action buttons (top-up/rebalance/transfer/execute) with toast feedback, and a radial gauge for reserve coverage ratio.
+- No regressions: ESLint clean (0 errors, 0 warnings), dev server compiles cleanly, all pre-existing routes still serve 200, the original `compliance-view.tsx` and `/api/compliance` API were NOT modified.
+- App stats: 31 views (added Treasury), 49 API routes (added `/api/treasury` GET), 19 database models (unchanged), 1 comprehensive treasury dashboard with 5 tabs, 8 settlement accounts, 9 fiat + 5 crypto reserves, 6 FX pairs, and 30+ data widgets.

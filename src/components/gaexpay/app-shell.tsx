@@ -31,9 +31,14 @@ import { SecurityView } from "./views/security-view";
 import { SettingsView } from "./views/settings-view";
 import { SupportView } from "./views/support-view";
 import { AdminView } from "./views/admin-view";
+import { EnterpriseAdminView } from "./views/enterprise-admin-view";
+import { ComplianceView } from "./views/compliance-view";
+import { TreasuryView } from "./views/treasury-view";
+import { DeveloperPortalView } from "./views/developer-portal-view";
 import { ReferralView } from "./views/referral-view";
 import { WalletDetailView } from "./views/wallet-detail-view";
 import { MerchantView } from "./views/merchant-view";
+import { BusinessProView } from "./views/business-pro-view";
 import { CommandPalette } from "./command-palette";
 import { AchievementMonitor } from "./achievement-monitor";
 import { OnboardingTour } from "./onboarding-tour";
@@ -67,11 +72,16 @@ export function AppShell() {
     achievements: <AchievementsView />,
     merchant: <MerchantView />,
     "merchant-qr": <MerchantQRView />,
+    "business-pro": <BusinessProView />,
     kyc: <KycView />,
     security: <SecurityView />,
     settings: <SettingsView />,
     support: <SupportView />,
     admin: <AdminView />,
+    "enterprise-admin": <EnterpriseAdminView />,
+    compliance: <ComplianceView />,
+    treasury: <TreasuryView />,
+    developer: <DeveloperPortalView />,
     referral: <ReferralView />,
   };
 

@@ -3,7 +3,7 @@
 import {
   LayoutDashboard, Wallet, SendHorizontal, ArrowLeftRight, CreditCard,
   QrCode, BarChart3, ShieldCheck, Shield, Settings, LifeBuoy, Users, Gift,
-  Sparkles, PiggyBank, Wallet2, CalendarClock, Store, ArrowLeftRight as Exchange, FileText, Trophy, Calendar, MapPin, Bitcoin, Repeat, Globe, DollarSign, AtSign, Banknote,
+  Sparkles, PiggyBank, Wallet2, CalendarClock, Store, ArrowLeftRight as Exchange, FileText, Trophy, Calendar, MapPin, Bitcoin, Repeat, Globe, DollarSign, AtSign, Banknote, Building2, Briefcase, Landmark, Code2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp, type View } from "@/lib/store";
@@ -40,6 +40,7 @@ const NAV: { section: string; items: { id: View; label: string; icon: any; badge
     section: "Business",
     items: [
       { id: "merchant", label: "Merchant Dashboard", icon: Store, badge: "Pro" },
+      { id: "business-pro", label: "Business Pro", icon: Briefcase, badge: "Pro" },
     ],
   },
   {
@@ -57,6 +58,10 @@ const NAV: { section: string; items: { id: View; label: string; icon: any; badge
     section: "Platform",
     items: [
       { id: "admin", label: "Admin Console", icon: Users, badge: "Admin" },
+      { id: "enterprise-admin", label: "Enterprise Admin", icon: Building2, badge: "L4" },
+      { id: "compliance", label: "AML & Compliance", icon: ShieldCheck, badge: "L4" },
+      { id: "treasury", label: "Treasury", icon: Landmark, badge: "L4" },
+      { id: "developer", label: "Developer Portal", icon: Code2 },
     ],
   },
 ];
