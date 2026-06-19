@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, LayoutDashboard, Wallet, SendHorizontal, ArrowLeftRight, CreditCard,
   QrCode, BarChart3, ShieldCheck, Settings, LifeBuoy, Users, Gift, PiggyBank,
   Wallet2, CalendarClock, FileText, Store, ArrowLeftRight as Exchange,
-  CornerDownLeft, ArrowUp, ArrowDown,
+  CornerDownLeft, ArrowUp, ArrowDown, Loader2, User, Store as StoreIcon, Receipt, Trophy,
 } from "lucide-react";
 import { useApp, type View } from "@/lib/store";
 import {
-  Dialog, DialogContent,
+  Dialog, DialogContent, DialogTitle,
 } from "@/components/ui/dialog";
+import { formatMoney, timeAgo } from "@/lib/gaexpay";
 import { cn } from "@/lib/utils";
 
 interface CommandItem {
@@ -44,6 +45,7 @@ const COMMANDS: CommandItem[] = [
   { id: "settings", label: "Settings", description: "Account & security settings", icon: Settings, keywords: ["profile", "security", "preferences"], section: "Navigate" },
   { id: "support", label: "Support", description: "Get help & contact us", icon: LifeBuoy, keywords: ["help", "faq", "chat"], section: "Navigate" },
   { id: "admin", label: "Admin Console", description: "Platform administration", icon: Users, keywords: ["manage", "users", "fraud"], section: "Navigate" },
+  { id: "achievements", label: "Achievements", description: "View your badges & progress", icon: Trophy, keywords: ["badges", "rewards", "level", "gamification"], section: "Navigate" },
 ];
 
 const QUICK_ACTIONS: CommandItem[] = [
@@ -58,6 +60,8 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
+  const [searchResults, setSearchResults] = useState<any>(null);
+  const [searching, setSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -82,8 +86,31 @@ export function CommandPalette() {
       setTimeout(() => inputRef.current?.focus(), 50);
       setSearch("");
       setActiveIndex(0);
+      setSearchResults(null);
     }
   }, [open]);
+
+  // Debounced API search
+  useEffect(() => {
+    if (!search || search.length < 2) {
+      setSearchResults(null);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(search)}`);
+        const data = await res.json();
+        setSearchResults(data);
+      } catch {
+        // ignore
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const allItems = [...COMMANDS, ...QUICK_ACTIONS];
 
@@ -98,8 +125,55 @@ export function CommandPalette() {
       })
     : allItems;
 
+  // Build search result items
+  const searchItems: CommandItem[] = [];
+  if (searchResults) {
+    (searchResults.transactions || []).forEach((t: any) => {
+      searchItems.push({
+        id: `tx-${t.id}`,
+        label: t.counterpartyName || t.description,
+        description: `${formatMoney(t.amount, t.currency)} · ${timeAgo(t.createdAt)} · ${t.reference}`,
+        icon: Receipt,
+        keywords: [],
+        section: "Transactions",
+      });
+    });
+    (searchResults.beneficiaries || []).forEach((b: any) => {
+      searchItems.push({
+        id: `ben-${b.id}`,
+        label: b.name,
+        description: `${b.account} · ${b.bank || b.type}`,
+        icon: User,
+        keywords: [],
+        section: "Beneficiaries",
+      });
+    });
+    (searchResults.merchants || []).forEach((m: any) => {
+      searchItems.push({
+        id: `mer-${m.id}`,
+        label: m.name,
+        description: `${m.category} · ★ ${m.rating} · ${m.qrCode}`,
+        icon: StoreIcon,
+        keywords: [],
+        section: "Merchants",
+      });
+    });
+    (searchResults.people || []).forEach((p: any) => {
+      searchItems.push({
+        id: `per-${p.id}`,
+        label: `${p.firstName} ${p.lastName}`,
+        description: p.email,
+        icon: User,
+        keywords: [],
+        section: "People",
+      });
+    });
+  }
+
+  const combinedFiltered = [...filtered, ...searchItems];
+
   // Group by section
-  const grouped = filtered.reduce((acc, item) => {
+  const grouped = combinedFiltered.reduce((acc, item) => {
     if (!acc[item.section]) acc[item.section] = [];
     acc[item.section].push(item);
     return acc;
@@ -118,6 +192,10 @@ export function CommandPalette() {
     else if (item.id === "qa-qr") setView("pay");
     else if (item.id === "qa-statement") setView("statement");
     else if (item.id === "qa-exchange") setView("exchange");
+    else if (item.id.startsWith("tx-")) setView("transactions");
+    else if (item.id.startsWith("ben-")) setView("send");
+    else if (item.id.startsWith("mer-")) setView("pay");
+    else if (item.id.startsWith("per-")) setView("send");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -143,7 +221,8 @@ export function CommandPalette() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-xl p-0 gap-0 overflow-hidden top-[15%] translate-y-0" style={{ top: "15%" }}>
+      <DialogContent className="max-w-xl p-0 gap-0 overflow-hidden top-[15%] translate-y-0" style={{ top: "15%" }} aria-describedby={undefined}>
+        <DialogTitle className="sr-only">Command Palette</DialogTitle>
         <div className="flex items-center gap-3 border-b px-4 py-3">
           <Search className="h-5 w-5 text-muted-foreground shrink-0" />
           <input
@@ -151,9 +230,10 @@ export function CommandPalette() {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setActiveIndex(0); }}
             onKeyDown={handleKeyDown}
-            placeholder="Search views, actions, or type a command..."
+            placeholder="Search views, transactions, people, merchants..."
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
+          {searching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
           <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] text-muted-foreground">
             ESC
           </kbd>
@@ -162,8 +242,17 @@ export function CommandPalette() {
         <div ref={listRef} className="max-h-[400px] overflow-y-auto p-2">
           {flatFiltered.length === 0 ? (
             <div className="py-12 text-center">
-              <Search className="mx-auto h-8 w-8 text-muted-foreground/40 mb-2" />
-              <p className="text-sm text-muted-foreground">No results for "{search}"</p>
+              {searching ? (
+                <>
+                  <Loader2 className="mx-auto h-8 w-8 text-muted-foreground/40 mb-2 animate-spin" />
+                  <p className="text-sm text-muted-foreground">Searching...</p>
+                </>
+              ) : (
+                <>
+                  <Search className="mx-auto h-8 w-8 text-muted-foreground/40 mb-2" />
+                  <p className="text-sm text-muted-foreground">No results for "{search}"</p>
+                </>
+              )}
             </div>
           ) : (
             Object.entries(grouped).map(([section, items]) => (

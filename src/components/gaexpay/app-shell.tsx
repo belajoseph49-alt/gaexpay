@@ -16,6 +16,7 @@ import { ScheduledView } from "./views/scheduled-view";
 import { AnalyticsView } from "./views/analytics-view";
 import { ExchangeView } from "./views/exchange-view";
 import { StatementView } from "./views/statement-view";
+import { AchievementsView } from "./views/achievements-view";
 import { MerchantQRView } from "./views/merchant-qr-view";
 import { KycView } from "./views/kyc-view";
 import { SettingsView } from "./views/settings-view";
@@ -44,6 +45,7 @@ export function AppShell() {
     analytics: <AnalyticsView />,
     exchange: <ExchangeView />,
     statement: <StatementView />,
+    achievements: <AchievementsView />,
     merchant: <MerchantView />,
     "merchant-qr": <MerchantQRView />,
     kyc: <KycView />,

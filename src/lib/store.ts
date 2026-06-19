@@ -16,6 +16,7 @@ export type View =
   | "analytics"
   | "exchange"
   | "statement"
+  | "achievements"
   | "merchant"
   | "merchant-qr"
   | "kyc"

@@ -3,7 +3,7 @@
 import {
   LayoutDashboard, Wallet, SendHorizontal, ArrowLeftRight, CreditCard,
   QrCode, BarChart3, ShieldCheck, Settings, LifeBuoy, Users, Gift,
-  Sparkles, PiggyBank, Wallet2, CalendarClock, Store, ArrowLeftRight as Exchange, FileText,
+  Sparkles, PiggyBank, Wallet2, CalendarClock, Store, ArrowLeftRight as Exchange, FileText, Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp, type View } from "@/lib/store";
@@ -38,6 +38,7 @@ const NAV: { section: string; items: { id: View; label: string; icon: any; badge
     section: "Account",
     items: [
       { id: "kyc", label: "Identity (KYC)", icon: ShieldCheck },
+      { id: "achievements", label: "Achievements", icon: Trophy },
       { id: "referral", label: "Referral & Rewards", icon: Gift },
       { id: "settings", label: "Settings", icon: Settings },
       { id: "support", label: "Support", icon: LifeBuoy },
