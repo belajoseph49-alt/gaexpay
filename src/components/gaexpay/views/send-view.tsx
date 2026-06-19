@@ -31,22 +31,22 @@ import { useFormatMoney } from "@/hooks/use-format-money";
 
 export function SendView() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Send & Receive</h1>
-        <p className="text-sm text-muted-foreground">Transfer money instantly, request payments, top up or withdraw</p>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Send & Receive</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Transfer money instantly, request payments, top up or withdraw</p>
       </div>
       <Tabs defaultValue="send">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
-          <TabsTrigger value="send"><SendHorizontal className="h-4 w-4 mr-1.5" /> Send</TabsTrigger>
-          <TabsTrigger value="request"><ArrowDownToLine className="h-4 w-4 mr-1.5" /> Request</TabsTrigger>
-          <TabsTrigger value="topup"><ArrowDownToLine className="h-4 w-4 mr-1.5" /> Top Up</TabsTrigger>
-          <TabsTrigger value="withdraw"><ArrowUpFromLine className="h-4 w-4 mr-1.5" /> Withdraw</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="send" className="text-xs sm:text-sm"><SendHorizontal className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Send</span></TabsTrigger>
+          <TabsTrigger value="request" className="text-xs sm:text-sm"><ArrowDownToLine className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Request</span></TabsTrigger>
+          <TabsTrigger value="topup" className="text-xs sm:text-sm"><ArrowDownToLine className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Top Up</span></TabsTrigger>
+          <TabsTrigger value="withdraw" className="text-xs sm:text-sm"><ArrowUpFromLine className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Withdraw</span></TabsTrigger>
         </TabsList>
-        <TabsContent value="send" className="mt-4"><SendFlow /></TabsContent>
-        <TabsContent value="request" className="mt-4"><RequestFlow /></TabsContent>
-        <TabsContent value="topup" className="mt-4"><TopUpFlow /></TabsContent>
-        <TabsContent value="withdraw" className="mt-4"><WithdrawFlow /></TabsContent>
+        <TabsContent value="send" className="mt-3 sm:mt-4"><SendFlow /></TabsContent>
+        <TabsContent value="request" className="mt-3 sm:mt-4"><RequestFlow /></TabsContent>
+        <TabsContent value="topup" className="mt-3 sm:mt-4"><TopUpFlow /></TabsContent>
+        <TabsContent value="withdraw" className="mt-3 sm:mt-4"><WithdrawFlow /></TabsContent>
       </Tabs>
     </div>
   );
@@ -191,7 +191,7 @@ function SendFlow() {
   };
 
   return (
-    <Card className="mx-auto max-w-2xl p-6">
+    <Card className="mx-auto max-w-2xl p-4 sm:p-6">
       {/* Steps indicator */}
       <div className="mb-6 flex items-center justify-between">
         {["Recipient", "Amount", "Review", "Verify"].map((s, i) => (
@@ -795,14 +795,14 @@ function RequestFlow() {
   };
 
   return (
-    <Card className="mx-auto max-w-2xl p-6">
-      <h3 className="font-semibold mb-1">Request Money</h3>
-      <p className="text-sm text-muted-foreground mb-4">Generate a payment link or QR code to receive funds</p>
+    <Card className="mx-auto max-w-2xl p-4 sm:p-6">
+      <h3 className="font-semibold text-base sm:text-lg">Request Money</h3>
+      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 mb-4">Generate a payment link or QR code to receive funds</p>
 
-      <div className="rounded-2xl border bg-muted/30 p-6 text-center">
+      <div className="rounded-xl sm:rounded-2xl border bg-muted/30 p-4 sm:p-6 text-center">
         <div className="flex items-center justify-center gap-2">
           <Select value={currency} onValueChange={setCurrency}>
-            <SelectTrigger className="w-24 h-9"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-20 sm:w-24 h-10"><SelectValue /></SelectTrigger>
             <SelectContent>
               {CURRENCIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>)}
             </SelectContent>
@@ -812,7 +812,7 @@ function RequestFlow() {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            className="flex-1 border-0 bg-transparent text-3xl font-bold tabular-nums text-center focus-visible:ring-0"
+            className="flex-1 border-0 bg-transparent text-2xl sm:text-3xl font-bold tabular-nums text-center focus-visible:ring-0"
           />
         </div>
       </div>
@@ -822,21 +822,21 @@ function RequestFlow() {
         <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Dinner split, rent contribution" />
       </div>
 
-      <Button className="mt-4 w-full" onClick={generate}>Generate Request Link</Button>
+      <Button className="mt-4 w-full h-11" onClick={generate}>Generate Request Link</Button>
 
       {link && (
         <div className="mt-4 space-y-3">
           <div className="flex items-center gap-2 rounded-lg border bg-muted/30 p-3">
-            <QrCode className="h-8 w-8 text-primary shrink-0" />
+            <QrCode className="h-7 w-7 text-primary shrink-0" />
             <Input readOnly value={link} className="border-0 bg-transparent text-xs" />
             <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard?.writeText(link); toast.success("Link copied"); }}>
               <Copy className="h-4 w-4" />
             </Button>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <Button variant="outline" size="sm"><Share2 className="h-4 w-4 mr-1" /> WhatsApp</Button>
-            <Button variant="outline" size="sm"><Share2 className="h-4 w-4 mr-1" /> Email</Button>
-            <Button variant="outline" size="sm"><Copy className="h-4 w-4 mr-1" /> Copy</Button>
+            <Button variant="outline" size="sm" className="h-9"><Share2 className="h-3.5 w-3.5 mr-1" /> WhatsApp</Button>
+            <Button variant="outline" size="sm" className="h-9"><Share2 className="h-3.5 w-3.5 mr-1" /> Email</Button>
+            <Button variant="outline" size="sm" className="h-9"><Copy className="h-3.5 w-3.5 mr-1" /> Copy</Button>
           </div>
         </div>
       )}
@@ -846,10 +846,10 @@ function RequestFlow() {
 
 function TopUpFlow() {
   return (
-    <Card className="mx-auto max-w-2xl p-6">
-      <h3 className="font-semibold mb-1">Top Up Wallet</h3>
-      <p className="text-sm text-muted-foreground mb-4">Add funds from card, bank or mobile money</p>
-      <div className="grid gap-3 sm:grid-cols-2">
+    <Card className="mx-auto max-w-2xl p-4 sm:p-6">
+      <h3 className="font-semibold text-base sm:text-lg">Top Up Wallet</h3>
+      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 mb-4">Add funds from card, bank or mobile money</p>
+      <div className="grid gap-2.5 sm:gap-3 sm:grid-cols-2">
         {[
           { icon: Landmark, title: "Bank Transfer", desc: "Free · Instant", color: "bg-emerald-500/15 text-emerald-500" },
           { icon: Smartphone, title: "Mobile Money", desc: "MTN, Orange, Airtel", color: "bg-amber-500/15 text-amber-500" },
@@ -858,15 +858,15 @@ function TopUpFlow() {
         ].map((m) => {
           const Icon = m.icon;
           return (
-            <button key={m.title} className="flex items-center gap-3 rounded-xl border p-4 text-left transition hover:border-primary/40 hover:bg-muted/30">
-              <div className={cn("grid h-11 w-11 place-items-center rounded-lg", m.color)}>
-                <Icon className="h-5 w-5" />
+            <button key={m.title} className="flex items-center gap-3 rounded-xl border p-3 sm:p-4 text-left transition hover:border-primary/40 hover:bg-muted/30">
+              <div className={cn("grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-lg shrink-0", m.color)}>
+                <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">{m.title}</p>
-                <p className="text-xs text-muted-foreground">{m.desc}</p>
+                <p className="text-[11px] sm:text-xs text-muted-foreground">{m.desc}</p>
               </div>
-              <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground" />
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
             </button>
           );
         })}
@@ -877,24 +877,24 @@ function TopUpFlow() {
 
 function WithdrawFlow() {
   return (
-    <Card className="mx-auto max-w-2xl p-6">
-      <h3 className="font-semibold mb-1">Withdraw Funds</h3>
-      <p className="text-sm text-muted-foreground mb-4">Cash out to bank or mobile money agent</p>
-      <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-xl border p-4">
-            <p className="text-xs text-muted-foreground">Available</p>
-            <p className="text-xl font-bold tabular-nums">₦845,230.55</p>
+    <Card className="mx-auto max-w-2xl p-4 sm:p-6">
+      <h3 className="font-semibold text-base sm:text-lg">Withdraw Funds</h3>
+      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 mb-4">Cash out to bank or mobile money agent</p>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+          <div className="rounded-xl border p-3 sm:p-4">
+            <p className="text-[11px] sm:text-xs text-muted-foreground">Available</p>
+            <p className="text-base sm:text-xl font-bold tabular-nums">₦845,230.55</p>
           </div>
-          <div className="rounded-xl border p-4">
-            <p className="text-xs text-muted-foreground">Daily limit left</p>
-            <p className="text-xl font-bold tabular-nums">₦4,200,000</p>
+          <div className="rounded-xl border p-3 sm:p-4">
+            <p className="text-[11px] sm:text-xs text-muted-foreground">Daily limit left</p>
+            <p className="text-base sm:text-xl font-bold tabular-nums">₦4,200,000</p>
           </div>
         </div>
-        <div className="space-y-2">
-          <Label>Withdraw to</Label>
+        <div className="space-y-1.5">
+          <Label className="text-xs sm:text-sm">Withdraw to</Label>
           <Select defaultValue="bank">
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="bank">Access Bank · 0123456789</SelectItem>
               <SelectItem value="gtb">GTBank · 9876543210</SelectItem>
@@ -902,11 +902,11 @@ function WithdrawFlow() {
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
-          <Label>Amount</Label>
-          <Input type="number" placeholder="0.00" className="text-lg font-semibold" />
+        <div className="space-y-1.5">
+          <Label className="text-xs sm:text-sm">Amount</Label>
+          <Input type="number" placeholder="0.00" className="h-11 text-base sm:text-lg font-semibold" />
         </div>
-        <Button className="w-full">Continue</Button>
+        <Button className="w-full h-11">Continue</Button>
       </div>
     </Card>
   );
