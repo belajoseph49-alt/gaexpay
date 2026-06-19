@@ -295,7 +295,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
             ))}
           </div>
           <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t pt-6 sm:flex-row">
-            <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} GaexPay Inc. All rights reserved. Licensed by CBN.</p>
+            <p className="text-xs text-muted-foreground" suppressHydrationWarning>© 2026 GaexPay Inc. All rights reserved. Licensed by CBN.</p>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span>🇳🇬 Nigeria</span>
               <span>·</span>
