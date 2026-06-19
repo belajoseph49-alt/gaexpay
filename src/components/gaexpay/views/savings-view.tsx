@@ -286,6 +286,17 @@ export function SavingsView() {
   );
 }
 
+const SAVINGS_TEMPLATES = [
+  { name: "Emergency Fund", targetAmount: 5000000, icon: "🛡️", color: "emerald", desc: "3-6 months of expenses", deadlineMonths: 12 },
+  { name: "Dream Vacation", targetAmount: 2500000, icon: "✈️", color: "sky", desc: "That trip you've been planning", deadlineMonths: 6 },
+  { name: "New Laptop", targetAmount: 1800000, icon: "💻", color: "violet", desc: "Upgrade your tech", deadlineMonths: 4 },
+  { name: "Wedding Fund", targetAmount: 8000000, icon: "💍", color: "rose", desc: "Your special day", deadlineMonths: 18 },
+  { name: "New Car", targetAmount: 15000000, icon: "🚗", color: "amber", desc: "Drive your dream", deadlineMonths: 24 },
+  { name: "Home Deposit", targetAmount: 25000000, icon: "🏠", color: "teal", desc: "Step onto the property ladder", deadlineMonths: 36 },
+  { name: "Education", targetAmount: 3000000, icon: "🎓", color: "violet", desc: "Invest in learning", deadlineMonths: 12 },
+  { name: "New Phone", targetAmount: 800000, icon: "📱", color: "sky", desc: "Latest gadget", deadlineMonths: 3 },
+];
+
 function NewGoalDialog({ onSubmit }: { onSubmit: (f: any) => void }) {
   const [name, setName] = useState("");
   const [targetAmount, setTargetAmount] = useState("");
@@ -296,6 +307,18 @@ function NewGoalDialog({ onSubmit }: { onSubmit: (f: any) => void }) {
   const [autoSave, setAutoSave] = useState(false);
   const [autoSaveAmount, setAutoSaveAmount] = useState("");
   const [autoSaveDay, setAutoSaveDay] = useState("1");
+  const [showTemplates, setShowTemplates] = useState(true);
+
+  const applyTemplate = (t: any) => {
+    setName(t.name);
+    setTargetAmount(String(t.targetAmount));
+    setIcon(t.icon);
+    setColor(t.color);
+    const d = new Date();
+    d.setMonth(d.getMonth() + t.deadlineMonths);
+    setDeadline(d.toISOString().slice(0, 10));
+    setShowTemplates(false);
+  };
 
   return (
     <DialogContent className="max-h-[90vh] overflow-y-auto">
@@ -303,6 +326,34 @@ function NewGoalDialog({ onSubmit }: { onSubmit: (f: any) => void }) {
         <DialogTitle>Create Savings Goal</DialogTitle>
       </DialogHeader>
       <div className="space-y-4 py-2">
+        {/* Quick templates */}
+        {showTemplates && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Quick Templates</Label>
+              <button onClick={() => setShowTemplates(false)} className="text-xs text-muted-foreground hover:text-foreground">Skip</button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {SAVINGS_TEMPLATES.map((t) => (
+                <button
+                  key={t.name}
+                  onClick={() => applyTemplate(t)}
+                  className="flex items-center gap-2 rounded-lg border p-2.5 text-left transition hover:border-primary/40 hover:bg-muted/30"
+                >
+                  <span className="text-xl">{t.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold truncate">{t.name}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">₦{(t.targetAmount / 1000000).toFixed(1)}M · {t.deadlineMonths}mo</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="border-t pt-2">
+              <p className="text-xs text-center text-muted-foreground">— or create custom below —</p>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-2">
           <Label>Goal Name</Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Dream Vacation" />

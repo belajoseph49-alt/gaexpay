@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import {
   Search, Filter, Download, ArrowDownRight, ArrowUpRight, ArrowLeftRight,
   Receipt, Smartphone, QrCode, CreditCard, Gift, Zap, TrendingUp,
-  CheckCircle2, XCircle, Clock, Flag, Repeat, AlertTriangle, FileText, X,
+  CheckCircle2, XCircle, Clock, Flag, Repeat, AlertTriangle, FileText, X, Calendar,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,9 @@ export function TransactionsView() {
   const [selected, setSelected] = useState<any>(null);
   const [disputeTx, setDisputeTx] = useState<any>(null);
   const [showDisputes, setShowDisputes] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [showDateFilter, setShowDateFilter] = useState(false);
 
   const txs = data?.transactions ?? [];
 
@@ -55,6 +58,16 @@ export function TransactionsView() {
     return txs.filter((t) => {
       if (type !== "all" && t.type !== type) return false;
       if (status !== "all" && t.status !== status) return false;
+      if (dateFrom) {
+        const from = new Date(dateFrom);
+        from.setHours(0, 0, 0, 0);
+        if (new Date(t.createdAt) < from) return false;
+      }
+      if (dateTo) {
+        const to = new Date(dateTo);
+        to.setHours(23, 59, 59, 999);
+        if (new Date(t.createdAt) > to) return false;
+      }
       if (search) {
         const q = search.toLowerCase();
         return (
@@ -65,7 +78,7 @@ export function TransactionsView() {
       }
       return true;
     });
-  }, [txs, search, type, status]);
+  }, [txs, search, type, status, dateFrom, dateTo]);
 
   // group by date
   const grouped = useMemo(() => {
@@ -152,7 +165,60 @@ export function TransactionsView() {
               <SelectItem value="flagged">Flagged</SelectItem>
             </SelectContent>
           </Select>
+          <Button
+            variant={showDateFilter || dateFrom || dateTo ? "default" : "outline"}
+            size="sm"
+            className="h-9"
+            onClick={() => setShowDateFilter(!showDateFilter)}
+          >
+            <Calendar className="h-4 w-4 mr-1.5" /> Date
+            {(dateFrom || dateTo) && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-white" />}
+          </Button>
+          {(dateFrom || dateTo) && (
+            <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => { setDateFrom(""); setDateTo(""); }}>
+              <X className="h-3.5 w-3.5" /> Clear
+            </Button>
+          )}
         </div>
+        {showDateFilter && (
+          <div className="mt-3 flex flex-wrap items-end gap-3 border-t pt-3">
+            <div className="space-y-1">
+              <Label className="text-xs">From Date</Label>
+              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-auto h-9" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">To Date</Label>
+              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-auto h-9" />
+            </div>
+            <div className="flex gap-1">
+              {[
+                { label: "Today", days: 0 },
+                { label: "7d", days: 7 },
+                { label: "30d", days: 30 },
+                { label: "90d", days: 90 },
+              ].map((r) => (
+                <button
+                  key={r.label}
+                  onClick={() => {
+                    const to = new Date();
+                    const from = new Date();
+                    from.setDate(from.getDate() - r.days);
+                    if (r.days === 0) {
+                      setDateFrom(to.toISOString().slice(0, 10));
+                      setDateTo(to.toISOString().slice(0, 10));
+                    } else {
+                      setDateFrom(from.toISOString().slice(0, 10));
+                      setDateTo(to.toISOString().slice(0, 10));
+                    }
+                  }}
+                  className="rounded-md border px-2 py-1 text-xs hover:bg-muted transition"
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* List */}

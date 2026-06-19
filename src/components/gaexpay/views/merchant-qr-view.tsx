@@ -34,7 +34,7 @@ export function MerchantQRView() {
     );
   }
 
-  const { merchant, qrMatrix, qrPayload } = data;
+  const { merchant, qrMatrix, qrPayload, qrDataUrl } = data;
 
   return (
     <div className="space-y-6">
@@ -76,10 +76,27 @@ export function MerchantQRView() {
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="rounded-3xl bg-white p-6 shadow-2xl"
+              className="relative rounded-3xl bg-white p-6 shadow-2xl"
             >
-              <QRMatrix matrix={qrMatrix} />
-              {/* GaexPay logo in center */}
+              {/* Real scannable QR code */}
+              {qrDataUrl ? (
+                <div className="relative">
+                  <img
+                    src={qrDataUrl}
+                    alt="Merchant QR Code"
+                    className="h-64 w-64 rounded-xl"
+                  />
+                  {/* Center logo overlay */}
+                  <div className="absolute left-1/2 top-1/2 grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-xl bg-white shadow-md ring-2 ring-slate-900/10">
+                    <div className="grid h-7 w-7 place-items-center rounded-md bg-gradient-to-br from-emerald-500 to-teal-600">
+                      <QrCode className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <QRMatrix matrix={qrMatrix} />
+              )}
+              {/* GaexPay logo below */}
               <div className="mt-4 flex items-center justify-center gap-1.5">
                 <div className="grid h-6 w-6 place-items-center rounded-md bg-gradient-to-br from-emerald-500 to-teal-600">
                   <QrCode className="h-3.5 w-3.5 text-white" />
@@ -113,7 +130,17 @@ export function MerchantQRView() {
               <Button variant="outline" onClick={() => toast.success("QR shared")}>
                 <Share2 className="h-4 w-4 mr-1.5" /> Share
               </Button>
-              <Button onClick={() => toast.success("QR downloaded as PNG")}>
+              <Button onClick={() => {
+                if (qrDataUrl) {
+                  const link = document.createElement("a");
+                  link.href = qrDataUrl;
+                  link.download = `${merchant.name.replace(/\s+/g, "-").toLowerCase()}-qr.png`;
+                  link.click();
+                  toast.success("QR downloaded as PNG");
+                } else {
+                  toast.success("QR downloaded");
+                }
+              }}>
                 <Download className="h-4 w-4 mr-1.5" /> Download
               </Button>
             </div>
