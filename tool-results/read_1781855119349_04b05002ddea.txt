@@ -1,0 +1,1013 @@
+     1→"use client";
+     2→
+     3→import { useEffect, useMemo, useState } from "react";
+     4→import { motion, AnimatePresence } from "framer-motion";
+     5→import {
+     6→  ArrowDown, ArrowUp, CheckCircle2, ChevronDown, Clock, DollarSign,
+     7→  History, Loader2, RefreshCw, Shield, Sparkles, TrendingDown,
+     8→  TrendingUp, Wallet, Zap,
+     9→} from "lucide-react";
+    10→import { Card } from "@/components/ui/card";
+    11→import { Button } from "@/components/ui/button";
+    12→import { Badge } from "@/components/ui/badge";
+    13→import {
+    14→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+    15→} from "@/components/ui/dialog";
+    16→import { Skeleton } from "@/components/ui/skeleton";
+    17→import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+    18→import { useFetch } from "@/hooks/use-fetch";
+    19→import {
+    20→  CRYPTOCURRENCIES, CURRENCY_SYMBOL, formatMoney, timeAgo,
+    21→} from "@/lib/gaexpay";
+    22→import { AnimatedNumber } from "@/components/gaexpay/animated-number";
+    23→import { Confetti } from "@/components/gaexpay/confetti";
+    24→import { toast } from "sonner";
+    25→import { cn } from "@/lib/utils";
+    26→
+    27→// ---------------------------------------------------------------------------
+    28→// Constants
+    29→// ---------------------------------------------------------------------------
+    30→
+    31→const CRYPTO_MAP: Record<string, (typeof CRYPTOCURRENCIES)[number]> = Object.fromEntries(
+    32→  CRYPTOCURRENCIES.map((c) => [c.code, c]),
+    33→);
+    34→
+    35→// Tailwind gradient classes per crypto (visual flourish on the icon tile)
+    36→const CRYPTO_GRADIENT: Record<string, string> = {
+    37→  USDT: "from-emerald-500 to-teal-600",
+    38→  USDC: "from-sky-500 to-blue-600",
+    39→  BUSD: "from-yellow-500 to-amber-600",
+    40→  DAI: "from-amber-400 to-yellow-600",
+    41→  BTC: "from-amber-500 to-orange-600",
+    42→  ETH: "from-blue-500 to-indigo-600",
+    43→  BNB: "from-yellow-500 to-amber-600",
+    44→  SOL: "from-violet-500 to-purple-600",
+    45→  XRP: "from-slate-600 to-slate-800",
+    46→  ADA: "from-blue-600 to-indigo-700",
+    47→  DOT: "from-pink-500 to-rose-600",
+    48→  MATIC: "from-purple-500 to-violet-600",
+    49→  LTC: "from-slate-500 to-blue-600",
+    50→  TRX: "from-red-500 to-rose-600",
+    51→  PI: "from-violet-500 to-purple-700",
+    52→};
+    53→
+    54→// Fiat currencies supported in the Buy/Sell UI
+    55→const FIATS = [
+    56→  { code: "NGN", name: "Nigerian Naira", symbol: "₦", flag: "🇳🇬" },
+    57→  { code: "USD", name: "US Dollar", symbol: "$", flag: "🇺🇸" },
+    58→  { code: "EUR", name: "Euro", symbol: "€", flag: "🇪🇺" },
+    59→  { code: "GBP", name: "British Pound", symbol: "£", flag: "🇬🇧" },
+    60→  { code: "GHS", name: "Ghanaian Cedi", symbol: "₵", flag: "🇬🇭" },
+    61→  { code: "KES", name: "Kenyan Shilling", symbol: "KSh", flag: "🇰🇪" },
+    62→  { code: "XAF", name: "Central African CFA", symbol: "FCFA", flag: "🇨🇲" },
+    63→  { code: "XOF", name: "West African CFA", symbol: "CFA", flag: "🇨🇮" },
+    64→  { code: "ZAR", name: "South African Rand", symbol: "R", flag: "🇿🇦" },
+    65→];
+    66→
+    67→const FIAT_MAP: Record<string, (typeof FIATS)[number]> = Object.fromEntries(
+    68→  FIATS.map((f) => [f.code, f]),
+    69→);
+    70→
+    71→const BUY_FEE_PCT = 1.5;
+    72→const SELL_FEE_PCT = 1.0;
+    73→
+    74→// ---------------------------------------------------------------------------
+    75→// Helpers
+    76→// ---------------------------------------------------------------------------
+    77→
+    78→function decimalsFor(code: string): number {
+    79→  const stable = ["USDT", "USDC", "BUSD", "DAI"];
+    80→  if (stable.includes(code)) return 2;
+    81→  const low = ["XRP", "ADA", "TRX", "DOT", "MATIC"];
+    82→  if (low.includes(code)) return 4;
+    83→  return 6;
+    84→}
+    85→
+    86→function formatCrypto(amount: number, code: string): string {
+    87→  if (!isFinite(amount)) return "0";
+    88→  const d = decimalsFor(code);
+    89→  return amount.toLocaleString("en-US", { maximumFractionDigits: d, minimumFractionDigits: 0 });
+    90→}
+    91→
+    92→function formatFiat(amount: number, currency: string): string {
+    93→  const symbol = CURRENCY_SYMBOL[currency] ?? "";
+    94→  return `${symbol}${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    95→}
+    96→
+    97→function formatPrice(price: number): string {
+    98→  if (price < 0.01) return `$${price.toFixed(6)}`;
+    99→  if (price < 1) return `$${price.toFixed(4)}`;
+   100→  if (price < 100) return `$${price.toFixed(2)}`;
+   101→  return `$${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+   102→}
+   103→
+   104→// ---------------------------------------------------------------------------
+   105→// Main component
+   106→// ---------------------------------------------------------------------------
+   107→
+   108→export function CryptoTradeView() {
+   109→  const { data: ratesData, reload: reloadRates } = useFetch<{ rates: any[] }>("/api/crypto/rates");
+   110→  const { data: walletData, reload: reloadWallets } = useFetch<{ wallets: any[] }>("/api/crypto/wallets");
+   111→
+   112→  const [tab, setTab] = useState<"buy" | "sell">("buy");
+   113→
+   114→  // Shared selections
+   115→  const [crypto, setCrypto] = useState("BTC");
+   116→  const [fiat, setFiat] = useState("NGN");
+   117→
+   118→  // Buy state
+   119→  const [buyAmount, setBuyAmount] = useState("50000");
+   120→  const [buyAmountType, setBuyAmountType] = useState<"fiat" | "crypto">("fiat");
+   121→
+   122→  // Sell state
+   123→  const [sellAmount, setSellAmount] = useState("0.001");
+   124→  // Sell always in crypto units (per spec)
+   125→
+   126→  const [pickerOpen, setPickerOpen] = useState<null | "crypto" | "fiat">(null);
+   127→  const [submitting, setSubmitting] = useState(false);
+   128→  const [success, setSuccess] = useState<any>(null);
+   129→
+   130→  const rates = ratesData?.rates ?? [];
+   131→  const wallets = walletData?.wallets ?? [];
+   132→
+   133→  const cryptoMeta = CRYPTO_MAP[crypto];
+   134→  const fiatMeta = FIAT_MAP[fiat];
+   135→  const rate = rates.find((r: any) => r.code === crypto);
+   136→  const priceUSD = rate?.priceUSD ?? 0;
+   137→  const change24h = rate?.change24h ?? 0;
+   138→
+   139→  // Find the user's wallet balance for the selected crypto (for sell flow)
+   140→  const wallet = wallets.find((w: any) => w.code === crypto);
+   141→  const walletBalance = wallet?.balance ?? 0;
+   142→
+   143→  // Poll the live trade quote every 60s — gives us the freshest market rate
+   144→  const [quote, setQuote] = useState<any>(null);
+   145→  useEffect(() => {
+   146→    let cancelled = false;
+   147→    const fetchQuote = async () => {
+   148→      try {
+   149→        const res = await fetch(`/api/crypto/trade?crypto=${crypto}&fiat=${fiat}`, { cache: "no-store" });
+   150→        if (!res.ok) return;
+   151→        const data = await res.json();
+   152→        if (!cancelled) setQuote(data);
+   153→      } catch {
+   154→        /* ignore — we have fallback to rates */
+   155→      }
+   156→    };
+   157→    fetchQuote();
+   158→    const id = setInterval(fetchQuote, 60_000);
+   159→    return () => {
+   160→      cancelled = true;
+   161→      clearInterval(id);
+   162→    };
+   163→  }, [crypto, fiat]);
+   164→
+   165→  // The live market rate: 1 crypto = X fiat
+   166→  const marketRate = quote?.marketRate ?? (priceUSD > 0 && rate?.prices?.[fiat] ? rate.prices[fiat] : 0);
+   167→
+   168→  // Auto-refresh rates every 60s
+   169→  useEffect(() => {
+   170→    const id = setInterval(() => {
+   171→      reloadRates();
+   172→      reloadWallets();
+   173→    }, 60_000);
+   174→    return () => clearInterval(id);
+   175→  }, [reloadRates, reloadWallets]);
+   176→
+   177→  // ---------- Buy calculations ----------
+   178→  const buyNumeric = Number(buyAmount) || 0;
+   179→  const buyFiatBase =
+   180→    buyAmountType === "fiat" ? buyNumeric : buyNumeric * marketRate;
+   181→  const buyCryptoBase =
+   182→    buyAmountType === "crypto" ? buyNumeric : marketRate > 0 ? buyNumeric / marketRate : 0;
+   183→  const buyFeeFiat = buyFiatBase * (BUY_FEE_PCT / 100);
+   184→  const buyTotalFiat = buyFiatBase + buyFeeFiat;
+   185→  const buyReceiveCrypto = buyCryptoBase; // fee is on top of fiat
+   186→
+   187→  // ---------- Sell calculations ----------
+   188→  const sellNumeric = Number(sellAmount) || 0;
+   189→  const sellCryptoBase = sellNumeric;
+   190→  const sellFiatBase = sellCryptoBase * marketRate;
+   191→  const sellFeeFiat = sellFiatBase * (SELL_FEE_PCT / 100);
+   192→  const sellReceiveFiat = sellFiatBase - sellFeeFiat;
+   193→  const sellRemainingBalance = Math.max(0, walletBalance - sellCryptoBase);
+   194→
+   195→  // ---------- Submit handlers ----------
+   196→  const executeBuy = async () => {
+   197→    if (buyNumeric <= 0) {
+   198→      toast.error("Enter an amount to buy");
+   199→      return;
+   200→    }
+   201→    setSubmitting(true);
+   202→    try {
+   203→      const res = await fetch("/api/crypto/trade", {
+   204→        method: "POST",
+   205→        headers: { "Content-Type": "application/json" },
+   206→        body: JSON.stringify({
+   207→          action: "buy",
+   208→          crypto,
+   209→          fiatCurrency: fiat,
+   210→          amount: buyNumeric,
+   211→          amountType: buyAmountType,
+   212→        }),
+   213→      });
+   214→      const data = await res.json();
+   215→      if (!res.ok || !data.success) {
+   216→        throw new Error(data.error || "Buy failed");
+   217→      }
+   218→      setSuccess(data);
+   219→      toast.success(`Bought ${formatCrypto(data.totalCrypto, crypto)} ${crypto}`);
+   220→      reloadWallets();
+   221→    } catch (e: any) {
+   222→      toast.error(e?.message || "Buy failed");
+   223→    } finally {
+   224→      setSubmitting(false);
+   225→    }
+   226→  };
+   227→
+   228→  const executeSell = async () => {
+   229→    if (sellNumeric <= 0) {
+   230→      toast.error("Enter an amount to sell");
+   231→      return;
+   232→    }
+   233→    if (sellNumeric > walletBalance) {
+   234→      toast.error(`Insufficient ${crypto} balance`);
+   235→      return;
+   236→    }
+   237→    setSubmitting(true);
+   238→    try {
+   239→      const res = await fetch("/api/crypto/trade", {
+   240→        method: "POST",
+   241→        headers: { "Content-Type": "application/json" },
+   242→        body: JSON.stringify({
+   243→          action: "sell",
+   244→          crypto,
+   245→          fiatCurrency: fiat,
+   246→          amount: sellNumeric,
+   247→          amountType: "crypto",
+   248→        }),
+   249→      });
+   250→      const data = await res.json();
+   251→      if (!res.ok || !data.success) {
+   252→        throw new Error(data.error || "Sell failed");
+   253→      }
+   254→      setSuccess(data);
+   255→      toast.success(`Sold ${formatCrypto(data.totalCrypto, crypto)} ${crypto}`);
+   256→      reloadWallets();
+   257→    } catch (e: any) {
+   258→      toast.error(e?.message || "Sell failed");
+   259→    } finally {
+   260→      setSubmitting(false);
+   261→    }
+   262→  };
+   263→
+   264→  return (
+   265→    <div className="space-y-6">
+   266→      <Confetti trigger={!!success} />
+   267→
+   268→      {/* Header */}
+   269→      <div className="flex flex-wrap items-end justify-between gap-3">
+   270→        <div>
+   271→          <h1 className="text-2xl font-bold tracking-tight">Buy / Sell Crypto</h1>
+   272→          <p className="text-sm text-muted-foreground">
+   273→            Instantly buy or sell {CRYPTOCURRENCIES.length} cryptocurrencies with fiat at live CoinGecko rates
+   274→          </p>
+   275→        </div>
+   276→        <div className="flex gap-2">
+   277→          <Badge variant="outline" className="border-emerald-500/30 text-emerald-600">
+   278→            <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+   279→            Live · CoinGecko
+   280→          </Badge>
+   281→          <Badge variant="outline" className="border-amber-500/30 text-amber-600">
+   282→            Buy 1.5% · Sell 1.0%
+   283→          </Badge>
+   284→        </div>
+   285→      </div>
+   286→
+   287→      {/* Live price ticker */}
+   288→      <LiveTicker rates={rates} loading={!ratesData} />
+   289→
+   290→      {/* Tabs */}
+   291→      <Tabs value={tab} onValueChange={(v) => setTab(v as "buy" | "sell")}>
+   292→        <TabsList className="grid w-full max-w-md grid-cols-2">
+   293→          <TabsTrigger value="buy" className="gap-1.5">
+   294→            <ArrowDown className="h-3.5 w-3.5" /> Buy Crypto
+   295→          </TabsTrigger>
+   296→          <TabsTrigger value="sell" className="gap-1.5">
+   297→            <ArrowUp className="h-3.5 w-3.5" /> Sell Crypto
+   298→          </TabsTrigger>
+   299→        </TabsList>
+   300→      </Tabs>
+   301→
+   302→      <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+   303→        {/* ===== Trade form card ===== */}
+   304→        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950 p-5 text-white shadow-2xl sm:p-6">
+   305→          <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-emerald-500/20 blur-3xl" />
+   306→          <div className="pointer-events-none absolute -left-12 bottom-0 h-40 w-40 rounded-full bg-teal-400/15 blur-3xl" />
+   307→
+   308→          <div className="relative space-y-4">
+   309→            {/* Crypto + Fiat pickers */}
+   310→            <div className="grid grid-cols-2 gap-3">
+   311→              <button
+   312→                onClick={() => setPickerOpen("crypto")}
+   313→                className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-left transition hover:bg-white/[0.07]"
+   314→              >
+   315→                <div className="flex items-center gap-2.5">
+   316→                  <div className={cn("grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br text-sm", CRYPTO_GRADIENT[crypto] || "from-slate-600 to-slate-800")}>
+   317→                    {cryptoMeta?.icon}
+   318→                  </div>
+   319→                  <div>
+   320→                    <p className="text-[10px] uppercase tracking-wide text-white/50">{tab === "buy" ? "You buy" : "You sell"}</p>
+   321→                    <p className="text-sm font-semibold">{crypto}</p>
+   322→                  </div>
+   323→                </div>
+   324→                <ChevronDown className="h-4 w-4 text-white/60" />
+   325→              </button>
+   326→              <button
+   327→                onClick={() => setPickerOpen("fiat")}
+   328→                className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-left transition hover:bg-white/[0.07]"
+   329→              >
+   330→                <div className="flex items-center gap-2.5">
+   331→                  <div className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-sm">
+   332→                    {fiatMeta?.flag}
+   333→                  </div>
+   334→                  <div>
+   335→                    <p className="text-[10px] uppercase tracking-wide text-white/50">{tab === "buy" ? "You pay with" : "You receive"}</p>
+   336→                    <p className="text-sm font-semibold">{fiat}</p>
+   337→                  </div>
+   338→                </div>
+   339→                <ChevronDown className="h-4 w-4 text-white/60" />
+   340→              </button>
+   341→            </div>
+   342→
+   343→            {/* Amount input */}
+   344→            <AnimatePresence mode="wait" initial={false}>
+   345→              {tab === "buy" ? (
+   346→                <motion.div
+   347→                  key="buy-amount"
+   348→                  initial={{ opacity: 0, y: 6 }}
+   349→                  animate={{ opacity: 1, y: 0 }}
+   350→                  exit={{ opacity: 0, y: -6 }}
+   351→                  transition={{ duration: 0.18 }}
+   352→                  className="space-y-3"
+   353→                >
+   354→                  <AmountInput
+   355→                    label={`Amount (${buyAmountType === "fiat" ? fiat : crypto})`}
+   356→                    value={buyAmount}
+   357→                    onChange={setBuyAmount}
+   358→                    placeholder="0.00"
+   359→                    suffix={buyAmountType === "fiat" ? fiatMeta?.symbol : crypto}
+   360→                  />
+   361→                  {/* Quick chips + amount-type toggle */}
+   362→                  <div className="flex flex-wrap items-center justify-between gap-2">
+   363→                    <div className="flex gap-1.5">
+   364→                      {buyAmountType === "fiat" ? (
+   365→                        <>
+   366→                          {[1000, 5000, 25000, 100000].map((v) => (
+   367→                            <button
+   368→                              key={v}
+   369→                              onClick={() => setBuyAmount(String(v))}
+   370→                              className="rounded-md border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-white/70 transition hover:bg-white/[0.08] hover:text-white"
+   371→                            >
+   372→                              {formatFiat(v, fiat)}
+   373→                            </button>
+   374→                          ))}
+   375→                        </>
+   376→                      ) : (
+   377→                        <>
+   378→                          {(crypto === "BTC" ? [0.001, 0.01, 0.1, 1] : crypto === "ETH" ? [0.1, 0.5, 1, 5] : [10, 100, 1000, 10000]).map((v) => (
+   379→                            <button
+   380→                              key={v}
+   381→                              onClick={() => setBuyAmount(String(v))}
+   382→                              className="rounded-md border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-white/70 transition hover:bg-white/[0.08] hover:text-white"
+   383→                            >
+   384→                              {formatCrypto(v, crypto)}
+   385→                            </button>
+   386→                          ))}
+   387→                        </>
+   388→                      )}
+   389→                    </div>
+   390→                    <button
+   391→                      onClick={() => setBuyAmountType(buyAmountType === "fiat" ? "crypto" : "fiat")}
+   392→                      className="inline-flex items-center gap-1 rounded-md border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] text-emerald-300 transition hover:bg-emerald-500/20"
+   393→                    >
+   394→                      <RefreshCw className="h-3 w-3" />
+   395→                      Switch to {buyAmountType === "fiat" ? "crypto" : "fiat"}
+   396→                    </button>
+   397→                  </div>
+   398→                </motion.div>
+   399→              ) : (
+   400→                <motion.div
+   401→                  key="sell-amount"
+   402→                  initial={{ opacity: 0, y: 6 }}
+   403→                  animate={{ opacity: 1, y: 0 }}
+   404→                  exit={{ opacity: 0, y: -6 }}
+   405→                  transition={{ duration: 0.18 }}
+   406→                  className="space-y-3"
+   407→                >
+   408→                  <AmountInput
+   409→                    label={`Amount (${crypto})`}
+   410→                    value={sellAmount}
+   411→                    onChange={setSellAmount}
+   412→                    placeholder="0.00"
+   413→                    suffix={crypto}
+   414→                  />
+   415→                  <div className="flex flex-wrap items-center justify-between gap-2">
+   416→                    <button
+   417→                      onClick={() => setSellAmount(String(walletBalance))}
+   418→                      className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-white/70 transition hover:bg-white/[0.08] hover:text-white"
+   419→                    >
+   420→                      <Wallet className="h-3 w-3" />
+   421→                      Balance: {formatCrypto(walletBalance, crypto)} {crypto} · MAX
+   422→                    </button>
+   423→                  </div>
+   424→                </motion.div>
+   425→              )}
+   426→            </AnimatePresence>
+   427→
+   428→            {/* Live rate row */}
+   429→            <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-white/70">
+   430→              <span className="inline-flex items-center gap-1.5">
+   431→                <RefreshCw className={cn("h-3 w-3", submitting && "animate-spin")} />
+   432→                {marketRate > 0 ? (
+   433→                  <>
+   434→                    1 {crypto} = <span className="font-semibold text-white">{marketRate.toLocaleString("en-US", { maximumFractionDigits: marketRate < 1 ? 6 : 2 })}</span> {fiat}
+   435→                  </>
+   436→                ) : (
+   437→                  "Fetching rate…"
+   438→                )}
+   439→              </span>
+   440→              <span className="inline-flex items-center gap-1 text-white/50">
+   441→                <Sparkles className="h-3 w-3" />
+   442→                CoinGecko · 60s
+   443→              </span>
+   444→            </div>
+   445→
+   446→            {/* 24h change pill */}
+   447→            <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs">
+   448→              <span className="text-white/60">24h change</span>
+   449→              <span className={cn("inline-flex items-center gap-1 font-semibold", change24h >= 0 ? "text-emerald-400" : "text-rose-400")}>
+   450→                {change24h >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+   451→                {change24h >= 0 ? "+" : ""}{change24h.toFixed(2)}%
+   452→              </span>
+   453→            </div>
+   454→
+   455→            {/* Cost breakdown */}
+   456→            {tab === "buy" ? (
+   457→              <div className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs">
+   458→                <Row label="Market rate" value={`1 ${crypto} = ${marketRate.toLocaleString("en-US", { maximumFractionDigits: marketRate < 1 ? 6 : 2 })} ${fiat}`} />
+   459→                <Row label="Base amount" value={`${formatFiat(buyFiatBase, fiat)} · ${formatCrypto(buyCryptoBase, crypto)} ${crypto}`} />
+   460→                <Row label={`Buy fee (${BUY_FEE_PCT}%)`} value={formatFiat(buyFeeFiat, fiat)} tone="warn" />
+   461→                <div className="my-1.5 h-px bg-white/10" />
+   462→                <Row label="Total cost" value={formatFiat(buyTotalFiat, fiat)} tone="strong" />
+   463→                <Row label="You receive" value={`${formatCrypto(buyReceiveCrypto, crypto)} ${crypto}`} tone="ok" />
+   464→              </div>
+   465→            ) : (
+   466→              <div className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs">
+   467→                <Row label="Market rate" value={`1 ${crypto} = ${marketRate.toLocaleString("en-US", { maximumFractionDigits: marketRate < 1 ? 6 : 2 })} ${fiat}`} />
+   468→                <Row label="Selling" value={`${formatCrypto(sellCryptoBase, crypto)} ${crypto}`} />
+   469→                <Row label="Base proceeds" value={formatFiat(sellFiatBase, fiat)} />
+   470→                <Row label={`Sell fee (${SELL_FEE_PCT}%)`} value={`− ${formatFiat(sellFeeFiat, fiat)}`} tone="warn" />
+   471→                <div className="my-1.5 h-px bg-white/10" />
+   472→                <Row label="You receive" value={formatFiat(sellReceiveFiat, fiat)} tone="ok" />
+   473→                <Row label="Remaining balance" value={`${formatCrypto(sellRemainingBalance, crypto)} ${crypto}`} />
+   474→              </div>
+   475→            )}
+   476→
+   477→            {/* CTA */}
+   478→            <Button
+   479→              onClick={tab === "buy" ? executeBuy : executeSell}
+   480→              disabled={submitting || (tab === "buy" ? buyNumeric <= 0 : sellNumeric <= 0)}
+   481→              className="group relative w-full overflow-hidden bg-gradient-to-r from-emerald-500 to-teal-500 text-base font-semibold text-white shadow-lg shadow-emerald-900/40 hover:from-emerald-400 hover:to-teal-400 disabled:opacity-50"
+   482→              size="lg"
+   483→            >
+   484→              <AnimatePresence mode="wait" initial={false}>
+   485→                {submitting ? (
+   486→                  <motion.span
+   487→                    key="loading"
+   488→                    initial={{ opacity: 0 }}
+   489→                    animate={{ opacity: 1 }}
+   490→                    exit={{ opacity: 0 }}
+   491→                    className="flex items-center justify-center gap-2"
+   492→                  >
+   493→                    <Loader2 className="h-4 w-4 animate-spin" />
+   494→                    {tab === "buy" ? "Buying…" : "Selling…"}
+   495→                  </motion.span>
+   496→                ) : (
+   497→                  <motion.span
+   498→                    key="idle"
+   499→                    initial={{ opacity: 0 }}
+   500→                    animate={{ opacity: 1 }}
+   501→                    exit={{ opacity: 0 }}
+   502→                    className="flex items-center justify-center gap-2"
+   503→                  >
+   504→                    {tab === "buy" ? (
+   505→                      <>
+   506→                        <Zap className="h-4 w-4 transition-transform group-hover:scale-110" />
+   507→                        {buyNumeric <= 0 ? "Enter an amount" : `Buy ${crypto} with ${fiat}`}
+   508→                      </>
+   509→                    ) : (
+   510→                      <>
+   511→                        <DollarSign className="h-4 w-4 transition-transform group-hover:scale-110" />
+   512→                        {sellNumeric <= 0 ? "Enter an amount" : `Sell ${crypto} for ${fiat}`}
+   513→                      </>
+   514→                    )}
+   515→                  </motion.span>
+   516→                )}
+   517→              </AnimatePresence>
+   518→            </Button>
+   519→
+   520→            {/* Security note */}
+   521→            <div className="flex items-start gap-2 rounded-lg border border-emerald-400/20 bg-emerald-500/5 px-3 py-2 text-[11px] text-white/70">
+   522→              <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
+   523→              <span>
+   524→                Trades settle instantly at locked rates. Funds are protected by AES-256 encryption, multi-signature cold storage and 2FA.
+   525→              </span>
+   526→            </div>
+   527→          </div>
+   528→        </Card>
+   529→
+   530→        {/* ===== Right column ===== */}
+   531→        <div className="space-y-4">
+   532→          {/* Live rate card */}
+   533→          <Card className="relative overflow-hidden p-5">
+   534→            <div className="mb-3 flex items-center justify-between">
+   535→              <div className="flex items-center gap-2.5">
+   536→                <div className={cn("grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br text-lg", CRYPTO_GRADIENT[crypto] || "from-slate-600 to-slate-800")}>
+   537→                  {cryptoMeta?.icon}
+   538→                </div>
+   539→                <div>
+   540→                  <p className="text-sm font-semibold">{crypto} / {fiat}</p>
+   541→                  <p className="text-xs text-muted-foreground">{cryptoMeta?.name}</p>
+   542→                </div>
+   543→              </div>
+   544→              <Badge variant="outline" className={cn("text-[10px]", change24h >= 0 ? "text-emerald-600" : "text-rose-600")}>
+   545→                {change24h >= 0 ? <TrendingUp className="mr-1 h-3 w-3" /> : <TrendingDown className="mr-1 h-3 w-3" />}
+   546→                {change24h >= 0 ? "+" : ""}{change24h.toFixed(2)}%
+   547→              </Badge>
+   548→            </div>
+   549→
+   550→            <div className="rounded-xl bg-muted/30 p-4">
+   551→              <p className="text-xs text-muted-foreground">Live price (CoinGecko)</p>
+   552→              <p className="mt-1 text-2xl font-bold tabular-nums">
+   553→                <AnimatedNumber
+   554→                  value={marketRate}
+   555→                  decimals={marketRate < 1 ? 6 : 2}
+   556→                  prefix={fiatMeta?.symbol}
+   557→                />
+   558→              </p>
+   559→              <p className="mt-1 text-xs text-muted-foreground">
+   560→                ≈ <AnimatedNumber value={priceUSD} prefix="$" decimals={priceUSD < 1 ? 4 : 2} /> USD
+   561→              </p>
+   562→            </div>
+   563→
+   564→            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+   565→              <Stat label="24h change" value={`${change24h >= 0 ? "+" : ""}${change24h.toFixed(2)}%`} tone={change24h >= 0 ? "ok" : "bad"} />
+   566→              <Stat label="Market cap" value={rate?.marketCap ? `$${(rate.marketCap / 1e9).toFixed(2)}B` : "—"} />
+   567→              <Stat label="24h volume" value={rate?.volume24h ? `$${(rate.volume24h / 1e6).toFixed(1)}M` : "—"} />
+   568→              <Stat label="Buy fee" value={`${BUY_FEE_PCT}%`} />
+   569→            </div>
+   570→          </Card>
+   571→
+   572→          {/* Your wallet */}
+   573→          <Card className="p-5">
+   574→            <div className="mb-3 flex items-center justify-between">
+   575→              <h3 className="text-sm font-semibold">Your {crypto} wallet</h3>
+   576→              <Badge variant="outline" className="text-[10px]">
+   577→                {wallet ? "Active" : "Empty"}
+   578→              </Badge>
+   579→            </div>
+   580→            {wallets.length === 0 ? (
+   581→              <Skeleton className="h-16 w-full" />
+   582→            ) : wallet ? (
+   583→              <div className="space-y-2">
+   584→                <div className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2.5">
+   585→                  <span className="text-xs text-muted-foreground">Balance</span>
+   586→                  <span className="text-sm font-semibold tabular-nums">
+   587→                    <AnimatedNumber value={walletBalance} decimals={decimalsFor(crypto)} suffix={` ${crypto}`} />
+   588→                  </span>
+   589→                </div>
+   590→                <div className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2.5">
+   591→                  <span className="text-xs text-muted-foreground">Value</span>
+   592→                  <span className="text-sm font-semibold tabular-nums">
+   593→                    <AnimatedNumber value={wallet.valueUSD} prefix="$" decimals={2} />
+   594→                  </span>
+   595→                </div>
+   596→              </div>
+   597→            ) : (
+   598→              <p className="py-2 text-center text-xs text-muted-foreground">
+   599→                You don&apos;t have a {crypto} wallet yet. Buy some to get started.
+   600→              </p>
+   601→            )}
+   602→          </Card>
+   603→
+   604→          {/* Recent trades */}
+   605→          <RecentTrades />
+   606→        </div>
+   607→      </div>
+   608→
+   609→      {/* ===== Asset Picker Dialog ===== */}
+   610→      <Dialog open={!!pickerOpen} onOpenChange={(o) => !o && setPickerOpen(null)}>
+   611→        <DialogContent className="max-w-md">
+   612→          <DialogHeader>
+   613→            <DialogTitle>
+   614→              Select {pickerOpen === "crypto" ? "cryptocurrency" : "fiat currency"}
+   615→            </DialogTitle>
+   616→            <DialogDescription>
+   617→              {pickerOpen === "crypto"
+   618→                ? `Choose from ${CRYPTOCURRENCIES.length} supported cryptocurrencies`
+   619→                : "Choose the fiat currency to pay or receive with"}
+   620→            </DialogDescription>
+   621→          </DialogHeader>
+   622→          <div className="max-h-[60vh] space-y-1 overflow-y-auto pr-1">
+   623→            {pickerOpen === "crypto"
+   624→              ? CRYPTOCURRENCIES.map((c) => {
+   625→                  const r = rates.find((x: any) => x.code === c.code);
+   626→                  return (
+   627→                    <button
+   628→                      key={c.code}
+   629→                      onClick={() => {
+   630→                        setCrypto(c.code);
+   631→                        setPickerOpen(null);
+   632→                      }}
+   633→                      className={cn(
+   634→                        "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition hover:bg-muted/60",
+   635→                        crypto === c.code && "bg-emerald-500/10 ring-1 ring-emerald-500/30",
+   636→                      )}
+   637→                    >
+   638→                      <div className="flex items-center gap-2.5">
+   639→                        <div className={cn("grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br text-base", CRYPTO_GRADIENT[c.code] || "from-slate-600 to-slate-800")}>
+   640→                          {c.icon}
+   641→                        </div>
+   642→                        <div>
+   643→                          <p className="text-sm font-semibold">{c.code}</p>
+   644→                          <p className="text-xs text-muted-foreground">{c.name}</p>
+   645→                        </div>
+   646→                      </div>
+   647→                      <div className="text-right">
+   648→                        <p className="text-xs tabular-nums text-muted-foreground">
+   649→                          {r ? formatPrice(r.priceUSD) : "—"}
+   650→                        </p>
+   651→                        {r && (
+   652→                          <p className={cn("text-[10px] tabular-nums", r.change24h >= 0 ? "text-emerald-600" : "text-rose-600")}>
+   653→                            {r.change24h >= 0 ? "+" : ""}{r.change24h.toFixed(2)}%
+   654→                          </p>
+   655→                        )}
+   656→                      </div>
+   657→                    </button>
+   658→                  );
+   659→                })
+   660→              : FIATS.map((f) => (
+   661→                  <button
+   662→                    key={f.code}
+   663→                    onClick={() => {
+   664→                      setFiat(f.code);
+   665→                      setPickerOpen(null);
+   666→                    }}
+   667→                    className={cn(
+   668→                      "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition hover:bg-muted/60",
+   669→                      fiat === f.code && "bg-emerald-500/10 ring-1 ring-emerald-500/30",
+   670→                    )}
+   671→                  >
+   672→                    <div className="flex items-center gap-2.5">
+   673→                      <div className="grid h-9 w-9 place-items-center rounded-lg bg-muted text-base">
+   674→                        {f.flag}
+   675→                      </div>
+   676→                      <div>
+   677→                        <p className="text-sm font-semibold">{f.code}</p>
+   678→                        <p className="text-xs text-muted-foreground">{f.name}</p>
+   679→                      </div>
+   680→                    </div>
+   681→                    <span className="text-sm font-medium text-muted-foreground">{f.symbol}</span>
+   682→                  </button>
+   683→                ))}
+   684→          </div>
+   685→        </DialogContent>
+   686→      </Dialog>
+   687→
+   688→      {/* ===== Success Dialog ===== */}
+   689→      <Dialog open={!!success} onOpenChange={(o) => !o && setSuccess(null)}>
+   690→        <DialogContent className="max-w-md">
+   691→          <DialogHeader>
+   692→            <motion.div
+   693→              initial={{ scale: 0, rotate: -30 }}
+   694→              animate={{ scale: 1, rotate: 0 }}
+   695→              transition={{ type: "spring", stiffness: 220, damping: 18 }}
+   696→              className="mx-auto mb-2 grid h-14 w-14 place-items-center rounded-full bg-emerald-500/15 text-emerald-500"
+   697→            >
+   698→              <CheckCircle2 className="h-8 w-8" />
+   699→            </motion.div>
+   700→            <DialogTitle className="text-center">
+   701→              {success?.action === "buy" ? "Purchase Complete" : "Sale Complete"}
+   702→            </DialogTitle>
+   703→            <DialogDescription className="text-center">
+   704→              {success?.action === "buy"
+   705→                ? "Your crypto purchase was executed at live market rates."
+   706→                : "Your crypto sale was executed at live market rates."}
+   707→            </DialogDescription>
+   708→          </DialogHeader>
+   709→
+   710→          {success && (
+   711→            <div className="space-y-3">
+   712→              <div className="rounded-xl bg-muted/40 p-4">
+   713→                <div className="mb-2 flex items-center justify-center gap-2 text-sm">
+   714→                  {success.action === "buy" ? (
+   715→                    <>
+   716→                      <span className="font-semibold">{formatFiat(success.totalFiat, success.fiatCurrency)}</span>
+   717→                      <ArrowDown className="h-4 w-4 text-muted-foreground" />
+   718→                      <span className="font-semibold text-emerald-600">{formatCrypto(success.totalCrypto, success.crypto)} {success.crypto}</span>
+   719→                    </>
+   720→                  ) : (
+   721→                    <>
+   722→                      <span className="font-semibold">{formatCrypto(success.totalCrypto, success.crypto)} {success.crypto}</span>
+   723→                      <ArrowDown className="h-4 w-4 text-muted-foreground" />
+   724→                      <span className="font-semibold text-emerald-600">{formatFiat(success.totalFiat, success.fiatCurrency)}</span>
+   725→                    </>
+   726→                  )}
+   727→                </div>
+   728→                <p className="text-center text-xs text-muted-foreground">
+   729→                  1 {success.crypto} = {success.marketRate.toLocaleString("en-US", { maximumFractionDigits: success.marketRate < 1 ? 6 : 2 })} {success.fiatCurrency}
+   730→                </p>
+   731→              </div>
+   732→
+   733→              <div className="space-y-2 text-xs">
+   734→                <SuccessRow label="Reference" value={success.reference} mono />
+   735→                <SuccessRow label="Market rate" value={`1 ${success.crypto} = ${success.marketRate.toLocaleString("en-US", { maximumFractionDigits: success.marketRate < 1 ? 6 : 2 })} ${success.fiatCurrency}`} />
+   736→                <SuccessRow label="Crypto price" value={formatPrice(success.cryptoPriceUSD)} />
+   737→                <SuccessRow label={`Fee (${success.feePct}%)`} value={`${formatFiat(success.feeFiat, success.fiatCurrency)} (${formatCrypto(success.feeCrypto, success.crypto)} ${success.crypto})`} />
+   738→                {success.action === "buy" ? (
+   739→                  <>
+   740→                    <SuccessRow label="Total paid" value={formatFiat(success.totalFiat, success.fiatCurrency)} />
+   741→                    <SuccessRow label="Crypto received" value={`${formatCrypto(success.totalCrypto, success.crypto)} ${success.crypto}`} tone="ok" />
+   742→                  </>
+   743→                ) : (
+   744→                  <>
+   745→                    <SuccessRow label="Crypto sold" value={`${formatCrypto(success.totalCrypto, success.crypto)} ${success.crypto}`} />
+   746→                    <SuccessRow label="Fiat received" value={formatFiat(success.totalFiat, success.fiatCurrency)} tone="ok" />
+   747→                  </>
+   748→                )}
+   749→                <SuccessRow label="Completed" value={success.completedAt ? new Date(success.completedAt).toLocaleString() : "—"} />
+   750→                <SuccessRow label="Price source" value="CoinGecko (live)" />
+   751→              </div>
+   752→
+   753→              <div className="flex gap-2 pt-1">
+   754→                <Button variant="outline" className="flex-1" onClick={() => setSuccess(null)}>
+   755→                  New trade
+   756→                </Button>
+   757→                <Button
+   758→                  className="flex-1"
+   759→                  onClick={() => {
+   760→                    setSuccess(null);
+   761→                    if (success.action === "buy") {
+   762→                      setBuyAmount("");
+   763→                    } else {
+   764→                      setSellAmount("");
+   765→                    }
+   766→                  }}
+   767→                >
+   768→                  Done
+   769→                </Button>
+   770→              </div>
+   771→            </div>
+   772→          )}
+   773→        </DialogContent>
+   774→      </Dialog>
+   775→    </div>
+   776→  );
+   777→}
+   778→
+   779→// ---------------------------------------------------------------------------
+   780→// Sub-components
+   781→// ---------------------------------------------------------------------------
+   782→
+   783→function LiveTicker({ rates, loading }: { rates: any[]; loading: boolean }) {
+   784→  if (loading && rates.length === 0) {
+   785→    return (
+   786→      <Card className="p-3">
+   787→        <div className="flex gap-2 overflow-hidden">
+   788→          {Array.from({ length: 6 }).map((_, i) => (
+   789→            <Skeleton key={i} className="h-16 flex-1" />
+   790→          ))}
+   791→        </div>
+   792→      </Card>
+   793→    );
+   794→  }
+   795→
+   796→  // Top 12 cryptos by market cap (skip stablecoins for variety)
+   797→  const top = [...rates]
+   798→    .filter((r) => !["USDT", "USDC", "BUSD", "DAI"].includes(r.code))
+   799→    .sort((a, b) => (b.marketCap || 0) - (a.marketCap || 0))
+   800→    .slice(0, 10);
+   801→
+   802→  return (
+   803→    <Card className="p-3">
+   804→      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+   805→        {top.map((r) => {
+   806→          const meta = CRYPTO_MAP[r.code];
+   807→          const up = (r.change24h || 0) >= 0;
+   808→          return (
+   809→            <button
+   810→              key={r.code}
+   811→              className="flex min-w-[140px] flex-col gap-1 rounded-lg border bg-muted/20 px-3 py-2 text-left transition hover:bg-muted/40"
+   812→            >
+   813→              <div className="flex items-center gap-1.5">
+   814→                <span className="text-base">{meta?.icon}</span>
+   815→                <span className="text-xs font-semibold">{r.code}</span>
+   816→              </div>
+   817→              <p className="text-xs font-bold tabular-nums">{formatPrice(r.priceUSD)}</p>
+   818→              <p className={cn("text-[10px] tabular-nums", up ? "text-emerald-600" : "text-rose-600")}>
+   819→                {up ? "+" : ""}{(r.change24h || 0).toFixed(2)}%
+   820→              </p>
+   821→            </button>
+   822→          );
+   823→        })}
+   824→      </div>
+   825→    </Card>
+   826→  );
+   827→}
+   828→
+   829→function RecentTrades() {
+   830→  const { data, loading } = useFetch<{ transactions: any[] }>(
+   831→    "/api/transactions?type=exchange&limit=15",
+   832→  );
+   833→
+   834→  const trades = useMemo(() => {
+   835→    const all = data?.transactions ?? [];
+   836→    return all
+   837→      .filter((t) => {
+   838→        try {
+   839→          const meta = JSON.parse(t.metadata || "{}");
+   840→          return meta.kind === "crypto-trade";
+   841→        } catch {
+   842→          return false;
+   843→        }
+   844→      })
+   845→      .slice(0, 6);
+   846→  }, [data]);
+   847→
+   848→  return (
+   849→    <Card className="p-5">
+   850→      <div className="mb-3 flex items-center justify-between">
+   851→        <div className="flex items-center gap-2">
+   852→          <History className="h-4 w-4 text-muted-foreground" />
+   853→          <h3 className="text-sm font-semibold">Recent trades</h3>
+   854→        </div>
+   855→        <Badge variant="outline" className="text-[10px]">
+   856→          <Clock className="mr-1 h-2.5 w-2.5" />
+   857→          Live
+   858→        </Badge>
+   859→      </div>
+   860→      {loading ? (
+   861→        <div className="space-y-2">
+   862→          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
+   863→        </div>
+   864→      ) : trades.length === 0 ? (
+   865→        <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+   866→          <div className="grid h-10 w-10 place-items-center rounded-full bg-muted/40">
+   867→            <DollarSign className="h-5 w-5 text-muted-foreground" />
+   868→          </div>
+   869→          <p className="text-xs text-muted-foreground">No trades yet.</p>
+   870→          <p className="text-[11px] text-muted-foreground">Buy or sell crypto to see your history here.</p>
+   871→        </div>
+   872→      ) : (
+   873→        <div className="max-h-80 space-y-1.5 overflow-y-auto pr-1 no-scrollbar">
+   874→          <AnimatePresence initial={false}>
+   875→            {trades.map((t) => {
+   876→              let meta: any = {};
+   877→              try {
+   878→                meta = JSON.parse(t.metadata || "{}");
+   879→              } catch {
+   880→                meta = {};
+   881→              }
+   882→              const isBuy = meta.action === "buy";
+   883→              return (
+   884→                <motion.div
+   885→                  key={t.id}
+   886→                  layout
+   887→                  initial={{ opacity: 0, y: 6 }}
+   888→                  animate={{ opacity: 1, y: 0 }}
+   889→                  exit={{ opacity: 0, y: -6 }}
+   890→                  className="flex items-center justify-between rounded-lg border bg-muted/20 px-3 py-2"
+   891→                >
+   892→                  <div className="flex items-center gap-2.5">
+   893→                    <div className={cn(
+   894→                      "grid h-8 w-8 place-items-center rounded-full text-xs font-bold",
+   895→                      isBuy ? "bg-emerald-500/15 text-emerald-600" : "bg-amber-500/15 text-amber-600",
+   896→                    )}>
+   897→                      {isBuy ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
+   898→                    </div>
+   899→                    <div>
+   900→                      <p className="text-xs font-semibold">
+   901→                        {isBuy ? "Buy" : "Sell"} {meta.crypto}
+   902→                      </p>
+   903→                      <p className="text-[10px] text-muted-foreground">
+   904→                        {timeAgo(t.createdAt)} · {t.reference?.slice(0, 10)}
+   905→                      </p>
+   906→                    </div>
+   907→                  </div>
+   908→                  <div className="text-right">
+   909→                    <p className="text-xs font-semibold tabular-nums">
+   910→                      {formatCrypto(meta.totalCrypto, meta.crypto)} {meta.crypto}
+   911→                    </p>
+   912→                    <p className={cn("text-[10px] tabular-nums", isBuy ? "text-rose-600" : "text-emerald-600")}>
+   913→                      {isBuy ? "−" : "+"}{formatFiat(meta.totalFiat, meta.fiatCurrency)}
+   914→                    </p>
+   915→                  </div>
+   916→                </motion.div>
+   917→              );
+   918→            })}
+   919→          </AnimatePresence>
+   920→        </div>
+   921→      )}
+   922→    </Card>
+   923→  );
+   924→}
+   925→
+   926→function AmountInput({
+   927→  label, value, onChange, placeholder, suffix,
+   928→}: {
+   929→  label: string;
+   930→  value: string;
+   931→  onChange: (v: string) => void;
+   932→  placeholder: string;
+   933→  suffix?: string;
+   934→}) {
+   935→  return (
+   936→    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur">
+   937→      <div className="mb-2 flex items-center justify-between">
+   938→        <span className="text-xs font-medium text-white/60">{label}</span>
+   939→        {suffix && <span className="text-[11px] text-white/50">{suffix}</span>}
+   940→      </div>
+   941→      <input
+   942→        inputMode="decimal"
+   943→        value={value}
+   944→        onChange={(e) => onChange(e.target.value.replace(/[^0-9.]/g, ""))}
+   945→        placeholder={placeholder}
+   946→        className="w-full bg-transparent text-2xl font-bold tabular-nums outline-none placeholder:text-white/30"
+   947→      />
+   948→    </div>
+   949→  );
+   950→}
+   951→
+   952→function Row({
+   953→  label, value, tone = "default",
+   954→}: {
+   955→  label: string;
+   956→  value: string;
+   957→  tone?: "default" | "ok" | "warn" | "strong" | "bad";
+   958→}) {
+   959→  return (
+   960→    <div className="flex items-center justify-between gap-3">
+   961→      <span className="text-white/60">{label}</span>
+   962→      <span className={cn(
+   963→        "font-semibold tabular-nums",
+   964→        tone === "ok" ? "text-emerald-300" : tone === "warn" ? "text-amber-300" : tone === "strong" ? "text-white text-sm" : tone === "bad" ? "text-rose-300" : "text-white",
+   965→      )}>
+   966→        {value}
+   967→      </span>
+   968→    </div>
+   969→  );
+   970→}
+   971→
+   972→function Stat({
+   973→  label, value, tone = "default",
+   974→}: {
+   975→  label: string;
+   976→  value: string;
+   977→  tone?: "default" | "ok" | "bad";
+   978→}) {
+   979→  return (
+   980→    <div className="rounded-lg border bg-muted/20 px-3 py-2">
+   981→      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+   982→      <p className={cn(
+   983→        "text-sm font-semibold tabular-nums",
+   984→        tone === "ok" ? "text-emerald-600" : tone === "bad" ? "text-rose-600" : "",
+   985→      )}>
+   986→        {value}
+   987→      </p>
+   988→    </div>
+   989→  );
+   990→}
+   991→
+   992→function SuccessRow({
+   993→  label, value, mono, tone,
+   994→}: {
+   995→  label: string;
+   996→  value: string;
+   997→  mono?: boolean;
+   998→  tone?: "ok";
+   999→}) {
+  1000→  return (
+  1001→    <div className="flex items-start justify-between gap-3">
+  1002→      <span className="text-muted-foreground">{label}</span>
+  1003→      <span className={cn(
+  1004→        "text-right font-medium",
+  1005→        mono && "font-mono text-[11px]",
+  1006→        tone === "ok" && "text-emerald-600",
+  1007→      )}>
+  1008→        {value}
+  1009→      </span>
+  1010→    </div>
+  1011→  );
+  1012→}
+  1013→

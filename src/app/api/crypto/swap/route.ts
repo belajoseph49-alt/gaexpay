@@ -1,20 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { DEMO_USER_ID, CRYPTOCURRENCIES } from "@/lib/gaexpay";
+import { getCryptoPriceMap } from "@/lib/coingecko";
 
 export const dynamic = "force-dynamic";
 
 function ref() {
   return "GXP" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
 }
-
-// Crypto prices in USD (mirrors rates/convert routes)
-const CRYPTO_PRICES_USD: Record<string, number> = {
-  BTC: 67500, ETH: 3450, BNB: 585, SOL: 145, XRP: 0.52, ADA: 0.45,
-  DOT: 7.2, MATIC: 0.72, LTC: 84, TRX: 0.12,
-  USDT: 1.0, USDC: 1.0, BUSD: 1.0, DAI: 1.0,
-  PI: 47.35,
-};
 
 // Per-crypto network fee in USD (simulated gas/ miner fee)
 const NETWORK_FEE_USD: Record<string, number> = {
@@ -64,8 +57,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const fromPrice = CRYPTO_PRICES_USD[fromCrypto];
-    const toPrice = CRYPTO_PRICES_USD[toCrypto];
+    // Real CoinGecko prices (60s cache)
+    const priceMap = await getCryptoPriceMap();
+    const fromPrice = priceMap[fromCrypto];
+    const toPrice = priceMap[toCrypto];
     if (!fromPrice || !toPrice) {
       return NextResponse.json(
         { error: "Price feed unavailable for selected asset" },
@@ -73,22 +68,19 @@ export async function POST(req: Request) {
       );
     }
 
-    // Live-ish price with tiny fluctuation to feel real
-    const fromPriceLive = fromPrice * (1 + (Math.random() - 0.5) * 0.01);
-    const toPriceLive = toPrice * (1 + (Math.random() - 0.5) * 0.01);
-
-    const grossRate = fromPriceLive / toPriceLive; // 1 from = X to
+    // Live rate from real USD prices
+    const grossRate = toPrice > 0 ? fromPrice / toPrice : 0;
     const swapFeeInFrom = amount * SWAP_FEE_PCT;
     const amountAfterFee = amount - swapFeeInFrom;
     const convertedAmount = amountAfterFee * grossRate;
 
     // Network fee denominated in the destination crypto (USD -> to-crypto units)
     const networkFeeUSD = NETWORK_FEE_USD[toCrypto] ?? 0.5;
-    const networkFeeCrypto = toPriceLive > 0 ? networkFeeUSD / toPriceLive : 0;
+    const networkFeeCrypto = toPrice > 0 ? networkFeeUSD / toPrice : 0;
     const minReceived = convertedAmount * (1 - DEFAULT_SLIPPAGE_PCT / 100) - networkFeeCrypto;
 
     // Price impact heuristic — larger swaps move price more
-    const usdValue = amount * fromPriceLive;
+    const usdValue = amount * fromPrice;
     const priceImpactPct =
       usdValue < 1000 ? 0.05 : usdValue < 10000 ? 0.18 : usdValue < 100000 ? 0.42 : 0.85;
 
@@ -105,7 +97,7 @@ export async function POST(req: Request) {
         direction: "debit",
         status: "completed",
         amount,
-        fee: swapFeeInFrom * fromPriceLive, // fee in USD for record-keeping
+        fee: swapFeeInFrom * fromPrice, // fee in USD for record-keeping
         currency: fromCrypto,
         description: `Swap ${amount} ${fromCrypto} → ${convertedAmount.toFixed(6)} ${toCrypto}`,
         category: "investment",
@@ -126,6 +118,9 @@ export async function POST(req: Request) {
           slippagePct: DEFAULT_SLIPPAGE_PCT,
           minReceived,
           priceImpactPct,
+          priceSource: "CoinGecko",
+          fromPriceUSD: fromPrice,
+          toPriceUSD: toPrice,
         }),
         completedAt: new Date(),
       },
@@ -160,7 +155,10 @@ export async function POST(req: Request) {
       slippagePct: DEFAULT_SLIPPAGE_PCT,
       minReceived,
       priceImpactPct,
+      fromPriceUSD: fromPrice,
+      toPriceUSD: toPrice,
       completedAt: tx.completedAt,
+      source: "CoinGecko",
     });
   } catch (e: any) {
     return NextResponse.json(
@@ -179,24 +177,25 @@ export async function GET(req: Request) {
   if (!from || !to) {
     return NextResponse.json({ error: "from and to query params required" }, { status: 400 });
   }
-  const fromPrice = CRYPTO_PRICES_USD[from];
-  const toPrice = CRYPTO_PRICES_USD[to];
+
+  const priceMap = await getCryptoPriceMap();
+  const fromPrice = priceMap[from];
+  const toPrice = priceMap[to];
   if (!fromPrice || !toPrice) {
     return NextResponse.json({ error: "Unsupported crypto" }, { status: 400 });
   }
 
-  const fromPriceLive = fromPrice * (1 + (Math.random() - 0.5) * 0.01);
-  const toPriceLive = toPrice * (1 + (Math.random() - 0.5) * 0.01);
-  const grossRate = fromPriceLive / toPriceLive;
+  const grossRate = toPrice > 0 ? fromPrice / toPrice : 0;
 
   return NextResponse.json({
     from,
     to,
     rate: grossRate,
-    fromPriceUSD: fromPriceLive,
-    toPriceUSD: toPriceLive,
+    fromPriceUSD: fromPrice,
+    toPriceUSD: toPrice,
     swapFeePct: SWAP_FEE_PCT * 100,
     networkFeeUSD: NETWORK_FEE_USD[to] ?? 0.5,
     slippagePct: DEFAULT_SLIPPAGE_PCT,
+    source: "CoinGecko",
   });
 }

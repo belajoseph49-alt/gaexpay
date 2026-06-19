@@ -9,6 +9,7 @@ import { WalletsView } from "./views/wallets-view";
 import { SendView } from "./views/send-view";
 import { TransactionsView } from "./views/transactions-view";
 import { InternationalTransferView } from "./views/international-transfer-view";
+import { UnifiedAddressView } from "./views/unified-address-view";
 import { CardsView } from "./views/cards-view";
 import { PayView } from "./views/pay-view";
 import { SavingsView } from "./views/savings-view";
@@ -20,6 +21,8 @@ import { SpendingMapView } from "./views/spending-map-view";
 import { ExchangeView } from "./views/exchange-view";
 import { CryptoView } from "./views/crypto-view";
 import { CryptoSwapView } from "./views/crypto-swap-view";
+import { CryptoTradeView } from "./views/crypto-trade-view";
+import { CryptoCashoutView } from "./views/crypto-cashout-view";
 import { StatementView } from "./views/statement-view";
 import { AchievementsView } from "./views/achievements-view";
 import { MerchantQRView } from "./views/merchant-qr-view";
@@ -45,6 +48,7 @@ export function AppShell() {
     "wallet-detail": <WalletDetailView />,
     send: <SendView />,
     international: <InternationalTransferView />,
+    "unified-address": <UnifiedAddressView />,
     transactions: <TransactionsView />,
     cards: <CardsView />,
     pay: <PayView />,
@@ -57,6 +61,8 @@ export function AppShell() {
     exchange: <ExchangeView />,
     crypto: <CryptoView />,
     "crypto-swap": <CryptoSwapView />,
+    "crypto-trade": <CryptoTradeView />,
+    "crypto-cashout": <CryptoCashoutView />,
     statement: <StatementView />,
     achievements: <AchievementsView />,
     merchant: <MerchantView />,

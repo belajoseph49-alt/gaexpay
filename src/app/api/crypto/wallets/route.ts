@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { DEMO_USER_ID } from "@/lib/gaexpay";
+import { getCryptoPriceMap } from "@/lib/coingecko";
 
 export const dynamic = "force-dynamic";
 
@@ -16,17 +15,14 @@ const DEMO_CRYPTO_WALLETS = [
   { code: "TRX", balance: 4580.0, address: "TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE" },
 ];
 
-// Crypto prices in USD
-const CRYPTO_PRICES_USD: Record<string, number> = {
-  BTC: 67500, ETH: 3450, BNB: 585, SOL: 145, XRP: 0.52, ADA: 0.45,
-  DOT: 7.2, MATIC: 0.72, LTC: 84, TRX: 0.12,
-  USDT: 1.0, USDC: 1.0, BUSD: 1.0, DAI: 1.0,
-  PI: 47.35,
-};
+// NGN per USD (used to convert total USD portfolio value into NGN)
+const NGN_PER_USD = 1535.0;
 
 export async function GET() {
+  const priceMap = await getCryptoPriceMap();
+
   const wallets = DEMO_CRYPTO_WALLETS.map((w) => {
-    const priceUSD = CRYPTO_PRICES_USD[w.code] || 0;
+    const priceUSD = priceMap[w.code] ?? 0;
     const valueUSD = w.balance * priceUSD;
     return {
       ...w,
@@ -36,11 +32,12 @@ export async function GET() {
   });
 
   const totalValueUSD = wallets.reduce((s, w) => s + w.valueUSD, 0);
-  const totalValueNGN = totalValueUSD / 0.00065;
+  const totalValueNGN = totalValueUSD * NGN_PER_USD;
 
   return NextResponse.json({
     wallets,
     totalValueUSD,
     totalValueNGN,
+    source: "CoinGecko",
   });
 }

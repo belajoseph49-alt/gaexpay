@@ -3,7 +3,7 @@
 import {
   LayoutDashboard, Wallet, SendHorizontal, ArrowLeftRight, CreditCard,
   QrCode, BarChart3, ShieldCheck, Shield, Settings, LifeBuoy, Users, Gift,
-  Sparkles, PiggyBank, Wallet2, CalendarClock, Store, ArrowLeftRight as Exchange, FileText, Trophy, Calendar, MapPin, Bitcoin, Repeat, Globe,
+  Sparkles, PiggyBank, Wallet2, CalendarClock, Store, ArrowLeftRight as Exchange, FileText, Trophy, Calendar, MapPin, Bitcoin, Repeat, Globe, DollarSign, AtSign, Banknote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp, type View } from "@/lib/store";
@@ -18,6 +18,7 @@ const NAV: { section: string; items: { id: View; label: string; icon: any; badge
       { id: "wallets", label: "Wallets", icon: Wallet },
       { id: "send", label: "Send & Receive", icon: SendHorizontal },
       { id: "international", label: "International Transfer", icon: Globe },
+      { id: "unified-address", label: "My Payment Address", icon: AtSign },
       { id: "transactions", label: "Transactions", icon: ArrowLeftRight },
       { id: "cards", label: "Cards", icon: CreditCard },
       { id: "pay", label: "Pay & Bills", icon: QrCode },
@@ -28,6 +29,8 @@ const NAV: { section: string; items: { id: View; label: string; icon: any; badge
       { id: "exchange", label: "Exchange", icon: Exchange },
       { id: "crypto", label: "Crypto Wallets", icon: Bitcoin },
       { id: "crypto-swap", label: "Crypto Swap", icon: Repeat },
+      { id: "crypto-trade", label: "Buy / Sell Crypto", icon: DollarSign },
+      { id: "crypto-cashout", label: "Crypto → Fiat", icon: Banknote },
       { id: "analytics", label: "Analytics", icon: BarChart3 },
       { id: "spending-map", label: "Spending Map", icon: MapPin },
       { id: "statement", label: "Statements", icon: FileText },
