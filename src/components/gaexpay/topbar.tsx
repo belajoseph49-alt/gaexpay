@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "./theme-toggle";
 import { useApp } from "@/lib/store";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { MobileNav } from "./mobile-nav";
 import { NotificationsPanel } from "./notifications-panel";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -29,6 +29,7 @@ export function Topbar() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-72 p-0">
+          <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
           <MobileNav />
         </SheetContent>
       </Sheet>
