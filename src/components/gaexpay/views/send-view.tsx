@@ -876,37 +876,75 @@ function TopUpFlow() {
 }
 
 function WithdrawFlow() {
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
+  const { data: walletData } = useFetch<{ wallets: any[]; totalNGN: number }>("/api/wallets");
+  const { data: benData } = useFetch<{ beneficiaries: any[] }>("/api/beneficiaries");
+  const [amount, setAmount] = useState("");
+  const [destination, setDestination] = useState("");
+
+  const wallets = walletData?.wallets ?? [];
+  const beneficiaries = benData?.beneficiaries ?? [];
+  const defaultWallet = wallets.find((w) => w.isDefault) || wallets[0];
+  const availableBalance = defaultWallet?.balance ?? 0;
+  const dailyLimit = 5000000;
+  const dailyLimitLeft = Math.max(0, dailyLimit - availableBalance * 0.1);
+
+  // Filter beneficiaries for withdrawal destinations (bank + momo)
+  const withdrawalDestinations = beneficiaries.filter((b) => b.type === "bank" || b.type === "momo");
+
+  const handleWithdraw = async () => {
+    if (!amount || Number(amount) <= 0) {
+      toast.error("Enter a valid amount");
+      return;
+    }
+    if (Number(amount) > availableBalance) {
+      toast.error("Insufficient balance");
+      return;
+    }
+    toast.success(`Withdrawing ${symbol}${Number(amount).toLocaleString()} to your account`);
+    setAmount("");
+  };
+
   return (
     <Card className="mx-auto max-w-2xl p-4 sm:p-6">
       <h3 className="font-semibold text-base sm:text-lg">Withdraw Funds</h3>
-      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 mb-4">Cash out to bank or mobile money agent</p>
+      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 mb-4">Cash out to bank or mobile money</p>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
           <div className="rounded-xl border p-3 sm:p-4">
             <p className="text-[11px] sm:text-xs text-muted-foreground">Available</p>
-            <p className="text-base sm:text-xl font-bold tabular-nums">₦845,230.55</p>
+            <p className="text-base sm:text-xl font-bold tabular-nums">{fmt(availableBalance)}</p>
           </div>
           <div className="rounded-xl border p-3 sm:p-4">
             <p className="text-[11px] sm:text-xs text-muted-foreground">Daily limit left</p>
-            <p className="text-base sm:text-xl font-bold tabular-nums">₦4,200,000</p>
+            <p className="text-base sm:text-xl font-bold tabular-nums">{fmt(dailyLimitLeft)}</p>
           </div>
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs sm:text-sm">Withdraw to</Label>
-          <Select defaultValue="bank">
-            <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="bank">Access Bank · 0123456789</SelectItem>
-              <SelectItem value="gtb">GTBank · 9876543210</SelectItem>
-              <SelectItem value="momo">MTN MoMo · +2348012345678</SelectItem>
-            </SelectContent>
-          </Select>
+          {withdrawalDestinations.length > 0 ? (
+            <Select value={destination} onValueChange={setDestination}>
+              <SelectTrigger className="h-11"><SelectValue placeholder="Select destination" /></SelectTrigger>
+              <SelectContent>
+                {withdrawalDestinations.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.bank || b.type} · {b.account}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="rounded-lg border border-dashed p-4 text-center">
+              <p className="text-xs text-muted-foreground mb-2">No saved bank or mobile money accounts</p>
+              <Button size="sm" variant="outline" onClick={() => useApp.getState().setView("send")}>Add beneficiary</Button>
+            </div>
+          )}
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs sm:text-sm">Amount</Label>
-          <Input type="number" placeholder="0.00" className="h-11 text-base sm:text-lg font-semibold" />
+          <Label className="text-xs sm:text-sm">Amount ({userCur})</Label>
+          <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" className="h-11 text-base sm:text-lg font-semibold" />
         </div>
-        <Button className="w-full h-11">Continue</Button>
+        <Button className="w-full h-11" onClick={handleWithdraw} disabled={!amount || !destination}>Continue</Button>
       </div>
     </Card>
   );

@@ -731,7 +731,7 @@ function InvoicesTab({ data }: { data: BusinessProData }) {
                 </div>
                 <div>
                   <Label htmlFor="items">Line items</Label>
-                  <Textarea id="items" rows={3} placeholder={"Premium Subscription x2 — ₦30,000\nOnboarding — ₦20,000"} value={form.items}
+                  <Textarea id="items" rows={3} placeholder={"Item 1 — Amount\nItem 2 — Amount"} value={form.items}
                     onChange={(e) => setForm({ ...form, items: e.target.value })} />
                 </div>
                 <div>

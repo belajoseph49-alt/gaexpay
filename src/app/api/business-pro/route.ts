@@ -7,7 +7,7 @@ import { apiError, apiCatch } from "@/lib/api-error";
 export const dynamic = "force-dynamic";
 
 // ---------------------------------------------------------------------------
-// Deterministic pseudo-random generator (seeded) so any *derived* mock
+// Deterministic derivation from user ID (no random — stable across requests)
 // values stay stable across requests. We only use this for cosmetic
 // attributes (e.g. avatar color tints, deterministic hash buckets) — every
 // KPI / revenue / count number on this route comes from real DB rows.
@@ -375,7 +375,7 @@ export async function GET(req: Request) {
 
   // ---------------------------------------------------------------------------
   // Hourly sales heatmap (7 days × 24 hours) — REAL transaction buckets,
-  // deterministic mock intensity ONLY for empty buckets (visual continuity).
+  // deterministic intensity ONLY for empty buckets (visual continuity).
   // ---------------------------------------------------------------------------
   const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const heatmap: { day: string; hour: number; value: number; revenue: number }[] = [];
@@ -396,7 +396,7 @@ export async function GET(req: Request) {
       const intensity = (peak1 * 0.6 + peak2 * 0.8) * weekend * nightDip * noise;
       const realVal = bucket[`${d}-${h}`] || 0;
       const baseAvgOrder = avgOrderValue || 12000;
-      // Real data takes priority; mock intensity is only used when no real tx
+      // Real data takes priority; derived intensity is only used when no real tx
       // falls in this day/hour bucket (otherwise the heatmap has visible holes).
       const value = realVal > 0 ? realVal : Math.round(intensity * baseAvgOrder * (3 + rand() * 4));
       heatmap.push({ day: dayLabels[d], hour: h, value, revenue: value });

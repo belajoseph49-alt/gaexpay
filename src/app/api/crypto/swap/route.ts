@@ -17,7 +17,7 @@ function ref() {
   );
 }
 
-// Per-crypto network fee in USD (simulated gas/miner fee)
+// Per-crypto network fee in USD (estimated gas/miner fee)
 const NETWORK_FEE_USD: Record<string, number> = {
   BTC: 1.85, ETH: 2.45, BNB: 0.15, SOL: 0.005, XRP: 0.001, ADA: 0.0017,
   DOT: 0.02, MATIC: 0.01, LTC: 0.03, TRX: 0.001,

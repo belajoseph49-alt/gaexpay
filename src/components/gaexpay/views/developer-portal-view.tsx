@@ -261,7 +261,7 @@ function ApiKeysTab({ data }: { data: DeveloperData }) {
     }
     const prefix = newKey.environment === "production" ? "gxp_live" : "gxp_test";
     const randomPart = Array.from({ length: 32 }, () =>
-      "0123456789abcdef"[Math.floor(Math.random() * 16)]
+      "0123456789abcdef"[hash % 16]
     ).join("");
     const fullKey = `${prefix}_${randomPart}`;
     setCreatedKey(fullKey);

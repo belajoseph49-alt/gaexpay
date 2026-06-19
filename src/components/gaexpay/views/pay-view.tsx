@@ -296,7 +296,7 @@ function BillsPay() {
           <div className="space-y-3">
             <div className="space-y-2">
               <Label>Account / Reference Number</Label>
-              <Input value={account} onChange={(e) => setAccount(e.target.value)} placeholder="e.g. 0123456789" />
+              <Input value={account} onChange={(e) => setAccount(e.target.value)} placeholder="Account or reference number" />
             </div>
             <div className="space-y-2">
               <Label>Amount (₦)</Label>

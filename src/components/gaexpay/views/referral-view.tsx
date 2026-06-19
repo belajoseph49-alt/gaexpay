@@ -54,10 +54,10 @@ export function ReferralView() {
         <div className="relative">
           <div className="flex items-center gap-2 mb-1">
             <Gift className="h-5 w-5" />
-            <span className="text-sm font-medium text-white/90">Earn ₦500 per friend</span>
+            <span className="text-sm font-medium text-white/90">Earn rewards per friend</span>
           </div>
           <h2 className="text-2xl font-bold">Invite friends to GaexPay</h2>
-          <p className="mt-1 text-sm text-white/80">You both get ₦500 when they complete their first transaction.</p>
+          <p className="mt-1 text-sm text-white/80">You both get a bonus when they complete their first transaction.</p>
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
             <div className="flex flex-1 items-center gap-2 rounded-xl bg-white/15 px-4 py-3 backdrop-blur">
@@ -153,7 +153,7 @@ export function ReferralView() {
               <Badge variant="outline" className={cn("text-[10px]", f.status === "active" ? "text-emerald-600" : "text-amber-600")}>
                 {f.status}
               </Badge>
-              <span className="text-xs font-medium text-emerald-600">+₦500</span>
+              <span className="text-xs font-medium text-emerald-600">+Bonus</span>
             </div>
           ))}
         </div>
@@ -165,10 +165,10 @@ export function ReferralView() {
         <p className="text-xs text-muted-foreground mb-4">Use your {points.toLocaleString()} points</p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[
-            { name: "₦1,000 Cash", points: 1000, icon: "💵" },
+            { name: "Cash Reward", points: 1000, icon: "💵" },
             { name: "Free Transfer Month", points: 500, icon: "🚀" },
             { name: "Netflix Subscription", points: 2500, icon: "🎬" },
-            { name: "Airtime ₦2,000", points: 1800, icon: "📱" },
+            { name: "Airtime Top-up", points: 1800, icon: "📱" },
             { name: "GaexPay Merch Tee", points: 3000, icon: "👕" },
             { name: "VIP Support Access", points: 4000, icon: "⭐" },
           ].map((r) => {

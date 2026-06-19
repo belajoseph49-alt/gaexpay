@@ -558,8 +558,15 @@ function RecipientLookup() {
     }
   };
 
-  // Try a few sample lookups (chips)
-  const samples = ["@adaeze", "demo@gaexpay.com", "+2348012345678", "GXP-ADAEZE"];
+  // Sample lookup chips — derived from actual user data
+  const samples = data?.addresses
+    ? [
+        data.addresses.atHandle?.value,
+        data.addresses.email?.value,
+        data.addresses.phone?.value,
+        data.addresses.gaexpayId?.value,
+      ].filter(Boolean).slice(0, 4)
+    : [];
 
   return (
     <Card className="p-6 h-full flex flex-col">

@@ -22,10 +22,10 @@ import { useFormatMoney } from "@/hooks/use-format-money";
 
 const FAQS = [
   { q: "How do I verify my identity (KYC)?", a: "Go to Identity (KYC) section, upload a valid government-issued ID and take a selfie. Verification usually completes within 1-2 hours." },
-  { q: "What are the transfer limits?", a: "Limits depend on your KYC tier: Tier 1 = ₦50k/day, Tier 2 = ₦500k/day, Tier 3 = ₦5M/day. Upgrade your tier for higher limits." },
+  { q: "What are the transfer limits?", a: "Limits depend on your KYC tier: check your KYC tier for limits. Upgrade your tier for higher limits." },
   { q: "How long do transfers take?", a: "GaexPay-to-GaexPay transfers are instant. Bank transfers typically take 1-5 minutes. International transfers may take 1-3 business days." },
   { q: "How do I freeze my card?", a: "Go to Cards, select the card, and tap 'Freeze'. You can unfreeze it anytime. Your card details remain secure." },
-  { q: "What are the fees?", a: "GaexPay-to-GaexPay is free. Bank transfers have a small fee (max ₦5,000). Mobile money has a 1% fee. Bills and airtime are free." },
+  { q: "What are the fees?", a: "GaexPay-to-GaexPay is free. Bank transfers have a small fee (small fee). Mobile money has a 1% fee. Bills and airtime are free." },
   { q: "Is my money safe?", a: "Yes. GaexPay uses end-to-end encryption, is PCI-DSS compliant, and funds are held in regulated partner banks. We also offer 2FA and biometric security." },
 ];
 

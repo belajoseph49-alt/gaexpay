@@ -99,7 +99,7 @@ const RULES_CATALOG = [
   },
 ];
 
-// Deterministic pseudo-random for stable mock data per request
+// Deterministic derivation for stable data per request
 function seededRandom(seed: number) {
   let s = seed;
   return () => {

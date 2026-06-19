@@ -227,7 +227,7 @@ function NewScheduleDialog({ onSubmit }: { onSubmit: (f: any) => void }) {
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label>Account / Number</Label>
-            <Input value={recipientAccount} onChange={(e) => setRecipientAccount(e.target.value)} placeholder="0123456789" />
+            <Input value={recipientAccount} onChange={(e) => setRecipientAccount(e.target.value)} placeholder="Account number" />
           </div>
           <div className="space-y-2">
             <Label>Bank / Provider</Label>

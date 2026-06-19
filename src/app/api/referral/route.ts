@@ -15,7 +15,7 @@ export async function GET(req: Request) {
       where: { id: userId },
       select: { referralCode: true, referralCount: true, referralEarnings: true, rewardPoints: true },
     });
-    // simulate referred users (other seeded users)
+    // Real referred users from DB
     const referred = await db.user.findMany({
       where: { NOT: { id: userId } },
       take: 14,

@@ -495,7 +495,7 @@ function Wizard() {
                       onChange={(e) => setRecipientAccount(e.target.value)}
                       placeholder={
                         method === "bank"
-                          ? "0123456789 or IBAN"
+                          ? "Enter account number or IBAN"
                           : method === "momo"
                             ? `${getCountry(recipientCountry)?.phonePrefix ?? "+234"} 801 234 5678`
                             : "@username or wallet ID"

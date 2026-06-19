@@ -94,7 +94,7 @@ export function WalletsView() {
               </button>
             </div>
             <div className="mt-2 flex items-center gap-1.5 text-sm text-white/80">
-              <TrendingUp className="h-4 w-4" /> +₦104,230 (12.4%) this month
+              <TrendingUp className="h-4 w-4" /> +12.4% this month
             </div>
           </div>
           <div className="flex gap-2">
