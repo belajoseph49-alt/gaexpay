@@ -163,3 +163,91 @@ Built 20 API routes under `src/app/api/`:
 - **P0**: Keep dev server alive (cron job handles this).
 - **P1**: Add more interactive features (scheduled transfers, savings goals) and polish loading states.
 - **P2**: WebSocket real-time notifications.
+
+---
+
+## Phase 2 — Cron Round 1: New Features + Styling Enhancements
+
+**Task ID**: 8 (webDevReview cron round)
+**Agent**: Main (Z.ai Code)
+**Date**: 2026-06-19
+
+### Current Project Status Assessment
+- Dev server was running stably on port 3000 (PID 5852).
+- Lint was clean (0 errors).
+- QA via agent-browser confirmed all 12 existing views render without console/runtime errors.
+- Full Send money flow (recipient → amount → review → OTP → success) verified working end-to-end.
+- AI assistant (Gaxie) verified responding correctly.
+- No bugs found in Phase 1 — app was stable. Proceeded to add new features per requirements.
+
+### Work Completed This Round
+
+#### 1. New Database Models (Prisma schema)
+Added 4 new models to `prisma/schema.prisma`:
+- **SavingsGoal**: name, targetAmount, currentAmount, currency, deadline, icon, color, status, autoSaveAmount, autoSaveDay
+- **SavingsContribution**: goalId, amount, type (deposit/withdrawal), note
+- **Budget**: category, limit, spent, period, currency, alertThreshold
+- **ScheduledTransfer**: recipientName/Account/Bank, method, amount, frequency, nextRunAt, status, totalRuns
+
+Ran `bun run db:push` + `bun run db:generate` to sync. Wrote `prisma/seed-phase2.ts` and seeded: 5 savings goals (vacation, MacBook, emergency fund, wedding, Tesla), 6 budgets (food, transport, shopping, bills, entertainment, health), 5 scheduled transfers (rent, mom support, auto-save, Netflix, salary).
+
+#### 2. New API Routes (3 routes)
+- `POST/GET/PATCH /api/savings-goals` — CRUD + contribute/withdraw
+- `POST/GET/PATCH/DELETE /api/budgets` — CRUD budgets
+- `POST/GET/PATCH/DELETE /api/scheduled-transfers` — CRUD scheduled transfers
+
+#### 3. Three New Views (15 total views now)
+- **savings-view.tsx**: Total saved hero (violet gradient), auto-save promo, 5 goal cards with progress bars, icons, deadlines, contribute/withdraw/pause actions, recent contributions list, full create-goal dialog with icon/color picker + auto-save config.
+- **budgets-view.tsx**: Total monthly budget hero (amber gradient), 3 insight cards (on track/near limit/over budget), 6 budget cards with color-coded progress (green/amber/red), smart budget tip, create-budget dialog.
+- **scheduled-view.tsx**: Monthly recurring hero (sky gradient), next-run banner, full transfer list with method icons, frequency badges, pause/resume/delete, create-schedule dialog with full form.
+
+#### 4. Dashboard Enhancements
+- Added **Savings Goals preview** widget (top 3 active goals with mini progress bars).
+- Added **Monthly Budgets preview** widget (top 4 budgets with color-coded progress).
+- Balance hero now uses **AnimatedNumber** for count-up animation (0 → balance over 1.2s with easeOutExpo).
+
+#### 5. Styling Improvements (Mandatory)
+- **AnimatedNumber component** (`src/components/gaexpay/animated-number.tsx`): Reusable count-up animation with `useCountUp` hook (easeOutExpo easing, configurable duration/decimals). Used in dashboard balance, savings total, budgets total, scheduled total.
+- **Confetti component** (`src/components/gaexpay/confetti.tsx`): CSS-based confetti burst (80 pieces, 8 colors, randomized rotation/duration/fall). Fires on successful transfer in Send flow.
+- **useCountUp hook** (`src/hooks/use-count-up.ts`): requestAnimationFrame-based smooth number animation.
+- All new views use gradient hero cards, card-lift hover, Framer Motion entrance animations, skeleton loaders during fetch, and consistent emerald/teal design language.
+- Send success step enhanced with confetti + pulse-glow on check icon + "Send Again" button.
+
+#### 6. Beneficiary "Send Again" Quick Action
+- Transactions detail dialog now shows a "Send Again" button for completed debit transactions.
+- Clicking it closes the dialog and navigates to the Send view (verified working via JS eval).
+
+#### 7. Navigation Updates
+- Updated `store.ts` View type to include `savings`, `budgets`, `scheduled`.
+- Updated `sidebar.tsx` and `mobile-nav.tsx` with 3 new nav items (PiggyBank, Wallet2, CalendarClock icons).
+- Updated `app-shell.tsx` to render the 3 new views.
+
+### Verification Results
+- ✅ `bun run lint` — 0 errors, 0 warnings
+- ✅ All 15 views tested via agent-browser — no console/runtime errors
+- ✅ New APIs: `/api/savings-goals`, `/api/budgets`, `/api/scheduled-transfers` all return 200
+- ✅ Savings Goals view: 5 goals render with progress, contributions, auto-save promo
+- ✅ Budgets view: 6 budgets render with color-coded progress + smart tip
+- ✅ Scheduled view: 5 transfers render with frequency/next-run/pause controls
+- ✅ Dashboard: new Savings + Budgets preview widgets render with live data
+- ✅ AnimatedNumber: balance counts up on dashboard load
+- ✅ Confetti: fires on Send success step
+- ✅ Send Again: navigates from transaction detail to Send view
+- ✅ Mobile (390×844): Savings + Budgets views responsive
+- ✅ Full Send flow (recipient → amount → review → OTP → success + confetti) verified
+- ✅ Dev log: no errors/warnings
+
+### Unresolved Issues / Risks
+1. **agent-browser ref click on dialog buttons**: Clicking buttons inside Radix Dialog via `click @ref` sometimes doesn't register (likely overlay interception). Workaround: use `agent-browser eval` with JS `.click()`. This is a testing tooling issue, not a code bug — the buttons work correctly for real users.
+2. **Seed transaction currencies**: Still uses uniform amount range across currencies (carryover from Phase 1). Low priority cosmetic issue.
+3. **No real-time updates**: Data requires manual reload. WebSocket mini-service still a future enhancement.
+
+### Priority Recommendations for Next Phase
+- **P1**: Add transaction disputes flow (report issue → ticket creation → status tracking).
+- **P1**: Add savings goal completion celebration (confetti + achievement badge).
+- **P1**: Add budget alerts/notifications when crossing thresholds.
+- **P2**: Add statements/PDF export for transactions.
+- **P2**: Add merchant dashboard view (for merchant accounts).
+- **P2**: WebSocket real-time notifications for scheduled transfer execution.
+- **P3**: Wire up next-intl for multi-language (8 languages declared).
+- **P3**: Add geographic spending heatmap in analytics.

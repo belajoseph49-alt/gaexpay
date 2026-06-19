@@ -286,3 +286,64 @@ model AdminMetric {
   category  String   @default("general")
   updatedAt DateTime @updatedAt
 }
+
+model SavingsGoal {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  targetAmount Float
+  currentAmount Float @default(0)
+  currency    String   @default("NGN")
+  deadline    DateTime?
+  icon        String   @default("🎯")
+  color       String   @default("emerald")
+  status      String   @default("active") // active | completed | paused
+  autoSaveAmount Float?
+  autoSaveDay  Int?    // day of month for auto-save
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  contributions SavingsContribution[]
+}
+
+model SavingsContribution {
+  id        String   @id @default(cuid())
+  goalId    String
+  goal      SavingsGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  amount    Float
+  type      String   @default("deposit") // deposit | withdrawal
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+model Budget {
+  id         String   @id @default(cuid())
+  userId     String
+  category   String   // p2p | bills | shopping | food | transport | entertainment | general
+  limit      Float
+  spent      Float    @default(0)
+  period     String   @default("monthly") // weekly | monthly
+  currency   String   @default("NGN")
+  alertThreshold Float @default(80)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model ScheduledTransfer {
+  id         String   @id @default(cuid())
+  userId     String
+  recipientName String
+  recipientAccount String?
+  recipientBank  String?
+  method     String   @default("wallet")
+  provider   String?
+  amount     Float
+  currency   String   @default("NGN")
+  note       String?
+  frequency  String   // once | daily | weekly | monthly
+  nextRunAt  DateTime
+  lastRunAt  DateTime?
+  status     String   @default("active") // active | paused | completed | failed
+  totalRuns  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

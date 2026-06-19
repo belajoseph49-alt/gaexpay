@@ -20,6 +20,7 @@ import {
   AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid,
   PieChart, Pie, Cell,
 } from "recharts";
+import { AnimatedNumber } from "@/components/gaexpay/animated-number";
 import { cn } from "@/lib/utils";
 
 const QUICK_ACTIONS = [
@@ -96,7 +97,7 @@ export function DashboardView() {
                   <p className="text-sm text-white/80">Total Balance (≈ NGN)</p>
                   <div className="mt-1 flex items-center gap-2">
                     <h2 className="text-3xl font-bold tracking-tight tabular-nums">
-                      {hidden ? "₦ • • • • • •" : formatMoney(totalNGN, "NGN")}
+                      {hidden ? "₦ • • • • • •" : <AnimatedNumber value={totalNGN} prefix="₦" decimals={2} />}
                     </h2>
                     <button onClick={() => setHidden(!hidden)} className="text-white/70 hover:text-white">
                       {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -326,6 +327,37 @@ export function DashboardView() {
         </Card>
       </div>
 
+      {/* Savings goals preview + Budget progress */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Savings goals */}
+        <Card className="p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold">Savings Goals</h3>
+              <p className="text-xs text-muted-foreground">Your progress</p>
+            </div>
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setView("savings")}>
+              View all <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <DashboardSavingsPreview onClick={() => setView("savings")} />
+        </Card>
+
+        {/* Budget progress */}
+        <Card className="p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold">Monthly Budgets</h3>
+              <p className="text-xs text-muted-foreground">Spending vs limit</p>
+            </div>
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setView("budgets")}>
+              Manage <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <DashboardBudgetsPreview onClick={() => setView("budgets")} />
+        </Card>
+      </div>
+
       {/* Cards promo */}
       <Card className="overflow-hidden border-0 bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -412,4 +444,79 @@ function buildCategoryBreakdown(transactions: any[]) {
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
+}
+
+function DashboardSavingsPreview({ onClick }: { onClick: () => void }) {
+  const { data } = useFetch<{ goals: any[]; totalSaved: number }>("/api/savings-goals");
+  const goals = (data?.goals ?? []).filter((g) => g.status !== "completed").slice(0, 3);
+  if (!data) return <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-12" />)}</div>;
+  if (goals.length === 0) {
+    return (
+      <div className="grid place-items-center py-6 text-center">
+        <p className="text-sm text-muted-foreground mb-2">No active savings goals</p>
+        <Button size="sm" variant="outline" onClick={onClick}>Create a goal</Button>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      {goals.map((g) => {
+        const pct = (g.currentAmount / g.targetAmount) * 100;
+        return (
+          <button key={g.id} onClick={onClick} className="w-full text-left group">
+            <div className="flex items-center gap-2.5">
+              <span className="text-lg">{g.icon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium truncate">{g.name}</p>
+                  <span className="text-xs text-muted-foreground tabular-nums">{pct.toFixed(0)}%</span>
+                </div>
+                <Progress value={pct} className="h-1.5 mt-1" />
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  {formatMoney(g.currentAmount, "NGN")} of {formatMoney(g.targetAmount, "NGN")}
+                </p>
+              </div>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function DashboardBudgetsPreview({ onClick }: { onClick: () => void }) {
+  const { data } = useFetch<{ budgets: any[]; totalLimit: number; totalSpent: number }>("/api/budgets");
+  const budgets = (data?.budgets ?? []).slice(0, 4);
+  if (!data) return <div className="space-y-2">{[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-10" />)}</div>;
+  if (budgets.length === 0) {
+    return (
+      <div className="grid place-items-center py-6 text-center">
+        <p className="text-sm text-muted-foreground mb-2">No budgets set</p>
+        <Button size="sm" variant="outline" onClick={onClick}>Create a budget</Button>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-2.5">
+      {budgets.map((b) => {
+        const pct = (b.spent / b.limit) * 100;
+        const over = pct > 100;
+        const warn = pct >= 80 && pct <= 100;
+        return (
+          <button key={b.id} onClick={onClick} className="w-full text-left group">
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span className="font-medium">{b.category}</span>
+              <span className={cn("tabular-nums", over ? "text-rose-600" : warn ? "text-amber-600" : "text-muted-foreground")}>
+                {formatMoney(b.spent, "NGN")} / {formatMoney(b.limit, "NGN")}
+              </span>
+            </div>
+            <Progress
+              value={Math.min(pct, 100)}
+              className={cn("h-1.5", over && "[&>div]:bg-rose-500", warn && "[&>div]:bg-amber-500")}
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
 }

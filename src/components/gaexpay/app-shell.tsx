@@ -10,6 +10,9 @@ import { SendView } from "./views/send-view";
 import { TransactionsView } from "./views/transactions-view";
 import { CardsView } from "./views/cards-view";
 import { PayView } from "./views/pay-view";
+import { SavingsView } from "./views/savings-view";
+import { BudgetsView } from "./views/budgets-view";
+import { ScheduledView } from "./views/scheduled-view";
 import { AnalyticsView } from "./views/analytics-view";
 import { KycView } from "./views/kyc-view";
 import { SettingsView } from "./views/settings-view";
@@ -28,6 +31,9 @@ export function AppShell() {
     transactions: <TransactionsView />,
     cards: <CardsView />,
     pay: <PayView />,
+    savings: <SavingsView />,
+    budgets: <BudgetsView />,
+    scheduled: <ScheduledView />,
     analytics: <AnalyticsView />,
     kyc: <KycView />,
     settings: <SettingsView />,

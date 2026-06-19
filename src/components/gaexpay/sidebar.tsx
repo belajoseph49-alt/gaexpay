@@ -3,7 +3,7 @@
 import {
   LayoutDashboard, Wallet, SendHorizontal, ArrowLeftRight, CreditCard,
   QrCode, BarChart3, ShieldCheck, Settings, LifeBuoy, Users, Gift,
-  Sparkles,
+  Sparkles, PiggyBank, Wallet2, CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp, type View } from "@/lib/store";
@@ -20,6 +20,9 @@ const NAV: { section: string; items: { id: View; label: string; icon: any; badge
       { id: "transactions", label: "Transactions", icon: ArrowLeftRight },
       { id: "cards", label: "Cards", icon: CreditCard },
       { id: "pay", label: "Pay & Bills", icon: QrCode },
+      { id: "savings", label: "Savings Goals", icon: PiggyBank },
+      { id: "budgets", label: "Budgets", icon: Wallet2 },
+      { id: "scheduled", label: "Scheduled", icon: CalendarClock },
       { id: "analytics", label: "Analytics", icon: BarChart3 },
     ],
   },

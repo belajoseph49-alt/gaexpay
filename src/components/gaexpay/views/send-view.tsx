@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   SendHorizontal, ArrowDownToLine, ArrowUpFromLine, QrCode, Search, UserPlus,
   Smartphone, Landmark, Wallet as WalletIcon, Check, ShieldCheck, ChevronRight,
-  ChevronLeft, Loader2, Copy, Share2,
+  ChevronLeft, Loader2, Copy, Share2, Repeat,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import { formatMoney, CURRENCIES, MOBILE_MONEY_PROVIDERS, BANKS } from "@/lib/ga
 import { useApp } from "@/lib/store";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Confetti } from "@/components/gaexpay/confetti";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -324,12 +325,13 @@ function SendFlow() {
         {/* Step 4: Success */}
         {step === 4 && done && (
           <motion.div key="s4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+            <Confetti trigger={true} />
             <div className="text-center">
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", delay: 0.1 }}
-                className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white"
+                className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white pulse-glow"
               >
                 <Check className="h-8 w-8" strokeWidth={3} />
               </motion.div>
@@ -355,7 +357,9 @@ function SendFlow() {
               <Button variant="outline" className="flex-1">
                 <Share2 className="h-4 w-4 mr-1.5" /> Share
               </Button>
-              <Button className="flex-1" onClick={reset}>New Transfer</Button>
+              <Button className="flex-1" onClick={reset}>
+                <Repeat className="h-4 w-4 mr-1.5" /> Send Again
+              </Button>
             </div>
           </motion.div>
         )}

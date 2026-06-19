@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import {
   Search, Filter, Download, ArrowDownRight, ArrowUpRight, ArrowLeftRight,
   Receipt, Smartphone, QrCode, CreditCard, Gift, Zap, TrendingUp,
-  CheckCircle2, XCircle, Clock, Flag,
+  CheckCircle2, XCircle, Clock, Flag, Repeat,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { useApp } from "@/lib/store";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const TYPE_ICONS: Record<string, any> = {
@@ -36,6 +38,7 @@ const STATUS_STYLES: Record<string, any> = {
 
 export function TransactionsView() {
   const { data } = useFetch<{ transactions: any[] }>("/api/transactions?limit=200");
+  const { setView } = useApp();
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
   const [status, setStatus] = useState("all");
@@ -232,8 +235,16 @@ export function TransactionsView() {
                 {selected.riskScore > 0.5 && <DetailRow label="Risk Score" value={`${(selected.riskScore * 100).toFixed(0)}%`} />}
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1"><Download className="h-4 w-4 mr-1.5" /> Receipt</Button>
-                <Button variant="outline" className="flex-1">Report Issue</Button>
+                <Button variant="outline" className="flex-1" type="button"><Download className="h-4 w-4 mr-1.5" /> Receipt</Button>
+                {selected.direction === "debit" && selected.status === "completed" && (
+                  <Button variant="outline" className="flex-1" type="button" onClick={() => {
+                    setSelected(null);
+                    setView("send");
+                  }}>
+                    <Repeat className="h-4 w-4 mr-1.5" /> Send Again
+                  </Button>
+                )}
+                <Button variant="outline" className="flex-1" type="button">Report Issue</Button>
               </div>
             </div>
           )}
