@@ -58,8 +58,8 @@ export function SettingsView() {
           <Card className="p-6">
             <div className="flex items-center gap-4">
               <Avatar className="h-20 w-20 ring-4 ring-primary/20">
-                <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-xl font-bold">
-                  {user?.firstName?.[0]}{user?.lastName?.[0] || "AO"}
+                <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-xl font-bold" suppressHydrationWarning>
+                  {user ? `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}` : "AO"}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
