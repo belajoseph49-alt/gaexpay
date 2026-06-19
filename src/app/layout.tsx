@@ -98,15 +98,18 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning translate="no">
       <head>
+        {/* Prevent translation extensions from modifying DOM (causes removeChild errors) */}
+        <meta name="google" content="notranslate" />
+        <meta name="translate" content="no" />
         {/* Safari pinned-tab mask icon (not exposed via the metadata API) */}
         <link rel="mask-icon" href="/icon.svg" color="#10b981" />
         {/* iOS launch screen background colour while the PWA is hydrating */}
         <meta name="apple-mobile-web-app-status-bar-inset" content="#0a0f0d" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground notranslate`}
         suppressHydrationWarning
       >
         <ThemeProvider
