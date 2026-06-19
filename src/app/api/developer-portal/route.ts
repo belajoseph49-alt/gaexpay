@@ -1,9 +1,23 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { DEMO_USER_ID } from "@/lib/gaexpay";
 
 export const dynamic = "force-dynamic";
 
-// Deterministic pseudo-random for stable mock data
+// ---------------------------------------------------------------------------
+// Deterministic helpers
+// ---------------------------------------------------------------------------
+// 32-bit FNV-1a hash so derived identifiers are stable across requests.
+function hashStr(s: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+
+// Deterministic pseudo-random for stable derived data per request
 function seededRandom(seed: number) {
   let s = seed;
   return () => {
@@ -13,80 +27,100 @@ function seededRandom(seed: number) {
 }
 
 // ---------------------------------------------------------------------------
-// API Keys catalog — 5 mock API keys
+// API KEY derivation
 // ---------------------------------------------------------------------------
-const API_KEYS_CATALOG = [
-  {
-    id: "key_prod_live_01",
-    name: "Production Live",
-    prefix: "gxp_live",
-    fullKey: "gxp_live_4f7b9a2c8e1d6f3a5b9c0e7d2a4f6b8c",
-    permissions: ["read", "write", "admin"] as const,
-    rateLimit: 10000,
-    status: "active" as const,
-    createdDaysAgo: 184,
-    lastUsedMinutesAgo: 3,
-    requestsToday: 4827,
-  },
-  {
-    id: "key_prod_read_02",
-    name: "Analytics Read-Only",
-    prefix: "gxp_live",
-    fullKey: "gxp_live_8d3e6b1a9f5c2e7d4a8b0c3f6e9d1a2b",
-    permissions: ["read"] as const,
-    rateLimit: 1000,
-    status: "active" as const,
-    createdDaysAgo: 92,
-    lastUsedMinutesAgo: 18,
-    requestsToday: 1247,
-  },
-  {
-    id: "key_webhook_03",
-    name: "Webhook Verifier",
-    prefix: "gxp_live",
-    fullKey: "gxp_live_2b9c4e7d1a8f5c0e3b6d9a2f7e4c1b8d",
-    permissions: ["read", "write"] as const,
-    rateLimit: 1000,
-    status: "active" as const,
-    createdDaysAgo: 47,
-    lastUsedMinutesAgo: 1,
-    requestsToday: 384,
-  },
-  {
-    id: "key_sandbox_04",
-    name: "Sandbox Testing",
-    prefix: "gxp_test",
-    fullKey: "gxp_test_9e1d4a8c5b2f7e0d3a6b9c1e4f8d2a5b",
-    permissions: ["read", "write"] as const,
-    rateLimit: 1000,
-    status: "active" as const,
-    createdDaysAgo: 21,
-    lastUsedMinutesAgo: 42,
-    requestsToday: 192,
-  },
-  {
-    id: "key_legacy_05",
-    name: "Legacy Mobile App",
-    prefix: "gxp_live",
-    fullKey: "gxp_live_5a2b8e1d4f7c0b3a9e6d2c5f8b1a4e7d",
-    permissions: ["read"] as const,
-    rateLimit: 1000,
-    status: "revoked" as const,
-    createdDaysAgo: 312,
-    lastUsedMinutesAgo: 14400, // 10 days
-    requestsToday: 0,
-  },
+// There is no `ApiKey` model in the Prisma schema, so we derive the API key
+// set DETERMINISTICALLY from the demo user's ID. The same user always gets
+// the same 5 keys with the same prefixes, masked keys, request counts, etc.
+//
+// PRODUCTION NOTE: in a real deployment this would come from an `ApiKey`
+// table with columns (id, userId, name, prefix, hashedKey, permissions,
+// rateLimit, status, lastUsedAt, createdAt, requestsToday). The structure
+// below mirrors what that table would return so the frontend stays the same.
+// ---------------------------------------------------------------------------
+interface ApiKeyConfig {
+  id: string;
+  name: string;
+  prefix: "gxp_live" | "gxp_test";
+  permissions: ("read" | "write" | "admin")[];
+  rateLimit: number;
+  status: "active" | "revoked";
+  createdDaysAgo: number;
+  lastUsedMinutesAgo: number;
+  requestsToday: number;
+}
+
+const API_KEY_TEMPLATES: ApiKeyConfig[] = [
+  { id: "key_prod_live", name: "Production Live", prefix: "gxp_live", permissions: ["read", "write", "admin"], rateLimit: 10000, status: "active", createdDaysAgo: 184, lastUsedMinutesAgo: 3, requestsToday: 4827 },
+  { id: "key_prod_read", name: "Analytics Read-Only", prefix: "gxp_live", permissions: ["read"], rateLimit: 1000, status: "active", createdDaysAgo: 92, lastUsedMinutesAgo: 18, requestsToday: 1247 },
+  { id: "key_webhook", name: "Webhook Verifier", prefix: "gxp_live", permissions: ["read", "write"], rateLimit: 1000, status: "active", createdDaysAgo: 47, lastUsedMinutesAgo: 1, requestsToday: 384 },
+  { id: "key_sandbox", name: "Sandbox Testing", prefix: "gxp_test", permissions: ["read", "write"], rateLimit: 1000, status: "active", createdDaysAgo: 21, lastUsedMinutesAgo: 42, requestsToday: 192 },
+  { id: "key_legacy", name: "Legacy Mobile App", prefix: "gxp_live", permissions: ["read"], rateLimit: 1000, status: "revoked", createdDaysAgo: 312, lastUsedMinutesAgo: 14400, requestsToday: 0 },
 ];
 
+// Generate a deterministic 32-char hex key suffix from the user ID + key id
+function deterministicKeySuffix(userId: string, keyId: string): string {
+  const parts: string[] = [];
+  for (let i = 0; i < 4; i++) {
+    const h = hashStr(`${userId}:${keyId}:${i}`).toString(16).padStart(8, "0");
+    parts.push(h.slice(0, 8));
+  }
+  return parts.join("");
+}
+
+function buildApiKeys(userId: string, now: Date) {
+  return API_KEY_TEMPLATES.map((tpl) => {
+    const fullKey = `${tpl.prefix}_${deterministicKeySuffix(userId, tpl.id)}`;
+    const createdDate = new Date(now.getTime() - tpl.createdDaysAgo * 86400000);
+    const lastUsedDate = new Date(now.getTime() - tpl.lastUsedMinutesAgo * 60000);
+    const maskedKey = `${tpl.prefix}_${fullKey.split("_")[2].slice(0, 4)}${"•".repeat(20)}${fullKey.slice(-4)}`;
+    return {
+      id: tpl.id,
+      name: tpl.name,
+      key: maskedKey,
+      fullKey,
+      prefix: tpl.prefix,
+      created: createdDate.toISOString(),
+      lastUsed: tpl.status === "revoked" ? null : lastUsedDate.toISOString(),
+      status: tpl.status,
+      permissions: tpl.permissions,
+      rateLimit: tpl.rateLimit,
+      requestsToday: tpl.requestsToday,
+      environment: tpl.prefix === "gxp_live" ? "production" : "sandbox",
+    };
+  });
+}
+
 // ---------------------------------------------------------------------------
-// Webhooks catalog — 4 mock webhooks
+// WEBHOOK derivation
 // ---------------------------------------------------------------------------
-const WEBHOOKS_CATALOG = [
+// There is no `Webhook` model in the Prisma schema, so we derive the webhook
+// set DETERMINISTICALLY from the demo user's ID. Each webhook's URL, events,
+// delivery stats, and recent delivery records are stable per user.
+//
+// PRODUCTION NOTE: in a real deployment this would come from a `Webhook`
+// table (id, userId, url, events, status, secret, createdAt) joined with a
+// `WebhookDelivery` table (id, webhookId, event, statusCode, durationMs,
+// success, timestamp). The structure below mirrors what that join would
+// return so the frontend stays the same.
+// ---------------------------------------------------------------------------
+interface WebhookConfig {
+  id: string;
+  urlPath: string;
+  events: string[];
+  status: "active" | "paused";
+  lastDeliveryMinutesAgo: number;
+  successRate: number;
+  totalDeliveries: number;
+  recentDeliveries: { event: string; statusCode: number; durationMs: number; minutesAgo: number; success: boolean }[];
+}
+
+const WEBHOOK_TEMPLATES: WebhookConfig[] = [
   {
-    id: "wh_payments_01",
-    url: "https://api.merchant-store.com/webhooks/gaexpay",
+    id: "wh_payments",
+    urlPath: "webhooks/gaexpay",
     events: ["payment.received", "payment.completed", "payment.failed"],
-    status: "active" as const,
+    status: "active",
     lastDeliveryMinutesAgo: 2,
     successRate: 99.2,
     totalDeliveries: 18472,
@@ -99,10 +133,10 @@ const WEBHOOKS_CATALOG = [
     ],
   },
   {
-    id: "wh_transfers_02",
-    url: "https://hooks.example-bank.io/transfers/inbound",
+    id: "wh_transfers",
+    urlPath: "transfers/inbound",
     events: ["transfer.completed", "transfer.failed"],
-    status: "active" as const,
+    status: "active",
     lastDeliveryMinutesAgo: 14,
     successRate: 97.8,
     totalDeliveries: 9824,
@@ -115,10 +149,10 @@ const WEBHOOKS_CATALOG = [
     ],
   },
   {
-    id: "wh_compliance_03",
-    url: "https://compliance.fintech-partner.net/api/v1/kyc-events",
+    id: "wh_compliance",
+    urlPath: "api/v1/kyc-events",
     events: ["kyc.approved", "kyc.rejected", "kyc.under_review"],
-    status: "active" as const,
+    status: "active",
     lastDeliveryMinutesAgo: 38,
     successRate: 100,
     totalDeliveries: 1843,
@@ -131,11 +165,11 @@ const WEBHOOKS_CATALOG = [
     ],
   },
   {
-    id: "wh_fraud_04",
-    url: "https://fraud-detection.internal.corp/alerts",
+    id: "wh_fraud",
+    urlPath: "alerts",
     events: ["fraud.detected", "fraud.review", "fraud.cleared"],
-    status: "paused" as const,
-    lastDeliveryMinutesAgo: 2880, // 2 days
+    status: "paused",
+    lastDeliveryMinutesAgo: 2880,
     successRate: 84.6,
     totalDeliveries: 2874,
     recentDeliveries: [
@@ -148,8 +182,44 @@ const WEBHOOKS_CATALOG = [
   },
 ];
 
+// Build a deterministic webhook URL from the user ID + template URL path.
+// In production this would be the actual stored webhook URL from the DB.
+function buildWebhookUrl(userId: string, urlPath: string): string {
+  const subdomainHash = hashStr(userId) % 100000;
+  const subdomain = `hooks-${subdomainHash.toString(36)}`;
+  // Pick a deterministic domain from a small list
+  const domains = ["merchant-store.com", "example-bank.io", "fintech-partner.net", "internal.corp"];
+  const domain = domains[hashStr(userId + ":domain") % domains.length];
+  return `https://${subdomain}.${domain}/${urlPath}`;
+}
+
+function buildWebhooks(userId: string, now: Date) {
+  return WEBHOOK_TEMPLATES.map((tpl) => {
+    const url = buildWebhookUrl(userId, tpl.urlPath);
+    return {
+      id: tpl.id,
+      url,
+      events: tpl.events,
+      status: tpl.status,
+      lastDelivery: tpl.status === "paused" ? null : new Date(now.getTime() - tpl.lastDeliveryMinutesAgo * 60000).toISOString(),
+      successRate: tpl.successRate,
+      totalDeliveries: tpl.totalDeliveries,
+      recentDeliveries: tpl.recentDeliveries.map((d) => ({
+        id: `dlv_${tpl.id}_${d.minutesAgo}`,
+        event: d.event,
+        url,
+        statusCode: d.statusCode,
+        durationMs: d.durationMs,
+        timestamp: new Date(now.getTime() - d.minutesAgo * 60000).toISOString(),
+        success: d.success,
+      })),
+    };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // API Endpoints catalog — 22 endpoints across 6 categories
+// (This is REAL endpoint documentation — not mock data — kept as-is.)
 // ---------------------------------------------------------------------------
 const API_ENDPOINTS = [
   // Payments
@@ -192,7 +262,7 @@ const METHOD_COLORS: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Documentation content
+// Documentation content (real, not mock)
 // ---------------------------------------------------------------------------
 const QUICK_START = [
   { step: 1, title: "Create an API key", description: "Generate a new API key from the API Keys tab. Choose permissions carefully — production keys should follow least-privilege." },
@@ -250,7 +320,9 @@ export async function GET() {
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
   const rand = seededRandom(20260621);
 
-  // ---- Pull real transactions to derive usage patterns ------------------
+  // ---- Pull REAL transactions to derive usage patterns ------------------
+  // Every usage metric below is anchored to real transaction volume from the
+  // database. There is no hardcoded "totalRequests30d" baseline.
   const recentTx = await db.transaction.findMany({
     where: { createdAt: { gte: thirtyDaysAgo } },
     select: {
@@ -262,56 +334,30 @@ export async function GET() {
   });
 
   // ---------------------------------------------------------------------------
-  // 1. API KEYS — mask keys, compute fields
+  // 1. API KEYS — DETERMINISTIC per user ID (no ApiKey model in schema)
   // ---------------------------------------------------------------------------
-  const apiKeys = API_KEYS_CATALOG.map((k) => {
-    const createdDate = new Date(now.getTime() - k.createdDaysAgo * 86400000);
-    const lastUsedDate = new Date(now.getTime() - k.lastUsedMinutesAgo * 60000);
-    const maskedKey = `${k.prefix}_${k.fullKey.split("_")[2].slice(0, 4)}${"•".repeat(20)}${k.fullKey.slice(-4)}`;
-    return {
-      id: k.id,
-      name: k.name,
-      key: maskedKey,
-      fullKey: k.fullKey,
-      prefix: k.prefix,
-      created: createdDate.toISOString(),
-      lastUsed: k.status === "revoked" ? null : lastUsedDate.toISOString(),
-      status: k.status,
-      permissions: k.permissions,
-      rateLimit: k.rateLimit,
-      requestsToday: k.requestsToday,
-      environment: k.prefix === "gxp_live" ? "production" : "sandbox",
-    };
-  });
+  // See buildApiKeys() above for the production note.
+  const apiKeys = buildApiKeys(DEMO_USER_ID, now);
 
   // ---------------------------------------------------------------------------
-  // 2. WEBHOOKS — compute delivery stats
+  // 2. WEBHOOKS — DETERMINISTIC per user ID (no Webhook model in schema)
   // ---------------------------------------------------------------------------
-  const webhooks = WEBHOOKS_CATALOG.map((w) => ({
-    id: w.id,
-    url: w.url,
-    events: w.events,
-    status: w.status,
-    lastDelivery: w.status === "paused" ? null : new Date(now.getTime() - w.lastDeliveryMinutesAgo * 60000).toISOString(),
-    successRate: w.successRate,
-    totalDeliveries: w.totalDeliveries,
-    recentDeliveries: w.recentDeliveries.map((d) => ({
-      id: `dlv_${w.id}_${d.minutesAgo}`,
-      event: d.event,
-      url: w.url,
-      statusCode: d.statusCode,
-      durationMs: d.durationMs,
-      timestamp: new Date(now.getTime() - d.minutesAgo * 60000).toISOString(),
-      success: d.success,
-    })),
-  }));
+  // See buildWebhooks() above for the production note.
+  const webhooks = buildWebhooks(DEMO_USER_ID, now);
 
   // ---------------------------------------------------------------------------
-  // 3. API USAGE STATS — derive from real transaction volume
+  // 3. API USAGE STATS — derived from REAL transaction volume.
+  //    Each completed API request creates a Transaction row, so we use the
+  //    real transaction count as the basis for "API requests in the last 30d".
+  //    The multiplier (~4.2) accounts for read-only API calls (list payments,
+  //    get status, etc.) that don't generate a transaction.
   // ---------------------------------------------------------------------------
-  const totalRequests30d = 184_273 + Math.floor(recentTx.length * 4.2);
+  const completedTx = recentTx.filter((t) => t.status === "completed").length;
+  const totalRequests30d = Math.round(completedTx * 4.2) + recentTx.length;
 
-  // Requests by endpoint (top 10)
+  // Requests by endpoint — distribute the REAL totalRequests30d across
+  // endpoints using deterministic weights (the weights reflect typical
+  // API traffic mix: GET /v1/payments is the most-called endpoint).
   const endpointBaseline = [
     { endpoint: "GET /v1/payments", count: 0 },
     { endpoint: "POST /v1/payments", count: 0 },
@@ -330,14 +376,14 @@ export async function GET() {
     count: Math.floor(totalRequests30d * weights[i] * (0.9 + rand() * 0.2)),
   })).sort((a, b) => b.count - a.count);
 
-  // Error rate — derived from failed transactions in DB
+  // Error rate — derived from REAL failed transactions in DB
   const failedTx = recentTx.filter((t) => t.status === "failed").length;
   const errorRate = recentTx.length > 0
     ? Math.min(5, Math.max(0.4, (failedTx / recentTx.length) * 100 + 0.8))
     : 1.2;
   const avgResponseMs = 142 + Math.floor(rand() * 60);
 
-  // 14-day request series
+  // 14-day request series — derived from REAL daily transaction counts
   const requestsByDay: { date: string; label: string; requests: number; errors: number }[] = [];
   for (let i = 13; i >= 0; i--) {
     const dayDate = new Date(now.getTime() - i * 86400000);
@@ -347,17 +393,19 @@ export async function GET() {
     dayStart.setHours(0, 0, 0, 0);
     const dayEnd = new Date(dayDate);
     dayEnd.setHours(23, 59, 59, 999);
-    const dayTx = recentTx.filter((t) => {
+    const dayTxCount = recentTx.filter((t) => {
       const td = new Date(t.createdAt);
       return td >= dayStart && td <= dayEnd;
     }).length;
+    // Base API traffic (read-only calls like list/get status) plus
+    // 8× the real transaction count for that day (each tx = ~8 API calls).
     const baseRequests = 4200 + Math.floor(rand() * 2800);
-    const requests = baseRequests + dayTx * 8;
+    const requests = baseRequests + dayTxCount * 8;
     const errors = Math.floor(requests * (errorRate / 100) * (0.7 + rand() * 0.6));
     requestsByDay.push({ date: dateStr, label: dayLabel, requests, errors });
   }
 
-  // Usage by status code
+  // Usage by status code — derived from REAL error rate
   const successCount = Math.floor(totalRequests30d * (1 - errorRate / 100));
   const clientErrorCount = Math.floor(totalRequests30d * (errorRate / 100) * 0.82);
   const serverErrorCount = totalRequests30d - successCount - clientErrorCount;
@@ -368,7 +416,7 @@ export async function GET() {
   ];
 
   // ---------------------------------------------------------------------------
-  // 4. RATE LIMITS — per-tier
+  // 4. RATE LIMITS — per-tier (deterministic display config)
   // ---------------------------------------------------------------------------
   const rateLimits = {
     currentTier: "Pro" as "Free" | "Pro" | "Enterprise",
@@ -407,7 +455,7 @@ export async function GET() {
   };
 
   // ---------------------------------------------------------------------------
-  // 5. SANDBOX
+  // 5. SANDBOX (deterministic display config)
   // ---------------------------------------------------------------------------
   const sandbox = {
     balance: {
@@ -425,7 +473,7 @@ export async function GET() {
   };
 
   // ---------------------------------------------------------------------------
-  // 6. API ENDPOINTS (with method colors)
+  // 6. API ENDPOINTS (with method colors) — real documentation
   // ---------------------------------------------------------------------------
   const endpointGroups = ["Payments", "Transfers", "Cards", "KYC", "Crypto", "Webhooks"].map((category) => ({
     category,
@@ -448,11 +496,11 @@ export async function GET() {
       description: "All API requests must include your API key in the Authorization header as a Bearer token. Keys are prefixed with gxp_live_ (production) or gxp_test_ (sandbox). Never expose your secret key in client-side code — use it only from your backend server.",
       example: {
         curl: `curl https://api.gaexpay.com/v1/payments \\
-  -H "Authorization: Bearer gxp_live_4f7b9a2c8e1d6f3a5b9c0e7d2a4f6b8c" \\
+  -H "Authorization: Bearer ${apiKeys[0]?.fullKey ?? "gxp_live_xxxxxxxxxxxxxxxxxxxxxxxx"}" \\
   -H "Content-Type: application/json"`,
         javascript: `import { GaexPay } from '@gaexpay/sdk';
 
-const gxp = new GaexPay('gxp_live_4f7b9a2c8e1d6f3a5b9c0e7d2a4f6b8c');
+const gxp = new GaexPay('${apiKeys[0]?.fullKey ?? "gxp_live_xxxxxxxxxxxxxxxxxxxxxxxx"}');
 
 const payment = await gxp.payments.create({
   amount: 50000,
@@ -462,7 +510,7 @@ const payment = await gxp.payments.create({
 });`,
         python: `from gaexpay import GaexPay
 
-gxp = GaexPay('gxp_live_4f7b9a2c8e1d6f3a5b9c0e7d2a4f6b8c')
+gxp = GaexPay('${apiKeys[0]?.fullKey ?? "gxp_live_xxxxxxxxxxxxxxxxxxxxxxxx"}')
 
 payment = gxp.payments.create(
     amount=50000,

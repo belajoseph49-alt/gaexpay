@@ -1,0 +1,300 @@
+    - **Crypto Reserves grid** (sm:2, lg:5 cols) — each card shows crypto symbol tile (colored), code + network, 24h change badge (emerald up / rose down), holdings amount (4 decimals), USD value (emerald, large), unit price, allocation % of crypto reserves, progress bar.
+  - **Reserves tab**:
+    - Reserves hero (dark gradient) — 4 HeroStat tiles (Total Reserves emerald, Fiat teal, Crypto amber, Currencies Tracked sky).
+    - **Currency Reserves table** (7 columns: Currency flag+code+name, Balance symbol+number+code, USD Value + NGN equivalent, Threshold min, Coverage progress bar + ratio×, Status badge with colored dot, Action button). Action button label/color varies by status: critical → "Top-up now" (rose), low → "Top-up" (amber), ratio>2.5 → "Reduce" (amber), else → "Rebalance" (emerald). All buttons trigger toast on click. Filter badges show healthy/low/critical counts at top.
+    - **Crypto Reserve Holdings grid** (sm:2, lg:3 cols) — each card shows crypto symbol tile (colored), code + name, 24h change badge, Holdings/Unit Price 2-col grid, USD Value (large emerald), cold wallet (Snowflake icon, monospace), hot wallet (Flame icon orange, monospace).
+  - **FX Exposure tab**:
+    - Exposure hero (dark gradient `slate-900 → teal-950/40 → slate-900`) — 4 HeroStat tiles (Total Exposure teal, Hedged emerald, Unhedged amber, Overall Hedge Ratio violet).
+    - **Net Position by Currency bar chart** (lg:col-span-3) — emerald→teal gradient for long bars, rose→orange gradient for short bars, XAxis currency codes, YAxis USD compact formatter, dark tooltip with direction.
+    - **Hedged vs Unhedged pie chart** (lg:col-span-2) — 2 slices (Hedged emerald, Unhedged rose), inner radius 60, outer 90, 2-tile legend grid below with USD values + percentages.
+    - **Exposure Heatmap by Currency Pair** — 6 colored cards (sm:2, lg:3 cols). Background color intensity scales with exposure magnitude (rgba with intensity 0–1). Border color & hedge badge color depend on hedge ratio (≥50% emerald, 25–50% amber, <25% rose). Each card shows pair name, hedge ratio badge, total exposure (large), emerald/rose hedge progress bar split, hedged/unhedged USD values, hedging instrument chips (Forward, NDF, Option).
+    - **Net Position Detail table** (5 columns: Currency, Direction badge (Long emerald up / Short rose down), Net USD signed, Net NGN signed, Magnitude progress bar). 9 rows sorted by absolute magnitude.
+  - **Cash Flow tab**:
+    - Cash flow hero (dark gradient) — 4 HeroStat tiles (Total Inflow emerald, Total Outflow amber, Net Cash Flow teal, Avg Daily Inflow sky).
+    - **30-Day Cash Flow area chart** — Inflow area (emerald gradient fill), Outflow area (rose gradient fill), XAxis labels (every 2-3 days), YAxis USD compact formatter, inflow/outflow legend badges above chart.
+    - **Daily Net Cash Flow bar chart** — Each day's net value as a single bar (emerald if positive, rose if negative), 30 bars total.
+    - **Daily Flow Detail table** — scrollable (max-h-96, no-scrollbar, sticky header) showing date, inflow (emerald), outflow (rose), net (signed, emerald/rose), and a green flow bar visualizing inflow magnitude vs max.
+  - **Settlements tab**:
+    - Settlement hero (dark gradient) — 4 HeroStat tiles (Total Balance teal, Available emerald, Locked amber, Active Accounts sky).
+    - **Settlement Accounts grid** (lg:2 cols) — 8 cards, each with: Building2 icon tile (emerald→teal gradient), bank name + label, status badge (Active emerald / Monitoring sky / Low Balance amber / Frozen slate), 2-col grid (Account Number monospace, SWIFT+Currency), Balance (large) + USD equivalent + Available (emerald) + Locked (amber), Available/Locked progress bar with % labels, last reconciled timeAgo, Ledger + Transfer buttons (Transfer disabled for frozen accounts, both trigger toast).
+  - **Skeleton & loading**: `TreasurySkeleton` component (hero + tab list + 4 KPI + 2 chart skeletons); `useFetch<TreasuryData>` with `loading || !data` gate; Framer Motion staggered entry (delay × index, opacity/y transitions); AnimatedNumber for all numeric KPIs/totals/percentages; Recharts dark tooltips (background #0f172a, border #1e293b, color #fff); Responsive (`sm:grid-cols-2/3/4/5`, `lg:grid-cols-2/3/4/5`); `no-scrollbar` for all scrollable lists; `card-lift` for hover elevation on cards and recommendation entries; max-h with overflow-y-auto on long lists.
+  - Helpers: `fmtNum`, `fmtUSD` (compact + full), `fmtNGN` (compact + full), `timeAgoShort`, status/priority/type config maps, ALLOCATION_COLORS palette (14 colors), HeroStat component (gradient bg white/5, ring white/10, colored icon tile, AnimatedNumber), LiquidityCard component (gradient bg, isPercent prop, footer node).
+- Wired navigation:
+  - Added `"treasury"` to the `View` union in `src/lib/store.ts` (immediately after `"compliance"`).
+  - Added `import { TreasuryView }` + `"treasury": <TreasuryView />` entry in `src/components/gaexpay/app-shell.tsx` (after `compliance`).
+  - Added `Landmark` to the lucide-react import in both `sidebar.tsx` and `mobile-nav.tsx`.
+  - Added `{ id: "treasury", label: "Treasury", icon: Landmark, badge: "L4" }` nav item to the "Platform" section in both `sidebar.tsx` (with "L4" badge) and `mobile-nav.tsx` (no badge), positioned immediately after the existing "AML & Compliance" entry.
+- Cleaned up unused imports: removed `useState`, `Progress`, `PiggyBank`, `Zap`, `Target`, `BanknoteIcon`, `Radio`, `ArrowRightCircle`, `ArrowRightLeft`, `Legend` (replaced by `PolarAngleAxis`) from treasury-view.tsx for code cleanliness.
+- Ran `bun run lint` → **0 errors, 0 warnings** (exit 0). Initial run flagged `PolarAngleAxis is not defined` (react/jsx-no-undef) — fixed by adding to recharts import. Re-ran lint to confirm clean.
+- Verified `GET /api/treasury` against live dev server (HTTP 200, ~13ms warm / ~430ms cold with CoinGecko fetch):
+  - **Total Reserves**: totalUSD=$13,673,763, totalNGN=₦20,989,225,722, fiatUSD=$10,579,453, cryptoUSD=$3,094,310, change24hPct=-0.46%, breakdownByCurrency=9 entries (NGN/USD/EUR/GBP/GHS/KES/XAF/XOF/ZAR).
+  - **Liquidity**: availableUSD=$11,054,465, lockedUSD=$2,619,298, pendingSettlementsUSD=$250, pendingSettlementsCount=1, reserveRatio=220 (capped, healthy), customerLiabilitiesUSD=$14,353,840, total30dOutflowUSD=$1,499,776, status=healthy.
+  - **FX Exposure**: 9 netPositions (GBP long, KES short, EUR short, ZAR long, GHS long, USD short, XOF long, XAF long, NGN short) sorted by absolute magnitude; 6 exposureByPair (USD/NGN 65% hedged, EUR/NGN 62.5%, GBP/NGN 66.7%, GHS/NGN 0%, KES/NGN 34.9%, ZAR/NGN 0%); hedgedUSD=$87M, unhedgedUSD=$54.4M, totalExposureUSD=$141.4M, overallHedgeRatio=61.5%.
+  - **Settlement Accounts**: 8 accounts (Access Bank NGN active, Citibank USD active, Standard Chartered GBP monitoring, Deutsche Bank EUR active, GCB GHS active, KCB KES active, Ecobank XAF low-balance, Standard Bank SA frozen).
+  - **Currency Reserves**: 9 currencies — NGN 2.13× healthy, USD 2.52× healthy, EUR 1.69× healthy, GBP 1.65× healthy, GHS 1.85× healthy, KES 1.86× healthy, XAF 1.18× low, XOF 0.59× critical, ZAR 1.88× healthy.
+  - **Cash Flow**: 30 daily buckets; totalInflow30d=$623,740, totalOutflow30d=$1,499,776, netCashFlow30d=-$876,036, avgDailyInflow=$20,791, avgDailyOutflow=$49,992.
+  - **Rebalancing**: 5 recommendations — top-up USD→XAF $292k medium, top-up USD→XOF $1.63M high, reduce USD→NGN $1.53M low, hedge NGN→GHS $1.6M medium, hedge NGN→ZAR $950k medium.
+  - **Crypto Reserves**: 5 cryptos with live CoinGecko prices — BTC 12.85 @ $62,400 = $801,671 (24h -2.84%), ETH 184.29 @ $1,692.36 = $311,890 (-2.96%), USDT 485,000 @ $0.9991 = $484,553 (-0.01%), USDC 312,500 @ $0.9998 = $312,445 (+0.01%), PI 25,000 @ $47.35 = $1,183,750 (0%).
+  - **Allocation**: 14 items (9 fiat + 5 crypto) sorted by USD value, each with pct of total.
+- Checked dev.log after each change — clean compilation (`✓ Compiled in 126ms` / `151ms` / `127ms`), `GET /api/treasury 200 in 13-432ms`, `GET / 200 in 28-326ms`, no runtime errors. CoinGecko fetch single-flight cached for 60s.
+- Confirmed `compliance-view.tsx` was NOT modified (only added Landmark to sidebar.tsx and mobile-nav.tsx imports).
+- Fixed `reduce` recommendation bug: source currency "USD" was producing USD→USD recommendation; updated logic to sweep USD excess to NGN operating reserve, and non-USD excess to USD for yield deployment.
+
+Stage Summary:
+- Treasury & Liquidity Management dashboard is live and reachable from both desktop sidebar and mobile nav under "Platform → Treasury" (Landmark icon, "L4" badge on desktop), positioned immediately after "AML & Compliance".
+- The single `/api/treasury` GET endpoint aggregates 2 parallel database queries (30-day transactions + all wallet balances) + 1 live CoinGecko price fetch (60s cached, single-flight) and returns a comprehensive payload with 9 sections: total reserves ($13.67M USD / ₦20.99B NGN across 9 fiat + 5 crypto), liquidity position (available/locked/pending/reserve ratio with realistic stress-factor formula), FX exposure (9 net positions + 6 hedged pairs + 61.5% overall hedge ratio), 8 settlement accounts (Access/Citi/StanChart/Deutsche/GCB/KCB/Ecobank/Standard Bank with 4 status types), 9 currency reserves (7 healthy, 1 low XAF, 1 critical XOF with per-currency thresholds + ratios), 30-day cash flow series (real daily buckets), 5 rebalancing recommendations (top-up/reduce/hedge with mixed priorities), 5 crypto reserves with live CoinGecko BTC/ETH/USDT/USDC + PI prices, and 14-item allocation breakdown.
+- The frontend view (`treasury-view.tsx`, ~1450 LOC) renders 5 tabs — Overview (hero + liquidity cards + allocation pie + recommendations + crypto grid), Reserves (hero + currency table + crypto detail grid), FX Exposure (hero + net position bar + hedged pie + exposure heatmap + detail table), Cash Flow (hero + inflow/outflow area chart + daily net bar + scrollable daily table), Settlements (hero + 8 account cards with transfer buttons) — each with rich charts (Recharts Area/Bar/Pie/RadialBar), AnimatedNumber KPIs, Framer Motion staggered entry, dark-gradient hero cards (emerald/teal accent + rose/amber for risk), responsive grid layouts (`sm:grid-cols-2/3/4/5`, `lg:grid-cols-2/3/4/5`), scrollable lists with `no-scrollbar`, `card-lift` hover effects, full skeleton loading states, action buttons (top-up/rebalance/transfer/execute) with toast feedback, and a radial gauge for reserve coverage ratio.
+- No regressions: ESLint clean (0 errors, 0 warnings), dev server compiles cleanly, all pre-existing routes still serve 200, the original `compliance-view.tsx` and `/api/compliance` API were NOT modified.
+- App stats: 31 views (added Treasury), 49 API routes (added `/api/treasury` GET), 19 database models (unchanged), 1 comprehensive treasury dashboard with 5 tabs, 8 settlement accounts, 9 fiat + 5 crypto reserves, 6 FX pairs, and 30+ data widgets.
+
+---
+Task ID: 21-E
+Agent: Senior Developer Experience Engineer (Developer API Portal)
+Date: 2026-06-19
+
+Task: Build a Developer API Portal with API keys management, webhooks configuration, API documentation, sandbox testing, and rate limit monitoring.
+
+Work Log:
+- Read prior worklog (Phases 1–14, Tasks 1–21-D) to understand the established design system: emerald/teal accent, dark gradient hero cards (slate-900 → emerald-950/50 → slate-900 with glow blobs), Framer Motion staggered entry, AnimatedNumber for all numeric KPIs, Recharts dark tooltips (background #0f172a, border #1e293b), `useFetch` hook pattern, `db` Prisma client import, `DEMO_USER_ID` constant, full shadcn/ui component set, `PolarAngleAxis` import required by `RadialBarChart` for gauge rendering, `Tabs` for multi-section views, `Dialog`/`DialogTrigger`/`DialogContent` pattern for create forms, `Switch` for toggles, `Checkbox` for multi-select, `Select`/`SelectContent`/`SelectItem` for dropdowns, `toast` from sonner for feedback. Existing `treasury-view.tsx` and existing `/api/treasury` route — both preserved untouched per spec (created NEW view + NEW API instead).
+- Created `src/app/api/developer-portal/route.ts` (~370 LOC, GET only, force-dynamic):
+  - **Single comprehensive payload** returning 9 top-level sections: `apiKeys`, `webhooks`, `recentDeliveries`, `usage`, `rateLimits`, `sandbox`, `endpoints`, `documentation`, plus `generatedAt`.
+  - **Real DB query**: pulls last 30 days of transactions (`db.transaction.findMany`) to derive usage/error patterns. Cold-cache response ~13ms.
+  - **API Keys** (5 mock keys): Production Live (admin, 10k/hr, 4827 req today), Analytics Read-Only (read, 1247 req), Webhook Verifier (read+write, 384 req), Sandbox Testing (gxp_test_ prefix, 192 req), Legacy Mobile App (revoked, 0 req). Each key includes masked key (`gxp_live_4f7b••••6b8c`), full key (only shown once on creation), created/lastUsed ISO timestamps, status (active/revoked), permissions (read/write/admin), rate limit, requests today, environment (production/sandbox).
+  - **Webhooks** (4 mock webhooks): Merchant Store (payment.received/completed/failed, 99.2% success, 18,472 deliveries), Example Bank (transfer.completed/failed, 97.8% success), Compliance Partner (kyc.approved/rejected/under_review, 100% success), Fraud Detection (fraud.detected/review/cleared, paused, 84.6% success). Each webhook includes URL, events array, status (active/paused), lastDelivery timestamp, successRate, totalDeliveries, and 5 recent deliveries (event, statusCode, durationMs, timestamp, success boolean).
+  - **Recent Deliveries** (aggregated): top 12 deliveries across all webhooks sorted by timestamp desc.
+  - **Usage Stats**: totalRequests30d (184,613 — derived from 184,273 baseline + real tx count × 4.2), requestsByEndpoint (top 10 endpoints with weighted distribution: GET /v1/payments 32%, POST /v1/payments 18%, GET /v1/transfers 14%, etc.), requestsByDay (14-day series with real tx-per-day contribution + 4200-7000 baseline + error overlay), usageByStatusCode (2xx/4xx/5xx pie with success/error-derived distribution), errorRate (clamped 0.4-5%, derived from real failed tx ratio + 0.8% baseline), avgResponseMs (142-202ms), peakDayRequests, uniqueEndpoints (22).
+  - **Rate Limits**: 3 tiers (Free $0/100/hr, Pro $99/1000/hr [current], Enterprise Custom/10k/hr) with per-tier features, current usage, usagePct, monthly limit. Plus currentHourUsage (612), currentHourLimit (1000), resetInMinutes (27).
+  - **Sandbox**: 5-currency balance (NGN ₦1.25M, USD $8.5k, EUR €4.2k, GBP £2.8k, GHS ₵12k), 6 test cards (Visa success/decline, Mastercard success/insufficient, Verve success, Amex success — each with brand/number/CVV/exp/behavior), 4 test phones (Successful OTP 123456, Delayed OTP 234567, Failed OTP, International US 345678), 4 test banks (Access Bank valid, GTBank valid, Zenith invalid, UBA frozen), lastReset (3 days ago), totalTestRequests (1842).
+  - **API Endpoints** (22 endpoints across 6 categories): Payments (4: POST /v1/payments, GET /v1/payments/{id}, POST /v1/payments/{id}/refund, GET /v1/payments), Transfers (4: POST /v1/transfers, GET /v1/transfers/{id}, GET /v1/transfers/quote, POST /v1/transfers/{id}/cancel), Cards (4: POST /v1/cards, GET /v1/cards, PATCH /v1/cards/{id}/freeze, PATCH /v1/cards/{id}/limits), KYC (3: POST /v1/kyc/submit, GET /v1/kyc/status, GET /v1/kyc/documents), Crypto (4: POST /v1/crypto/swap, POST /v1/crypto/buy, GET /v1/crypto/rates, POST /v1/crypto/withdraw), Webhooks (4: POST /v1/webhooks, GET /v1/webhooks, POST /v1/webhooks/{id}/test, DELETE /v1/webhooks/{id}). Each endpoint has method, path, description, and color (GET=emerald #10b981, POST=blue #3b82f6, PATCH=amber #f59e0b, DELETE=rose #f43f5e).
+  - **Documentation**: quickStart (4 steps: create key → authenticate → first call → subscribe webhooks), authentication (Bearer token type, header example, full description, code examples in curl/JavaScript/Python with real SDK syntax), errorCodes (9 codes: 200/201/400/401/403/404/429/500/503 with name and description), sdks (6 SDKs: JavaScript, Python, PHP, Go, Ruby, Java — each with install command, language, color, icon), baseUrls (production + sandbox), version (v1.4.2).
+- Created `src/components/gaexpay/views/developer-portal-view.tsx` (~1180 LOC):
+  - **Header**: Code2 icon tile (emerald→teal gradient) + title + Live badge (pulsing dot) + v1.4.2 version badge (Terminal icon) + Refresh button (calls `reload()`) + Export button (toast).
+  - **Tabs**: API Keys | Webhooks | Usage | Endpoints | Sandbox — each with icon prefix.
+  - **API Keys tab**:
+    - 4 summary cards (Total Keys, Requests Today, Revoked, Admin Keys) using `SummaryCard` helper with AnimatedNumber.
+    - API keys table (8 columns: Name+environment badge, masked key with copy/reveal toggle, permissions badges, created date, last used timeAgo, status badge with dot, requests today tabular-nums, actions: edit + revoke). Copy button shows Check icon for 1.5s after click. Reveal toggle shows/hides full key. Edit/Revoke buttons trigger toasts.
+    - **Create API Key Dialog**: name input, environment Select (Production gxp_live_ / Sandbox gxp_test_), permissions checkboxes (Read/Write/Admin with descriptions), security warning card. On submit generates random 32-char hex key with proper prefix, opens Created Key dialog.
+    - **Created Key Dialog**: full key displayed in monospace with break-all, Copy Key button + Done button, security warning to never commit/expose the key.
+  - **Webhooks tab**:
+    - 4 summary cards (Endpoints, Total Deliveries, Avg Success %, Last Delivery timeAgo).
+    - Webhook list — each card shows: URL (monospace truncate), status badge (Active emerald / Paused amber), event badges (color-coded by event type), last delivery timeAgo, total deliveries, success rate (color-coded: ≥95% emerald, ≥85% amber, <85% rose), Active switch toggle (Switch component), Test button (sends test event toast), Delete button.
+    - **Add Webhook Dialog**: URL input, event selector with 11 events (payment.*, transfer.*, kyc.*, fraud.*) as checkboxes. Validates URL starts with http and at least one event selected.
+    - Recent Deliveries table (5 columns: Event badge, URL truncate, Status badge with Check/X icon + status code colored by class, Duration (ms/s), Time timeAgo) — max-h-96 scrollable with no-scrollbar.
+  - **Usage tab**:
+    - **Hero** (dark gradient `slate-900 → emerald-950/50 → slate-900` with emerald/teal glow blobs) — 4 HeroStat tiles (Total Requests 30d emerald, Error Rate color-coded by value, Avg Response teal, Endpoints Used sky) with AnimatedNumber.
+    - **14-day Request Volume area chart** (lg:col-span-2): dual-area chart with Requests (emerald gradient fill) + Errors (rose gradient fill), 14 daily buckets, XAxis labels every 2 days, YAxis compact formatter, dark tooltip. Peak badge in header.
+    - **Rate Limit Gauge** (RadialBarChart full circle, PolarAngleAxis domain [0, 100], emerald/amber/rose fill based on usage %): center overlay with AnimatedNumber showing usage %, current/limit display, reset-in-minutes card below.
+    - **Requests by Endpoint bar chart** (lg:col-span-3, horizontal layout): emerald→teal gradient bars, 10 endpoints on YAxis, XAxis compact formatter, dark tooltip, cursor fill highlight.
+    - **Status Code Distribution pie** (lg:col-span-2): 3 slices (2xx emerald, 4xx amber, 5xx rose), inner radius 50, outer 85, 3-tile legend grid below with compact counts + labels.
+    - **Rate Limit Tiers** (3-col grid): each tier card shows tier name, price (2xl bold), hourly/monthly limits, current usage % (color-coded), progress bar (color matches usage tier), feature checklist with CheckCircle2 icons. Current tier (Pro) gets emerald border + emerald bg tint + "Current" Star badge. Non-current tiers show Upgrade/Downgrade button.
+  - **Endpoints tab**:
+    - **Quick Start Guide card** — 4 numbered steps (emerald circle badges with step number, title, description).
+    - **Authentication card** — description + Authorization header example in slate-900 code block + 2-tile base URLs (production + sandbox).
+    - **API Endpoints card** — search input (filters by path/description/method), grouped by category (6 groups with count badges). Each endpoint button shows method badge (color-coded: GET emerald, POST blue, PATCH amber, DELETE rose) + path (monospace) + description (truncate) + chevron. Clicking opens endpoint detail dialog.
+    - **Endpoint Detail Dialog**: header with method badge + path + description. Code tab switcher (cURL / JavaScript / Python) with active state emerald. Code preview in slate-900 monospace block (scrollable, max-h-80, no-scrollbar). Footer with base URL + auth info + Try it button (toast). Code generated dynamically based on endpoint method + path (POST/PATCH include body example, GET/DELETE omit body).
+    - **Error Codes card** — scrollable list (max-h-80, no-scrollbar) of 9 codes, each with color-coded status badge (2xx emerald, 4xx amber, 5xx rose), name, description.
+    - **Official SDKs card** — 2-col grid of 6 SDK cards, each with colored language icon tile (JS yellow, Py blue, PHP purple, Go cyan, Rb red, Jv orange), name, install command in monospace.
+  - **Sandbox tab**:
+    - **Sandbox Balance Hero** (dark gradient with glow blobs) — FlaskConical icon tile + title + last reset timeAgo + total test requests + 5 currency balance cards (NGN/USD/EUR/GBP/GHS) + Reset Sandbox button (white/10 bg, white border).
+    - **Test Request Runner card** — 2-col grid: left side has method Select (GET/POST/PATCH/DELETE) + endpoint Select (filtered by method) + JSON body Textarea (disabled for GET/DELETE with placeholder) + Send Test Request button (with loading state showing spinner); right side has Response panel (slate-900 bg, monospace emerald text, loading skeleton during request, empty state with Terminal icon). Mock responses for 6 endpoint types (payments/transfers/cards/crypto-swap/kyc/webhooks) with realistic sandbox payloads.
+    - **Test Cards card** (lg:col-span-1) — scrollable list (max-h-80, no-scrollbar) of 6 cards. Each card shows brand, behavior badge (color-coded: success emerald, decline/insufficient rose, others amber), card number monospace, CVV/EXP, Copy button.
+    - **Test Phone Numbers card** — 4 phones with label, behavior description, copy button.
+    - **Test Bank Accounts card** — 4 banks with bank name, behavior badge (Valid emerald / others rose), account number monospace, account name.
+  - **Skeleton & loading**: `DeveloperSkeleton` component (header + tab list + 4 KPI + 2 chart skeletons); `useFetch<DeveloperData>` with `loading || !data` gate; Framer Motion staggered entry (delay × index, opacity/y transitions); AnimatedNumber for all numeric KPIs/totals/percentages; Recharts dark tooltips (background #0f172a, border #1e293b, color #fff); Responsive (`sm:grid-cols-2/3/4`, `lg:grid-cols-2/3/4/5`); `no-scrollbar` for all scrollable lists/tables; `card-lift` for hover elevation on cards and webhook entries; max-h with overflow-y-auto on long lists.
+  - Helpers: `fmtNum`, `fmtCompact`, `fmtMoney` (currency-aware with symbols), `timeAgoShort`. Config maps: `METHOD_BG` (5 HTTP methods), `PERMISSION_COLORS` (read/write/admin), `EVENT_COLORS` (11 webhook events). Shared `SummaryCard` and `HeroStat` components for consistent KPI rendering.
+- Wired navigation:
+  - Added `"developer"` to the `View` union in `src/lib/store.ts` (immediately after `"treasury"`).
+  - Added `import { DeveloperPortalView }` + `"developer": <DeveloperPortalView />` entry in `src/components/gaexpay/app-shell.tsx` (after `treasury`).
+  - Added `Code2` to the lucide-react import in both `sidebar.tsx` and `mobile-nav.tsx`.
+  - Added `{ id: "developer", label: "Developer Portal", icon: Code2 }` nav item to the "Platform" section in both `sidebar.tsx` (no badge) and `mobile-nav.tsx` (no badge), positioned immediately after the existing "Treasury" entry.
+- Ran `bun run lint` → **0 errors, 0 warnings** (exit 0) on first attempt. No unused imports, no type errors.
+- Verified `GET /api/developer-portal` against live dev server (HTTP 200, ~10-13ms cold-cache):
+  - **API Keys**: 5 keys (Production Live admin active, Analytics Read-Only read active, Webhook Verifier read+write active, Sandbox Testing read+write active gxp_test_ prefix, Legacy Mobile App read revoked). Masked key format: `gxp_live_4f7b••••6b8c`. Full key preserved for one-time display.
+  - **Webhooks**: 4 endpoints (merchant-store.com active 99.2%, example-bank.io active 97.8%, fintech-partner.net active 100%, internal.corp paused 84.6%). Each with 5 recent deliveries (mix of 200/408/500 status codes).
+  - **Recent Deliveries**: 12 aggregated deliveries sorted by timestamp desc, mix of payment/transfer/kyc/fraud events.
+  - **Usage**: totalRequests30d=184,613, requestsByEndpoint=10 endpoints (GET /v1/payments top with ~59k), requestsByDay=14 entries with requests+errors, usageByStatusCode=3 buckets (2xx/4xx/5xx), errorRate=5.0% (derived from real failed tx ratio), avgResponseMs=153ms, peakDayRequests computed from series, uniqueEndpoints=22.
+  - **Rate Limits**: 3 tiers (Free 100/hr, Pro 1000/hr current 61.2% usage, Enterprise 10k/hr 48.3% usage), resetInMinutes=27.
+  - **Sandbox**: 5-currency balance, 6 test cards, 4 test phones, 4 test banks, lastReset=3 days ago, totalTestRequests=1842.
+  - **Endpoints**: 6 categories (Payments/Transfers/Cards/KYC/Crypto/Webhooks) totaling 23 endpoints (22 + the GET /v1/payments list endpoint appearing once), each with method color.
+  - **Documentation**: 4 quick-start steps, authentication example with curl/JS/Python, 9 error codes, 6 SDKs, base URLs (production + sandbox), version v1.4.2.
+- Checked dev.log after each change — clean compilation (`Compiled in 220ms` / `136ms` / `342ms` / `189ms` / `133ms`), `GET /api/developer-portal 200 in 13ms` (after compile: 2ms), `GET / 200 in 14-32ms` for app shell, no runtime errors.
+- Confirmed `treasury-view.tsx` was NOT modified (only added Code2 to sidebar.tsx and mobile-nav.tsx imports, plus the new view file + new API route).
+
+Stage Summary:
+- Developer API Portal is live and reachable from both desktop sidebar and mobile nav under "Platform → Developer Portal" (Code2 icon, no badge), positioned immediately after "Treasury".
+- The single `/api/developer-portal` GET endpoint aggregates 1 database query (30-day transactions for usage derivation) and returns a comprehensive payload with 9 sections: 5 API keys (with masked keys, permissions, rate limits, requests today, environment), 4 webhooks (with events, status, success rates, recent deliveries), 12 aggregated recent deliveries, usage stats (184k+ 30d requests, top-10 endpoints, 14-day series, status code distribution, error rate, avg response time), 3 rate-limit tiers (Free/Pro/Enterprise with current usage %), sandbox (5-currency balance + 6 test cards + 4 phones + 4 banks), 22 API endpoints across 6 categories (Payments/Transfers/Cards/KYC/Crypto/Webhooks with color-coded methods), and documentation (quick-start, auth examples in 3 languages, 9 error codes, 6 SDKs).
+- The frontend view (`developer-portal-view.tsx`, ~1180 LOC) renders 5 tabs — API Keys (summary cards + table with copy/reveal/revoke actions + Create Key dialog with permissions selector + Created Key one-time display dialog), Webhooks (summary cards + endpoint list with status toggle/test/delete + Add Webhook dialog with event selector + recent deliveries table), Usage (hero stats + 14-day area chart + rate-limit radial gauge + endpoint bar chart + status code pie + 3-tier pricing cards), Endpoints (quick-start guide + auth card + searchable endpoint catalog grouped by category + endpoint detail dialog with curl/JS/Python code tabs + error codes + SDK grid), Sandbox (5-currency balance hero + test request runner with method/endpoint/body inputs and response panel + test cards/phones/banks reference grids) — each with rich charts (Recharts Area/Bar/Pie/RadialBar), AnimatedNumber KPIs, Framer Motion staggered entry, dark-gradient hero cards (emerald/teal accent), responsive grid layouts (`sm:grid-cols-2/3/4`, `lg:grid-cols-2/3/4/5`), scrollable lists with `no-scrollbar`, `card-lift` hover effects, full skeleton loading states, copy-to-clipboard feedback, toast notifications for all actions, and a working test request runner that returns realistic sandbox JSON responses.
+- No regressions: ESLint clean (0 errors, 0 warnings on first attempt), dev server compiles cleanly, all pre-existing routes still serve 200, the original `treasury-view.tsx` and `/api/treasury` API were NOT modified.
+- App stats: 32 views (added Developer Portal), 50 API routes (added `/api/developer-portal` GET), 19 database models (unchanged), 1 comprehensive developer portal with 5 tabs, 5 API keys, 4 webhooks, 22 endpoints, 6 SDKs, and 30+ data widgets.
+
+---
+
+## Phase 15 — Enterprise Pro Features (5 Agents Deployed)
+
+**Task ID**: 21 (5 senior engineer agents deployed in parallel)
+**Agent**: Main + 5 specialized subagents
+**Date**: 2026-06-19
+
+### User Request
+"Ajoute toute les fonctionnalités pro, pour un niveau entreprise plus avancée"
+
+### Work Completed — 5 Enterprise Pro Features
+
+#### 1. Enterprise Admin Console (Agent A — Senior Enterprise Platform Engineer)
+- **New API** `/api/admin/enterprise` (GET): Platform KPIs, revenue by type, 14-day user growth + volume + revenue trends, geographic distribution, top 10 users, system health, compliance metrics
+- **New view** `enterprise-admin-view.tsx` (~850 LOC, 5 tabs):
+  - **Overview**: KPI hero, 14d volume chart, recent activity, quick actions
+  - **Users**: Growth charts, geographic distribution, top users table
+  - **Revenue**: Revenue by type pie, 14d trend, fee breakdown cards
+  - **Compliance**: KYC cards, risk metrics, audit trail
+  - **System**: Health cards, infrastructure status, service board
+
+#### 2. Business Pro Dashboard (Agent B — Senior Fintech Business Engineer)
+- **New API** `/api/business-pro` (GET): Business KPIs, revenue trend, sales by category/method, top products/customers, hourly heatmap, staff performance, invoices, settlements, AI insights
+- **New view** `business-pro-view.tsx` (~970 LOC, 5 tabs):
+  - **Dashboard**: Revenue hero, charts, heatmap, top products/customers
+  - **Invoices**: Summary cards, create invoice dialog, invoice list
+  - **Staff**: Performance chart, roster cards, add staff dialog
+  - **Settlements**: Balance cards, history table, settle now dialog
+  - **Insights**: AI insights, retention metrics, growth recommendations
+
+#### 3. AML & Compliance Center (Agent C — Senior Compliance Engineer)
+- **New API** `/api/compliance` (GET): AML alerts, sanctions screening, KYC queue, risk distribution, 8 monitoring rules, recent alerts, compliance metrics, regulatory reports
+- **New view** `compliance-view.tsx` (~1180 LOC, 5 tabs):
+  - **AML Dashboard**: Alert hero, severity tiles, alerts by type, trend, recent alerts table
+  - **Sanctions**: Screening stats, watchlist status, screened transactions, blocked entities
+  - **KYC Queue**: Queue stats, tier distribution, pending reviews with approve/reject
+  - **Rules**: 8 monitoring rule toggle cards, risk threshold slider
+  - **Reports**: Compliance metrics, regulatory reports table, generate report dialog
+
+#### 4. Treasury & Liquidity Management (Agent D — Senior Treasury Engineer)
+- **New API** `/api/treasury` (GET): Total reserves ($13.67M), liquidity position, FX exposure, 8 settlement accounts, currency reserves with thresholds, 30-day cash flow, rebalancing recommendations, crypto reserves with real CoinGecko prices
+- **New view** `treasury-view.tsx` (~1450 LOC, 5 tabs):
+  - **Overview**: Reserves hero with gauge, liquidity cards, crypto reserves
+  - **Reserves**: Currency reserves table with status badges and actions, rebalancing recommendations
+  - **FX Exposure**: Net position bar chart, hedged vs unhedged pie, exposure heatmap
+  - **Cash Flow**: 30-day inflow/outflow area chart, daily net bars, detail table
+  - **Settlements**: 8 settlement account cards with transfer buttons
+
+#### 5. Developer API Portal (Agent E — Senior Developer Experience Engineer)
+- **New API** `/api/developer-portal` (GET): 5 API keys, 4 webhooks, usage stats, rate limits, sandbox, 22 API endpoints, documentation
+- **New view** `developer-portal-view.tsx` (~1180 LOC, 5 tabs):
+  - **API Keys**: Key table with copy/reveal/revoke, create key dialog
+  - **Webhooks**: Webhook list with toggle, add webhook dialog, recent deliveries
+  - **Usage**: 14-day volume chart, rate limit gauge, endpoint bar chart, status code pie
+  - **Endpoints**: Searchable endpoint catalog, code examples (curl/JS/Python), error codes, SDKs
+  - **Sandbox**: Sandbox balance, test request runner, test cards/phones/banks
+
+### Verification Results
+- ✅ `bun run lint` — 0 errors, 0 warnings
+- ✅ All 33 views tested via agent-browser — ZERO runtime errors
+- ✅ All 5 new APIs return 200
+- ✅ Enterprise Admin: KPIs, revenue charts, user growth, compliance metrics
+- ✅ Business Pro: Revenue analytics, invoices, staff, settlements, AI insights
+- ✅ AML Compliance: Alerts, sanctions, KYC queue, monitoring rules, reports
+- ✅ Treasury: $13.67M reserves, FX exposure, cash flow, settlement accounts, real crypto prices
+- ✅ Developer Portal: API keys, webhooks, usage stats, endpoint docs, sandbox
+- ✅ Dev log: no errors
+- ✅ Server running stably
+
+### Current App Stats
+- **33 views** (added Enterprise Admin, Business Pro, AML Compliance, Treasury, Developer Portal)
+- **52 API routes** (added 5 new enterprise endpoints)
+- **19 database models** (unchanged)
+- **5 senior engineer agents** deployed in parallel
+- **Enterprise-grade features**: Admin console, business intelligence, AML/compliance, treasury management, developer API portal
+
+---
+
+## Task ID: 22-A — Real Database-Backed Crypto Wallets
+
+**Agent**: Senior Backend Engineer (Crypto Wallets DB Migration)
+**Task ID**: 22-A
+**Date**: 2026-06-19
+
+### Problem
+The crypto wallets system was running on top of a hardcoded `DEMO_CRYPTO_WALLETS` array (and a parallel `DEMO_CRYPTO_BALANCES` in-memory map in the cashout route) — meaning:
+- Wallet balances were not persisted to the DB; a server restart reset them.
+- The cashout/swap/trade routes mutated in-memory JS objects instead of writing to the `Wallet` table, so concurrent route handlers and the wallets UI were out of sync.
+- No transactional safety: a cashout that succeeded at the crypto-debit step but failed mid-way through the fiat-credit would leave the system in an inconsistent state.
+
+### Solution — 5 deliverables
+
+#### 1. `prisma/seed-crypto-wallets.ts` (idempotent seed script)
+- Creates 8 crypto `Wallet` rows for the demo user (BTC=0.04582, ETH=1.2847, USDT=2850.50, USDC=1240.00, BNB=3.582, SOL=12.45, PI=1850.0, TRX=4580.0).
+- Each wallet: `userId=DEMO_USER_ID`, `currency=crypto code`, `balance=amount`, `ledgerBalance=amount`, `type="crypto"`, `label="Crypto Wallet"`, `isDefault=false`, `status="active"`.
+- Uses `findFirst` per `(userId, currency, type="crypto")` before `create` — re-running the script is a no-op (does not duplicate or overwrite existing rows). Verified by running twice.
+- Ran successfully: `bun run prisma/seed-crypto-wallets.ts` → 8 wallets created on first run, all marked "✓ exists" on second run.
+
+#### 2. `/api/crypto/wallets` (route.ts) — fully rewritten to use the DB
+- Queries `db.wallet.findMany({ where: { userId: DEMO_USER_ID, type: "crypto" } })`.
+- **Self-bootstrapping**: if no crypto wallets exist in the DB yet, the route seeds them inline (`createMany`) on the first GET — so the system always returns data even on a fresh DB.
+- For each wallet, fetches the real price from CoinGecko via `getCryptoRates()` (60s cache, single-flight).
+- Generates a deterministic deposit address per crypto using `SHA-256(userId + ":" + currency)`, formatted with the correct per-chain prefix (`bc1q…` for BTC, `0x…` for EVM chains, `bnb1…` for BNB, `T…` for TRX, `pi_network_…` for PI, etc). Same input → same address across reloads.
+- Computes `valueUSD = balance × realPrice` and `valueNGN = valueUSD × 1535` (NGN per USD from `FIAT_USD_RATE`).
+- Returns `{ wallets: [...], totalValueUSD, totalValueNGN, source: "CoinGecko" }`.
+- Removed the old hardcoded `DEMO_CRYPTO_WALLETS` array and `NGN_PER_USD` constant entirely.
+
+#### 3. `/api/crypto/cashout` (route.ts) — checks real balance, atomic
+- **Before processing**: re-fetches the crypto wallet from the DB inside a `db.$transaction`, checks `balance >= amount`, returns `400 { error: "Insufficient {crypto} balance (available: X)" }` if not.
+- **Inside the transaction**: (a) decrements the crypto wallet by `numericAmount`, (b) finds-or-creates the destination fiat wallet, (c) credits the fiat wallet by `fiatCredited`, (d) creates the paired debit + credit `Transaction` records (with `pairedTxRef` linking both ways).
+- Notifications are created **outside** the financial transaction (so a notification failure can't roll back a successful cashout).
+- The GET quote endpoint now reads `availableBalance` from the DB instead of the old in-memory constant, so the UI's "available" reflects prior cashouts in real time.
+- Removed the old `DEMO_CRYPTO_BALANCES` in-memory map and `DEMO_CRYPTO_CODES` constant entirely.
+
+#### 4. `/api/crypto/swap` (route.ts) — checks real balance, atomic
+- **Inside a `db.$transaction`**: (a) re-fetches the `fromCrypto` wallet, checks `balance >= amount` (returns `400 "Insufficient {from} balance (available: X)"` if not), (b) finds-or-creates the `toCrypto` wallet, (c) decrements the source wallet by `amount`, (d) credits the destination wallet by `convertedAmount` (after 0.3% swap fee + network fee), (e) creates the exchange `Transaction` record.
+- Returns the new `remainingFromBalance` and `newToBalance` in the response so the UI can update without a refetch.
+- The GET quote endpoint stays unchanged (price-only, no balance check needed).
+
+#### 5. `/api/crypto/trade` (route.ts) — checks real balance, atomic
+- **BUY**: inside a `db.$transaction`, finds-or-creates both the fiat wallet and the crypto wallet, checks `fiatWallet.balance >= totalFiat` (returns `400 "Insufficient {fiat} balance (available: X, required: Y)"` if not), debits the fiat wallet by `totalFiat`, credits the crypto wallet by `totalCrypto`.
+- **SELL**: same atomicity, but checks `cryptoWallet.balance >= totalCrypto`, debits crypto by `totalCrypto`, credits fiat by `totalFiat`.
+- The GET quote endpoint now also returns live `availableFiatBalance` and `availableCryptoBalance` from the DB, so the UI's "available to trade" reflects prior trades.
+
+### Verification
+
+#### Lint
+- `bun run lint` → **0 errors, 0 warnings** (exit 0).
+
+#### Seed script
+```
+$ bun run prisma/seed-crypto-wallets.ts
+Seeding crypto wallets for demo user cmqk4on7w0000l54pde5vpp0q
+  BTC   + created (balance: 0.04582)
+  ETH   + created (balance: 1.2847)
+  USDT  + created (balance: 2850.5)
+  USDC  + created (balance: 1240)
+  BNB   + created (balance: 3.582)
+  SOL   + created (balance: 12.45)
+  PI    + created (balance: 1850)
+  TRX   + created (balance: 4580)
+Done. 8 crypto wallets present for demo user.
+```
+Re-running → all 8 marked "✓ exists" (idempotency verified).
+
+#### End-to-end API verification (against live dev server)
+- `GET /api/crypto/wallets` → 200: returns 8 wallets with real CoinGecko prices, deterministic addresses, USD + NGN portfolio values.
+- `POST /api/crypto/cashout { BTC→NGN, 1.0 }` → **400** `{"error":"Insufficient BTC balance (available: 0.04582)"}` ✓
+- `POST /api/crypto/cashout { BTC→NGN, 0.001 }` → 200: `cryptoDebited: 0.001, fiatCredited: 84098.90 NGN, remainingCryptoBalance: 0.04482` ✓ (BTC wallet decremented in DB).
+- `GET /api/crypto/cashout?crypto=BTC&fiat=NGN` → 200: `availableBalance: 0.04482` ✓ (live DB balance, not stale constant).
+- `POST /api/crypto/swap { BTC→ETH, 100 }` → **400** `{"error":"Insufficient BTC balance (available: 0.04482)"}` ✓
+- `POST /api/crypto/swap { BTC→ETH, 0.001 }` → 200: `convertedAmount: 0.0368651 ETH, remainingFromBalance: 0.04382, newToBalance: 1.3215651` ✓ (BTC debited, ETH credited).
+- `POST /api/crypto/swap { XRP→BTC, 10 }` → **400** `{"error":"You don't have a XRP wallet to swap from"}` ✓
+- `POST /api/crypto/trade { buy BTC, 100 BTC, NGN }` → **400** `{"error":"Insufficient NGN balance (available: 1276206.66, required: 8621285561)"}` ✓
+- `POST /api/crypto/trade { sell BTC, 100 BTC, NGN }` → **400** `{"error":"Insufficient BTC balance (available: 0.04382, required: 100)"}` ✓
+- `POST /api/crypto/trade { buy BTC, 100000 NGN, NGN }` → 200: `totalFiat: 101500, totalCrypto: 0.0011773, fiatBalanceAfter: 1174706.66, cryptoBalanceAfter: 0.0449973` ✓
+- `POST /api/crypto/trade { sell BTC, 0.001 BTC, NGN }` → 200: `totalCrypto: 0.001, totalFiat: 84089.39, fiatBalanceAfter: 1258796.04, cryptoBalanceAfter: 0.0439973` ✓
+- `GET /api/crypto/trade?crypto=BTC&fiat=NGN` → 200: now includes `availableFiatBalance` and `availableCryptoBalance` from DB ✓
+- Re-calling `GET /api/crypto/wallets` after the trades confirms BTC balance = `0.04399731861776107` and ETH balance = `1.321565102067428` — exactly the post-trade/post-swap values from the DB.
+
+#### Dev log
+- No 500 errors, no compile errors, no warnings across all crypto routes during testing.
+
+### Stage Summary
+- **Files created**: `prisma/seed-crypto-wallets.ts`
+- **Files rewritten**: `src/app/api/crypto/wallets/route.ts`, `src/app/api/crypto/cashout/route.ts`, `src/app/api/crypto/swap/route.ts`, `src/app/api/crypto/trade/route.ts`
+- **Behavior change**: All 4 crypto APIs now read + write the `Wallet` table instead of relying on hardcoded constants. Cashout/swap/trade are now atomic via `db.$transaction`, with descriptive 400 errors on insufficient balance and auto-creation of missing destination wallets (fiat wallet on cashout, toCrypto wallet on swap, both wallets on trade).
+- **DB state**: Demo user now has 8 crypto `Wallet` rows (`type="crypto"`) persisted in the SQLite DB, alongside the existing 8 fiat wallets.
+- **No frontend changes** required — the response shapes are backward-compatible (only additive new fields like `remainingFromBalance`, `newToBalance`, `fiatBalanceAfter`, `cryptoBalanceAfter`, `availableFiatBalance`, `availableCryptoBalance`).
+- **Backward compat**: GET `/api/crypto/wallets` still returns the same `wallets / totalValueUSD / totalValueNGN / source` shape, so the existing frontend keeps working.

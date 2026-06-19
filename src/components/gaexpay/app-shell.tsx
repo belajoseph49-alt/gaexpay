@@ -42,6 +42,7 @@ import { BusinessProView } from "./views/business-pro-view";
 import { CommandPalette } from "./command-palette";
 import { AchievementMonitor } from "./achievement-monitor";
 import { OnboardingTour } from "./onboarding-tour";
+import { InstallPrompt } from "./install-prompt";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function AppShell() {
@@ -109,6 +110,7 @@ export function AppShell() {
       <CommandPalette />
       <AchievementMonitor />
       <OnboardingTour />
+      <InstallPrompt />
     </div>
   );
 }

@@ -1,0 +1,678 @@
+     1→import { NextResponse } from "next/server";
+     2→import { db } from "@/lib/db";
+     3→
+     4→export const dynamic = "force-dynamic";
+     5→
+     6→// USD-normalized currency conversion (mirrors enterprise route)
+     7→const USD_RATE: Record<string, number> = {
+     8→  NGN: 1 / 1540, USD: 1, EUR: 1.08, GBP: 1.27, GHS: 1 / 12.5,
+     9→  KES: 1 / 130, UGX: 1 / 3800, XOF: 1 / 600, XAF: 1 / 600,
+    10→  ZAR: 1 / 18, ETB: 1 / 125, RWF: 1 / 1300, TZS: 1 / 2530,
+    11→  EGP: 1 / 48, MAD: 1 / 10, DZD: 1 / 134, TND: 1 / 3.1,
+    12→  BIF: 1 / 2950, CDF: 1 / 2750, AOA: 1 / 920, MZN: 1 / 63,
+    13→  ZMW: 1 / 26, BWP: 1 / 13.5, CNY: 1 / 7.2, JPY: 1 / 156,
+    14→  CAD: 1 / 1.37, AUD: 1 / 1.51, CHF: 1 / 0.88, AED: 1 / 3.67,
+    15→  SAR: 1 / 3.75, INR: 1 / 83, BRL: 1 / 5.4,
+    16→  BTC: 62500, ETH: 1700, BNB: 575, SOL: 68, XRP: 1.12, ADA: 0.45,
+    17→  DOT: 6.5, MATIC: 0.7, LTC: 85, TRX: 0.12, PI: 47.35,
+    18→  USDT: 1, USDC: 1, BUSD: 1, DAI: 1,
+    19→};
+    20→const toUSD = (amount: number, currency: string) =>
+    21→  amount * (USD_RATE[currency] ?? 1);
+    22→
+    23→// AML alert types
+    24→const ALERT_TYPES = [
+    25→  "structuring",
+    26→  "velocity",
+    27→  "high-risk-geo",
+    28→  "unusual-pattern",
+    29→  "peeling",
+    30→] as const;
+    31→
+    32→// Transaction monitoring rules catalog (8 rules)
+    33→const RULES_CATALOG = [
+    34→  {
+    35→    id: "rule_large_txn",
+    36→    name: "Transactions > ₦1M",
+    37→    description: "Flags any single transaction exceeding ₦1,000,000 to detect high-value movement requiring enhanced due diligence.",
+    38→    severity: "high" as const,
+    39→    category: "Threshold",
+    40→  },
+    41→  {
+    42→    id: "rule_velocity",
+    43→    name: "Velocity > 10 tx/day",
+    44→    description: "Triggers when a user performs more than 10 transactions within 24 hours, indicating potential structuring or account takeover.",
+    45→    severity: "medium" as const,
+    46→    category: "Velocity",
+    47→  },
+    48→  {
+    49→    id: "rule_high_risk_countries",
+    50→    name: "High-risk countries",
+    51→    description: "Screens transactions involving sanctioned or high-risk jurisdictions (FATF grey/black list) for OFAC, UN, EU compliance.",
+    52→    severity: "high" as const,
+    53→    category: "Geographic",
+    54→  },
+    55→  {
+    56→    id: "rule_structuring",
+    57→    name: "Structuring pattern",
+    58→    description: "Detects multiple sub-threshold transactions just below reporting limits — a classic smurfing indicator.",
+    59→    severity: "high" as const,
+    60→    category: "Pattern",
+    61→  },
+    62→  {
+    63→    id: "rule_round_amounts",
+    64→    name: "Round amounts",
+    65→    description: "Flags unusual round-number transfers (e.g. ₦500,000.00 exactly) often linked to money laundering or bulk cash placement.",
+    66→    severity: "low" as const,
+    67→    category: "Pattern",
+    68→  },
+    69→  {
+    70→    id: "rule_unusual_hours",
+    71→    name: "Unusual hours",
+    72→    description: "Alerts on transactions between 02:00–05:00 local time, which deviate from the user's typical activity window.",
+    73→    severity: "medium" as const,
+    74→    category: "Behavioral",
+    75→  },
+    76→  {
+    77→    id: "rule_new_recipient_large",
+    78→    name: "New recipient large amount",
+    79→    description: "Triggers when a user sends a high-value transfer to a newly added beneficiary within 24h of adding them.",
+    80→    severity: "medium" as const,
+    81→    category: "Behavioral",
+    82→  },
+    83→  {
+    84→    id: "rule_failed_attempts",
+    85→    name: "Multiple failed attempts",
+    86→    description: "Flags 5+ failed authentication or transaction attempts within an hour — a possible brute-force or fraud signal.",
+    87→    severity: "medium" as const,
+    88→    category: "Authentication",
+    89→  },
+    90→];
+    91→
+    92→// Deterministic pseudo-random for stable mock data per request
+    93→function seededRandom(seed: number) {
+    94→  let s = seed;
+    95→  return () => {
+    96→    s = (s * 1664525 + 1013904223) % 4294967296;
+    97→    return s / 4294967296;
+    98→  };
+    99→}
+   100→
+   101→// 14-day alert trend builder
+   102→function build14DayAlertSeries(alerts: any[]) {
+   103→  const out: { date: string; label: string; value: number }[] = [];
+   104→  const nowTs = Date.now();
+   105→  for (let i = 13; i >= 0; i--) {
+   106→    const d = new Date(nowTs - i * 86400000);
+   107→    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+   108→    const dayEnd = new Date(dayStart.getTime() + 86400000);
+   109→    const count = alerts.filter(
+   110→      (a) => new Date(a.createdAt) >= dayStart && new Date(a.createdAt) < dayEnd,
+   111→    ).length;
+   112→    out.push({
+   113→      date: dayStart.toISOString().slice(0, 10),
+   114→      label: dayStart.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+   115→      value: count,
+   116→    });
+   117→  }
+   118→  return out;
+   119→}
+   120→
+   121→export async function GET() {
+   122→  const now = new Date();
+   123→  const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
+   124→  const rand = seededRandom(20260621);
+   125→
+   126→  // Parallel aggregations
+   127→  const [
+   128→    allUsers,
+   129→    flaggedTx,
+   130→    allKycDocs,
+   131→    recentScreenedTx,
+   132→    pendingKycCount,
+   133→    verifiedKycCount,
+   134→    rejectedKycCount,
+   135→    sanctionsAuditCount,
+   136→    amlAuditCount,
+   137→  ] = await Promise.all([
+   138→    db.user.findMany({
+   139→      select: {
+   140→        id: true, firstName: true, lastName: true, email: true,
+   141→        country: true, status: true, kycStatus: true, kycTier: true,
+   142→        kycSubmittedAt: true, kycVerifiedAt: true, kycRejectionReason: true,
+   143→        createdAt: true, lastLoginAt: true, role: true,
+   144→      },
+   145→      orderBy: { createdAt: "desc" },
+   146→      take: 2000,
+   147→    }),
+   148→    db.transaction.findMany({
+   149→      where: {
+   150→        OR: [
+   151→          { fraudFlag: true },
+   152→          { status: "flagged" },
+   153→          { riskScore: { gte: 0.55 } },
+   154→        ],
+   155→      },
+   156→      orderBy: { createdAt: "desc" },
+   157→      take: 200,
+   158→      include: {
+   159→        user: {
+   160→          select: { firstName: true, lastName: true, email: true, country: true, kycTier: true },
+   161→        },
+   162→      },
+   163→    }),
+   164→    db.kycDocument.findMany({
+   165→      orderBy: { createdAt: "desc" },
+   166→      take: 200,
+   167→      include: {
+   168→        user: {
+   169→          select: { firstName: true, lastName: true, email: true, country: true, kycTier: true, kycSubmittedAt: true },
+   170→        },
+   171→      },
+   172→    }),
+   173→    db.transaction.findMany({
+   174→      where: { createdAt: { gte: thirtyDaysAgo } },
+   175→      select: {
+   176→        id: true, reference: true, userId: true, type: true, direction: true,
+   177→        status: true, amount: true, fee: true, currency: true, description: true,
+   178→        category: true, method: true, provider: true, riskScore: true,
+   179→        fraudFlag: true, counterpartyName: true, counterpartyAccount: true,
+   180→        counterpartyBank: true, createdAt: true,
+   181→      },
+   182→      orderBy: { createdAt: "desc" },
+   183→      take: 1000,
+   184→    }),
+   185→    db.user.count({ where: { kycStatus: "pending" } }),
+   186→    db.user.count({ where: { kycStatus: "verified" } }),
+   187→    db.user.count({ where: { kycStatus: "rejected" } }),
+   188→    db.auditLog.count({ where: { action: { contains: "sanctions" } } }),
+   189→    db.auditLog.count({ where: { action: { contains: "aml" } } }),
+   190→  ]);
+   191→
+   192→  // silence unused warnings (these counts are reserved for future audit enrichment)
+   193→  void sanctionsAuditCount;
+   194→  void amlAuditCount;
+   195→
+   196→  // -----------------------------------------------------------------
+   197→  // 1. AML DASHBOARD
+   198→  // -----------------------------------------------------------------
+   199→  const alertTypeForTx = (tx: any): (typeof ALERT_TYPES)[number] => {
+   200→    const amtUsd = toUSD(tx.amount, tx.currency);
+   201→    if (amtUsd >= 5000 && tx.amount % 100000 === 0) return "structuring";
+   202→    if (tx.riskScore >= 0.85) return "high-risk-geo";
+   203→    if (amtUsd >= 10000) return "peeling";
+   204→    if (tx.riskScore >= 0.7) return "velocity";
+   205→    return "unusual-pattern";
+   206→  };
+   207→  const severityForTx = (tx: any): "high" | "medium" | "low" => {
+   208→    if (tx.riskScore >= 0.85 || toUSD(tx.amount, tx.currency) >= 5000) return "high";
+   209→    if (tx.riskScore >= 0.65) return "medium";
+   210→    return "low";
+   211→  };
+   212→
+   213→  const amlAlerts = flaggedTx
+   214→    .filter((t) => new Date(t.createdAt) >= thirtyDaysAgo)
+   215→    .map((t) => {
+   216→      const type = alertTypeForTx(t);
+   217→      const severity = severityForTx(t);
+   218→      const ageHours = (Date.now() - new Date(t.createdAt).getTime()) / 3600000;
+   219→      let status: "open" | "under_review" | "escalated" | "closed" | "sar_filed";
+   220→      if (severity === "high" && ageHours < 72) status = "escalated";
+   221→      else if (ageHours < 24) status = "open";
+   222→      else if (ageHours < 168) status = "under_review";
+   223→      else if (severity === "high" && rand() > 0.5) status = "sar_filed";
+   224→      else status = "closed";
+   225→      const ruleIdMap: Record<string, string> = {
+   226→        "high-risk-geo": "rule_high_risk_countries",
+   227→        "structuring": "rule_structuring",
+   228→        "peeling": "rule_large_txn",
+   229→        "velocity": "rule_velocity",
+   230→        "unusual-pattern": "rule_round_amounts",
+   231→      };
+   232→      return {
+   233→        id: `ALR-${t.id.slice(-8).toUpperCase()}`,
+   234→        txId: t.id,
+   235→        reference: t.reference,
+   236→        userId: t.userId,
+   237→        userName: t.user ? `${t.user.firstName} ${t.user.lastName}` : "Unknown",
+   238→        userEmail: t.user?.email ?? "",
+   239→        userCountry: t.user?.country ?? "",
+   240→        amount: t.amount,
+   241→        currency: t.currency,
+   242→        amountUSD: Math.round(toUSD(t.amount, t.currency) * 100) / 100,
+   243→        type,
+   244→        severity,
+   245→        riskScore: Math.round((t.riskScore || 0) * 100) / 100,
+   246→        ruleId: ruleIdMap[type] ?? "rule_round_amounts",
+   247→        status,
+   248→        description: t.description,
+   249→        createdAt: t.createdAt,
+   250→      };
+   251→    });
+   252→
+   253→  const totalAlerts = amlAlerts.length;
+   254→  const alertsBySeverity = {
+   255→    high: amlAlerts.filter((a) => a.severity === "high").length,
+   256→    medium: amlAlerts.filter((a) => a.severity === "medium").length,
+   257→    low: amlAlerts.filter((a) => a.severity === "low").length,
+   258→  };
+   259→  const alertsByType = ALERT_TYPES.map((type) => ({
+   260→    type,
+   261→    label: type.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+   262→    count: amlAlerts.filter((a) => a.type === type).length,
+   263→  }));
+   264→  const sarFiled = amlAlerts.filter((a) => a.status === "sar_filed").length;
+   265→  const falsePositiveRate =
+   266→    totalAlerts > 0
+   267→      ? Math.round(
+   268→          (amlAlerts.filter((a) => a.status === "closed").length / totalAlerts) * 1000,
+   269→        ) / 10
+   270→      : 0;
+   271→  const alertTrend14d = build14DayAlertSeries(amlAlerts);
+   272→  const recentAlerts = amlAlerts.slice(0, 10);
+   273→
+   274→  // -----------------------------------------------------------------
+   275→  // 2. SANCTIONS SCREENING
+   276→  // -----------------------------------------------------------------
+   277→  const totalScreened = recentScreenedTx.length;
+   278→  const sanctionsHits = recentScreenedTx.filter(
+   279→    (t) =>
+   280→      t.riskScore >= 0.85 ||
+   281→      (t.counterpartyName || "").toLowerCase().match(/sanction|ofac|blocked|pep/) !== null,
+   282→  ).length;
+   283→  const blockedTx = recentScreenedTx.filter(
+   284→    (t) => t.fraudFlag && t.riskScore >= 0.85,
+   285→  ).length;
+   286→
+   287→  const screeningLists = [
+   288→    {
+   289→      id: "ofac",
+   290→      name: "OFAC SDN List",
+   291→      fullName: "Office of Foreign Assets Control — Specially Designated Nationals",
+   292→      entities: 9542,
+   293→      lastUpdated: new Date(now.getTime() - 2 * 86400000).toISOString(),
+   294→      status: "active",
+   295→      hits: Math.max(2, Math.floor(sanctionsHits * 0.5)),
+   296→    },
+   297→    {
+   298→      id: "un",
+   299→      name: "UN Consolidated Sanctions",
+   300→      fullName: "United Nations Security Council Consolidated List",
+   301→      entities: 1024,
+   302→      lastUpdated: new Date(now.getTime() - 5 * 86400000).toISOString(),
+   303→      status: "active",
+   304→      hits: Math.max(1, Math.floor(sanctionsHits * 0.2)),
+   305→    },
+   306→    {
+   307→      id: "eu",
+   308→      name: "EU Financial Sanctions",
+   309→      fullName: "European Union Financial Sanctions Files",
+   310→      entities: 2187,
+   311→      lastUpdated: new Date(now.getTime() - 1 * 86400000).toISOString(),
+   312→      status: "active",
+   313→      hits: Math.max(1, Math.floor(sanctionsHits * 0.2)),
+   314→    },
+   315→    {
+   316→      id: "local",
+   317→      name: "NFIU Local Watchlist",
+   318→      fullName: "Nigerian Financial Intelligence Unit — Domestic Watchlist",
+   319→      entities: 487,
+   320→      lastUpdated: new Date(now.getTime() - 3 * 86400000).toISOString(),
+   321→      status: "active",
+   322→      hits: Math.max(1, Math.floor(sanctionsHits * 0.1)),
+   323→    },
+   324→  ];
+   325→
+   326→  const recentScreened = recentScreenedTx
+   327→    .slice()
+   328→    .sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0))
+   329→    .slice(0, 12)
+   330→    .map((t) => {
+   331→      const user = allUsers.find((u) => u.id === t.userId);
+   332→      const hit = t.riskScore >= 0.85;
+   333→      const blocked = t.fraudFlag && t.riskScore >= 0.85;
+   334→      return {
+   335→        id: t.id,
+   336→        reference: t.reference,
+   337→        userName: user ? `${user.firstName} ${user.lastName}` : "Unknown",
+   338→        userCountry: user?.country ?? "Unknown",
+   339→        counterparty: t.counterpartyName || t.counterpartyAccount || "—",
+   340→        amount: t.amount,
+   341→        currency: t.currency,
+   342→        amountUSD: Math.round(toUSD(t.amount, t.currency) * 100) / 100,
+   343→        riskScore: Math.round((t.riskScore || 0) * 100) / 100,
+   344→        status: blocked ? "blocked" : hit ? "hit" : "cleared",
+   345→        listMatched: hit ? ["OFAC SDN", "EU FSF", "UN Consolidated", "NFIU"][Math.floor(rand() * 4)] : null,
+   346→        screenedAt: t.createdAt,
+   347→      };
+   348→    });
+   349→
+   350→  const blockedEntities = Array.from({ length: Math.min(6, Math.max(3, sanctionsHits)) }).map((_, i) => {
+   351→    const entities = [
+   352→      { name: "Bilad Al-Rafidain Trading LLC", country: "IQ", type: "Entity", reason: "OFAC SDN — terror financing" },
+   353→      { name: "Yevgeny Volkov", country: "RU", type: "Individual", reason: "EU FSF — oligarch sanctions" },
+   354→      { name: "Khartoum Exchange House", country: "SD", type: "Entity", reason: "UN Consolidated — regime" },
+   355→      { name: "Mahmoud Al-Bashir", country: "SD", type: "Individual", reason: "OFAC SDN — PEP" },
+   356→      { name: "Mirage Holdings Ltd", country: "IR", type: "Entity", reason: "EU FSF — nuclear program" },
+   357→      { name: "Joseph Kabila Trust", country: "CD", type: "Entity", reason: "NFIU — corruption PEP" },
+   358→    ];
+   359→    const e = entities[i % entities.length];
+   360→    return {
+   361→      id: `BLK-${(1000 + i).toString(36).toUpperCase()}`,
+   362→      ...e,
+   363→      addedAt: new Date(now.getTime() - (i + 1) * 4 * 86400000).toISOString(),
+   364→      source: ["OFAC", "UN", "EU", "NFIU"][i % 4],
+   365→    };
+   366→  });
+   367→
+   368→  // -----------------------------------------------------------------
+   369→  // 3. KYC QUEUE
+   370→  // -----------------------------------------------------------------
+   371→  const pendingReviewsRaw = allKycDocs
+   372→    .filter((d) => d.status === "pending")
+   373→    .slice(0, 12)
+   374→    .map((d) => ({
+   375→      id: d.id,
+   376→      userId: d.userId,
+   377→      userName: d.user ? `${d.user.firstName} ${d.user.lastName}` : "Unknown",
+   378→      userEmail: d.user?.email ?? "",
+   379→      userCountry: d.user?.country ?? "Unknown",
+   380→      documentType: d.type,
+   381→      documentNumber: d.documentNumber ?? "",
+   382→      tier: d.user?.kycTier ?? 0,
+   383→      submittedAt: d.user?.kycSubmittedAt ?? d.createdAt,
+   384→      daysInQueue: Math.max(
+   385→        0,
+   386→        Math.floor((Date.now() - new Date(d.user?.kycSubmittedAt ?? d.createdAt).getTime()) / 86400000),
+   387→      ),
+   388→      riskFlag: (d.user?.kycTier ?? 0) < 2 && (d.user?.country ?? "").match(/IR|KP|SY|CU|SD/) !== null,
+   389→    }));
+   390→
+   391→  const approvedToday = Math.max(1, Math.floor(verifiedKycCount * 0.12));
+   392→  const rejectedToday = Math.max(0, Math.floor(rejectedKycCount * 0.25));
+   393→  const avgReviewTimeMinutes = 204 + Math.floor(rand() * 60);
+   394→  const avgReviewTime = `${Math.floor(avgReviewTimeMinutes / 60)}h ${avgReviewTimeMinutes % 60}m`;
+   395→
+   396→  const kycQueueByTier = [
+   397→    { tier: 1, label: "Tier 1 — Basic", count: Math.max(0, pendingKycCount - 2) },
+   398→    { tier: 2, label: "Tier 2 — Standard", count: Math.max(1, Math.floor(pendingKycCount * 0.5)) },
+   399→    { tier: 3, label: "Tier 3 — Enhanced", count: Math.max(1, Math.floor(pendingKycCount * 0.3)) },
+   400→  ];
+   401→
+   402→  // -----------------------------------------------------------------
+   403→  // 4. RISK DISTRIBUTION
+   404→  // -----------------------------------------------------------------
+   405→  const userRiskMap = new Map<string, "low" | "medium" | "high" | "critical">();
+   406→  for (const u of allUsers) {
+   407→    const userTx = recentScreenedTx.filter((t) => t.userId === u.id);
+   408→    const maxRisk = userTx.reduce((m, t) => Math.max(m, t.riskScore || 0), 0);
+   409→    let level: "low" | "medium" | "high" | "critical";
+   410→    if (u.status === "suspended" || maxRisk >= 0.9) level = "critical";
+   411→    else if (maxRisk >= 0.7 || u.kycTier < 1) level = "high";
+   412→    else if (maxRisk >= 0.4 || u.kycTier < 2) level = "medium";
+   413→    else level = "low";
+   414→    userRiskMap.set(u.id, level);
+   415→  }
+   416→  const usersByRisk = {
+   417→    low: Array.from(userRiskMap.values()).filter((l) => l === "low").length,
+   418→    medium: Array.from(userRiskMap.values()).filter((l) => l === "medium").length,
+   419→    high: Array.from(userRiskMap.values()).filter((l) => l === "high").length,
+   420→    critical: Array.from(userRiskMap.values()).filter((l) => l === "critical").length,
+   421→  };
+   422→
+   423→  const riskBuckets = [
+   424→    { bucket: "0–20", label: "Minimal (0–20)", count: 0, color: "#10b981" },
+   425→    { bucket: "21–40", label: "Low (21–40)", count: 0, color: "#84cc16" },
+   426→    { bucket: "41–60", label: "Moderate (41–60)", count: 0, color: "#f59e0b" },
+   427→    { bucket: "61–80", label: "High (61–80)", count: 0, color: "#f97316" },
+   428→    { bucket: "81–100", label: "Critical (81–100)", count: 0, color: "#ef4444" },
+   429→  ];
+   430→  for (const t of recentScreenedTx) {
+   431→    const r = (t.riskScore || 0) * 100;
+   432→    if (r <= 20) riskBuckets[0].count++;
+   433→    else if (r <= 40) riskBuckets[1].count++;
+   434→    else if (r <= 60) riskBuckets[2].count++;
+   435→    else if (r <= 80) riskBuckets[3].count++;
+   436→    else riskBuckets[4].count++;
+   437→  }
+   438→
+   439→  // -----------------------------------------------------------------
+   440→  // 5. TRANSACTION MONITORING RULES
+   441→  // -----------------------------------------------------------------
+   442→  const ruleTriggerStats: Record<string, { count: number; lastTriggered: string }> = {
+   443→    rule_large_txn: { count: 0, lastTriggered: "" },
+   444→    rule_velocity: { count: 0, lastTriggered: "" },
+   445→    rule_high_risk_countries: { count: 0, lastTriggered: "" },
+   446→    rule_structuring: { count: 0, lastTriggered: "" },
+   447→    rule_round_amounts: { count: 0, lastTriggered: "" },
+   448→    rule_unusual_hours: { count: 0, lastTriggered: "" },
+   449→    rule_new_recipient_large: { count: 0, lastTriggered: "" },
+   450→    rule_failed_attempts: { count: 0, lastTriggered: "" },
+   451→  };
+   452→
+   453→  let latestLarge = "";
+   454→  let latestVelocity = "";
+   455→  let latestGeo = "";
+   456→  let latestStruct = "";
+   457→  let latestRound = "";
+   458→  let latestHours = "";
+   459→  let latestNewRec = "";
+   460→  let latestFail = "";
+   461→
+   462→  const userTxMap: Record<string, any[]> = {};
+   463→  for (const t of recentScreenedTx) {
+   464→    if (!userTxMap[t.userId]) userTxMap[t.userId] = [];
+   465→    userTxMap[t.userId].push(t);
+   466→  }
+   467→
+   468→  for (const t of recentScreenedTx) {
+   469→    const amtUsd = toUSD(t.amount, t.currency);
+   470→    if (amtUsd >= 1000) {
+   471→      ruleTriggerStats.rule_large_txn.count++;
+   472→      if (t.createdAt > latestLarge) latestLarge = t.createdAt;
+   473→    }
+   474→    if (t.amount >= 100000 && t.amount % 100000 === 0) {
+   475→      ruleTriggerStats.rule_round_amounts.count++;
+   476→      if (t.createdAt > latestRound) latestRound = t.createdAt;
+   477→    }
+   478→    const u = allUsers.find((x) => x.id === t.userId);
+   479→    const country = u?.country ?? "";
+   480→    if (["Iran", "North Korea", "Syria", "Cuba", "Sudan", "Myanmar"].some((c) => country.includes(c))) {
+   481→      ruleTriggerStats.rule_high_risk_countries.count++;
+   482→      if (t.createdAt > latestGeo) latestGeo = t.createdAt;
+   483→    }
+   484→    const userTxs = userTxMap[t.userId] || [];
+   485→    const sameDayTx = userTxs.filter(
+   486→      (x) =>
+   487→        new Date(x.createdAt).toDateString() === new Date(t.createdAt).toDateString() &&
+   488→        toUSD(x.amount, x.currency) < 500,
+   489→    );
+   490→    if (sameDayTx.length >= 3) {
+   491→      ruleTriggerStats.rule_structuring.count++;
+   492→      if (t.createdAt > latestStruct) latestStruct = t.createdAt;
+   493→    }
+   494→    if (userTxs.length > 10) {
+   495→      ruleTriggerStats.rule_velocity.count++;
+   496→      if (t.createdAt > latestVelocity) latestVelocity = t.createdAt;
+   497→    }
+   498→    const hour = new Date(t.createdAt).getHours();
+   499→    if (hour >= 2 && hour < 5) {
+   500→      ruleTriggerStats.rule_unusual_hours.count++;
+   501→      if (t.createdAt > latestHours) latestHours = t.createdAt;
+   502→    }
+   503→    if (t.status === "failed") {
+   504→      ruleTriggerStats.rule_failed_attempts.count++;
+   505→      if (t.createdAt > latestFail) latestFail = t.createdAt;
+   506→    }
+   507→    if (amtUsd >= 500 && t.counterpartyName) {
+   508→      ruleTriggerStats.rule_new_recipient_large.count++;
+   509→      if (t.createdAt > latestNewRec) latestNewRec = t.createdAt;
+   510→    }
+   511→  }
+   512→  ruleTriggerStats.rule_large_txn.lastTriggered = latestLarge || new Date(now.getTime() - 6 * 3600000).toISOString();
+   513→  ruleTriggerStats.rule_velocity.lastTriggered = latestVelocity || new Date(now.getTime() - 2 * 3600000).toISOString();
+   514→  ruleTriggerStats.rule_high_risk_countries.lastTriggered = latestGeo || new Date(now.getTime() - 12 * 3600000).toISOString();
+   515→  ruleTriggerStats.rule_structuring.lastTriggered = latestStruct || new Date(now.getTime() - 4 * 3600000).toISOString();
+   516→  ruleTriggerStats.rule_round_amounts.lastTriggered = latestRound || new Date(now.getTime() - 8 * 3600000).toISOString();
+   517→  ruleTriggerStats.rule_unusual_hours.lastTriggered = latestHours || new Date(now.getTime() - 18 * 3600000).toISOString();
+   518→  ruleTriggerStats.rule_new_recipient_large.lastTriggered = latestNewRec || new Date(now.getTime() - 36 * 3600000).toISOString();
+   519→  ruleTriggerStats.rule_failed_attempts.lastTriggered = latestFail || new Date(now.getTime() - 1 * 3600000).toISOString();
+   520→
+   521→  const monitoringRules = RULES_CATALOG.map((r, i) => {
+   522→    const stats = ruleTriggerStats[r.id];
+   523→    const enabled = i !== 4 && i !== 6;
+   524→    return {
+   525→      ...r,
+   526→      enabled,
+   527→      triggeredCount: stats.count,
+   528→      lastTriggered: stats.lastTriggered,
+   529→      threshold: r.id === "rule_large_txn" ? 1_000_000
+   530→        : r.id === "rule_velocity" ? 10
+   531→        : r.id === "rule_failed_attempts" ? 5
+   532→        : r.id === "rule_structuring" ? 3
+   533→        : null,
+   534→    };
+   535→  });
+   536→
+   537→  // -----------------------------------------------------------------
+   538→  // 6. COMPLIANCE METRICS (CTR, SAR, compliance rate, audit score)
+   539→  // -----------------------------------------------------------------
+   540→  const ctrFiled = Math.max(3, Math.floor(recentScreenedTx.filter((t) => toUSD(t.amount, t.currency) >= 10000).length * 0.4));
+   541→  const sarFiledTotal = sarFiled + Math.max(2, Math.floor(totalAlerts * 0.15));
+   542→  const complianceRate =
+   543→    allUsers.length > 0
+   544→      ? Math.round((verifiedKycCount / allUsers.length) * 1000) / 10
+   545→      : 0;
+   546→  const auditScore = Math.min(98, Math.max(82, Math.round(complianceRate * 0.85 + 12)));
+   547→
+   548→  // -----------------------------------------------------------------
+   549→  // 7. REGULATORY REPORTS
+   550→  // -----------------------------------------------------------------
+   551→  const reportsCatalog = [
+   552→    {
+   553→      id: "RPT-CTR-2026-06",
+   554→      type: "CTR",
+   555→      title: "Currency Transaction Report — June 2026",
+   556→      period: "Jun 1 – Jun 19, 2026",
+   557→      status: "filed",
+   558→      filedDate: new Date(now.getTime() - 3 * 86400000).toISOString(),
+   559→      regulator: "NFIU",
+   560→      count: ctrFiled,
+   561→    },
+   562→    {
+   563→      id: "RPT-SAR-2026-12",
+   564→      type: "SAR",
+   565→      title: "Suspicious Activity Report — Case #2026-12",
+   566→      period: "May 22 – Jun 5, 2026",
+   567→      status: "filed",
+   568→      filedDate: new Date(now.getTime() - 8 * 86400000).toISOString(),
+   569→      regulator: "NFIU",
+   570→      count: 1,
+   571→    },
+   572→    {
+   573→      id: "RPT-CTR-2026-05",
+   574→      type: "CTR",
+   575→      title: "Currency Transaction Report — May 2026",
+   576→      period: "May 1 – May 31, 2026",
+   577→      status: "filed",
+   578→      filedDate: new Date(now.getTime() - 22 * 86400000).toISOString(),
+   579→      regulator: "NFIU",
+   580→      count: Math.max(5, ctrFiled + 2),
+   581→    },
+   582→    {
+   583→      id: "RPT-AUD-2026-Q1",
+   584→      type: "Audit",
+   585→      title: "Q1 2026 Compliance Audit",
+   586→      period: "Jan 1 – Mar 31, 2026",
+   587→      status: "filed",
+   588→      filedDate: new Date(now.getTime() - 45 * 86400000).toISOString(),
+   589→      regulator: "Internal Audit",
+   590→      count: null,
+   591→    },
+   592→    {
+   593→      id: "RPT-SAR-2026-11",
+   594→      type: "SAR",
+   595→      title: "Suspicious Activity Report — Case #2026-11",
+   596→      period: "May 8 – May 18, 2026",
+   597→      status: "filed",
+   598→      filedDate: new Date(now.getTime() - 35 * 86400000).toISOString(),
+   599→      regulator: "NFIU",
+   600→      count: 1,
+   601→    },
+   602→    {
+   603→      id: "RPT-CTR-2026-04",
+   604→      type: "CTR",
+   605→      title: "Currency Transaction Report — April 2026",
+   606→      period: "Apr 1 – Apr 30, 2026",
+   607→      status: "filed",
+   608→      filedDate: new Date(now.getTime() - 52 * 86400000).toISOString(),
+   609→      regulator: "NFIU",
+   610→      count: Math.max(4, ctrFiled + 1),
+   611→    },
+   612→    {
+   613→      id: "RPT-COMPL-Q2",
+   614→      type: "Compliance",
+   615→      title: "Q2 2026 Compliance Summary",
+   616→      period: "Apr 1 – Jun 19, 2026",
+   617→      status: "draft",
+   618→      filedDate: null,
+   619→      regulator: "Internal",
+   620→      count: null,
+   621→    },
+   622→    {
+   623→      id: "RPT-SAR-2026-13",
+   624→      type: "SAR",
+   625→      title: "Suspicious Activity Report — Case #2026-13",
+   626→      period: "Jun 10 – Jun 17, 2026",
+   627→      status: "under_review",
+   628→      filedDate: null,
+   629→      regulator: "NFIU",
+   630→      count: 1,
+   631→    },
+   632→  ];
+   633→
+   634→  return NextResponse.json({
+   635→    aml: {
+   636→      totalAlerts,
+   637→      alertsBySeverity,
+   638→      alertsByType,
+   639→      alertTrend14d,
+   640→      recentAlerts,
+   641→      sarFiled,
+   642→      falsePositiveRate,
+   643→    },
+   644→    sanctions: {
+   645→      totalScreened,
+   646→      hitsFound: sanctionsHits,
+   647→      blockedTransactions: blockedTx,
+   648→      screeningLists,
+   649→      recentScreened,
+   650→      blockedEntities,
+   651→    },
+   652→    kycQueue: {
+   653→      pendingReviews: pendingKycCount,
+   654→      approvedToday,
+   655→      rejectedToday,
+   656→      avgReviewTime,
+   657→      queueByTier: kycQueueByTier,
+   658→      pendingList: pendingReviewsRaw,
+   659→      totalPending: pendingReviewsRaw.length,
+   660→    },
+   661→    risk: {
+   662→      usersByRisk,
+   663→      txByRiskBucket: riskBuckets,
+   664→    },
+   665→    rules: monitoringRules,
+   666→    metrics: {
+   667→      ctrFiled,
+   668→      sarFiled: sarFiledTotal,
+   669→      complianceRate,
+   670→      auditScore,
+   671→      totalScreened,
+   672→      passRate: Math.round((1 - sanctionsHits / Math.max(1, totalScreened)) * 1000) / 10,
+   673→    },
+   674→    reports: reportsCatalog,
+   675→    generatedAt: now.toISOString(),
+   676→  });
+   677→}
+   678→

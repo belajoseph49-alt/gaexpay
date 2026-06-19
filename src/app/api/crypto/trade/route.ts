@@ -6,12 +6,26 @@ import { getCryptoRates, FIAT_USD_RATE } from "@/lib/coingecko";
 export const dynamic = "force-dynamic";
 
 function ref() {
-  return "GXP" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
+  return (
+    "GXP" +
+    Date.now().toString(36).toUpperCase() +
+    Math.random().toString(36).slice(2, 6).toUpperCase()
+  );
 }
 
 // Fees — buy = 1.5%, sell = 1.0%
 const BUY_FEE_PCT = 0.015;
-const SELL_FEE_PCT = 0.010;
+const SELL_FEE_PCT = 0.01;
+
+/** Thrown inside the transaction to abort with a specific HTTP status. */
+class HttpError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
 
 interface TradeRequestBody {
   action: "buy" | "sell";
@@ -26,6 +40,15 @@ interface TradeRequestBody {
  *
  * Buy or sell crypto against a fiat balance using REAL CoinGecko prices.
  *
+ *  - BUY  : user pays `totalFiat` (base + 1.5% fee), receives `totalCrypto`.
+ *           Checks the fiat wallet has ≥ totalFiat; debits fiat, credits crypto.
+ *  - SELL : user gives `totalCrypto`, receives `totalFiat` (base − 1.0% fee).
+ *           Checks the crypto wallet has ≥ totalCrypto; debits crypto, credits fiat.
+ *
+ * All wallet mutations + transaction record are wrapped in `db.$transaction`
+ * for atomicity. Fiat/crypto wallets are created on the fly if missing (so a
+ * BUY into a brand-new crypto works, and a SELL into an unused fiat works).
+ *
  * Body:
  *   {
  *     action: "buy" | "sell",
@@ -34,13 +57,6 @@ interface TradeRequestBody {
  *     amount: number,
  *     amountType: "fiat" | "crypto"
  *   }
- *
- * - BUY  : user pays `amount` in fiat, receives crypto at market + 1.5% fee.
- * - SELL : user sells `amount` of crypto, receives fiat at market − 1.0% fee.
- *
- * Persists a Transaction (type="exchange", method="card" for buy / "wallet"
- * for sell, category="investment") and a Notification. Returns the full
- * trade receipt (rate, fee, received amount, reference).
  */
 export async function POST(req: Request) {
   try {
@@ -51,7 +67,8 @@ export async function POST(req: Request) {
     if (!action || (action !== "buy" && action !== "sell")) {
       return NextResponse.json({ error: "action must be 'buy' or 'sell'" }, { status: 400 });
     }
-    const cryptoMeta = CRYPTOCURRENCIES.find((c) => c.code === crypto);
+    const cryptoUpper = String(crypto || "").toUpperCase();
+    const cryptoMeta = CRYPTOCURRENCIES.find((c) => c.code === cryptoUpper);
     if (!cryptoMeta) {
       return NextResponse.json({ error: "Unsupported cryptocurrency" }, { status: 400 });
     }
@@ -68,7 +85,7 @@ export async function POST(req: Request) {
 
     // ---------- Real prices ----------
     const { rates, priceMap } = await getCryptoRates();
-    const cryptoPriceUSD = priceMap[crypto];
+    const cryptoPriceUSD = priceMap[cryptoUpper];
     if (!cryptoPriceUSD || cryptoPriceUSD <= 0) {
       return NextResponse.json({ error: "Price feed unavailable" }, { status: 500 });
     }
@@ -76,7 +93,7 @@ export async function POST(req: Request) {
     // Use CoinGecko's direct fiat price when available (more accurate than
     // USD × static rate). Fall back to USD × FIAT_USD_RATE for currencies
     // CoinGecko doesn't support (XAF, XOF, UGX, ETB, …).
-    const cryptoRate = rates.find((r) => r.code === crypto);
+    const cryptoRate = rates.find((r) => r.code === cryptoUpper);
     const fiatPerUsd = FIAT_USD_RATE[fiatUpper];
     const directFiatPrice = cryptoRate?.prices?.[fiatUpper];
     // 1 crypto = X fiat units (real market rate)
@@ -122,55 +139,151 @@ export async function POST(req: Request) {
       totalCrypto = cryptoAmount; // user sells this much crypto
     }
 
-    // ---------- Persist Transaction ----------
     const direction = action === "buy" ? "debit" : "credit";
     const method = action === "buy" ? "card" : "wallet";
     const description =
       action === "buy"
-        ? `Buy ${totalCrypto.toFixed(6)} ${crypto} with ${totalFiat.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${fiatUpper}`
-        : `Sell ${totalCrypto.toFixed(6)} ${crypto} for ${totalFiat.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${fiatUpper}`;
+        ? `Buy ${totalCrypto.toFixed(6)} ${cryptoUpper} with ${totalFiat.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${fiatUpper}`
+        : `Sell ${totalCrypto.toFixed(6)} ${cryptoUpper} for ${totalFiat.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${fiatUpper}`;
 
-    const tx = await db.transaction.create({
-      data: {
-        reference: ref(),
-        userId: DEMO_USER_ID,
-        senderId: DEMO_USER_ID,
-        type: "exchange",
-        direction,
-        status: "completed",
-        amount: totalCrypto,
-        fee: feeFiat,
-        currency: action === "buy" ? fiatUpper : crypto,
-        description,
-        category: "investment",
-        counterpartyName:
-          action === "buy"
-            ? `GaexPay Trade — Buy ${crypto}`
-            : `GaexPay Trade — Sell ${crypto}`,
-        method,
-        provider: "gaexpay-trade",
-        metadata: JSON.stringify({
-          kind: "crypto-trade",
-          action,
-          crypto,
-          cryptoName: cryptoMeta.name,
-          fiatCurrency: fiatUpper,
-          amountType,
-          inputAmount: amount,
-          marketRate, // 1 crypto = X fiat
-          cryptoPriceUSD,
-          fiatPerUsd,
-          fiatAmount,
-          cryptoAmount,
-          feePct: action === "buy" ? BUY_FEE_PCT * 100 : SELL_FEE_PCT * 100,
-          feeFiat,
-          feeCrypto,
-          totalFiat,
-          totalCrypto,
-          priceSource: "CoinGecko",
-        }),
-        completedAt: new Date(),
-      },
+    const txRef = ref();
+
+    // ---------- Atomic trade ----------
+    const result = await db.$transaction(async (tx) => {
+      // 1. Find (or create) the fiat wallet
+      let fiatWallet = await tx.wallet.findFirst({
+        where: { userId: DEMO_USER_ID, currency: fiatUpper, type: "primary" },
+      });
+      if (!fiatWallet) {
+        fiatWallet = await tx.wallet.create({
+          data: {
+            userId: DEMO_USER_ID,
+            currency: fiatUpper,
+            label: `${fiatUpper} Wallet`,
+            type: "primary",
+            balance: 0,
+            ledgerBalance: 0,
+            isDefault: false,
+            status: "active",
+          },
+        });
+      }
+
+      // 2. Find (or create) the crypto wallet
+      let cryptoWallet = await tx.wallet.findFirst({
+        where: { userId: DEMO_USER_ID, currency: cryptoUpper, type: "crypto" },
+      });
+      if (!cryptoWallet) {
+        cryptoWallet = await tx.wallet.create({
+          data: {
+            userId: DEMO_USER_ID,
+            currency: cryptoUpper,
+            balance: 0,
+            ledgerBalance: 0,
+            type: "crypto",
+            label: "Crypto Wallet",
+            isDefault: false,
+            status: "active",
+          },
+        });
+      }
+
+      // 3. Balance check + apply debit/credit based on action
+      let fiatBalanceAfter = fiatWallet.balance;
+      let cryptoBalanceAfter = cryptoWallet.balance;
+
+      if (action === "buy") {
+        // User pays totalFiat from fiat wallet
+        if (fiatWallet.balance < totalFiat) {
+          throw new HttpError(
+            400,
+            `Insufficient ${fiatUpper} balance (available: ${fiatWallet.balance}, required: ${totalFiat})`,
+          );
+        }
+        const updatedFiat = await tx.wallet.update({
+          where: { id: fiatWallet.id },
+          data: { balance: { decrement: totalFiat } },
+        });
+        const updatedCrypto = await tx.wallet.update({
+          where: { id: cryptoWallet.id },
+          data: { balance: { increment: totalCrypto } },
+        });
+        fiatBalanceAfter = updatedFiat.balance;
+        cryptoBalanceAfter = updatedCrypto.balance;
+      } else {
+        // SELL — user pays totalCrypto from crypto wallet
+        if (cryptoWallet.balance < totalCrypto) {
+          throw new HttpError(
+            400,
+            `Insufficient ${cryptoUpper} balance (available: ${cryptoWallet.balance}, required: ${totalCrypto})`,
+          );
+        }
+        const updatedCrypto = await tx.wallet.update({
+          where: { id: cryptoWallet.id },
+          data: { balance: { decrement: totalCrypto } },
+        });
+        const updatedFiat = await tx.wallet.update({
+          where: { id: fiatWallet.id },
+          data: { balance: { increment: totalFiat } },
+        });
+        cryptoBalanceAfter = updatedCrypto.balance;
+        fiatBalanceAfter = updatedFiat.balance;
+      }
+
+      // 4. Persist transaction record
+      const txRecord = await tx.transaction.create({
+        data: {
+          reference: txRef,
+          userId: DEMO_USER_ID,
+          senderId: DEMO_USER_ID,
+          type: "exchange",
+          direction,
+          status: "completed",
+          amount: totalCrypto,
+          fee: feeFiat,
+          currency: action === "buy" ? fiatUpper : cryptoUpper,
+          description,
+          category: "investment",
+          counterpartyName:
+            action === "buy"
+              ? `GaexPay Trade — Buy ${cryptoUpper}`
+              : `GaexPay Trade — Sell ${cryptoUpper}`,
+          method,
+          provider: "gaexpay-trade",
+          walletId: action === "buy" ? fiatWallet.id : cryptoWallet.id,
+          metadata: JSON.stringify({
+            kind: "crypto-trade",
+            action,
+            crypto: cryptoUpper,
+            cryptoName: cryptoMeta.name,
+            fiatCurrency: fiatUpper,
+            amountType,
+            inputAmount: amount,
+            marketRate,
+            cryptoPriceUSD,
+            fiatPerUsd,
+            fiatAmount,
+            cryptoAmount,
+            feePct: action === "buy" ? BUY_FEE_PCT * 100 : SELL_FEE_PCT * 100,
+            feeFiat,
+            feeCrypto,
+            totalFiat,
+            totalCrypto,
+            fiatWalletId: fiatWallet.id,
+            cryptoWalletId: cryptoWallet.id,
+            fiatBalanceAfter,
+            cryptoBalanceAfter,
+            priceSource: "CoinGecko",
+          }),
+          completedAt: new Date(),
+        },
+      });
+
+      return {
+        txRecord,
+        fiatBalanceAfter,
+        cryptoBalanceAfter,
+      };
     });
 
     // ---------- Notification ----------
@@ -181,8 +294,8 @@ export async function POST(req: Request) {
           action === "buy" ? "Crypto purchase completed" : "Crypto sale completed",
         message:
           action === "buy"
-            ? `You bought ${totalCrypto.toFixed(6)} ${crypto} for ${totalFiat.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${fiatUpper} (incl. ${feeFiat.toFixed(2)} ${fiatUpper} fee).`
-            : `You sold ${totalCrypto.toFixed(6)} ${crypto} and received ${totalFiat.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${fiatUpper} (after ${feeFiat.toFixed(2)} ${fiatUpper} fee).`,
+            ? `You bought ${totalCrypto.toFixed(6)} ${cryptoUpper} for ${totalFiat.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${fiatUpper} (incl. ${feeFiat.toFixed(2)} ${fiatUpper} fee).`
+            : `You sold ${totalCrypto.toFixed(6)} ${cryptoUpper} and received ${totalFiat.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${fiatUpper} (after ${feeFiat.toFixed(2)} ${fiatUpper} fee).`,
         type: "transaction",
         channel: "push",
       },
@@ -191,15 +304,15 @@ export async function POST(req: Request) {
     // ---------- Response ----------
     return NextResponse.json({
       success: true,
-      reference: tx.reference,
-      transactionId: tx.id,
+      reference: result.txRecord.reference,
+      transactionId: result.txRecord.id,
       action,
-      crypto,
+      crypto: cryptoUpper,
       cryptoName: cryptoMeta.name,
       fiatCurrency: fiatUpper,
       amountType,
       inputAmount: Number(amount),
-      marketRate, // 1 crypto = X fiat (real CoinGecko price)
+      marketRate,
       cryptoPriceUSD,
       fiatPerUsd,
       fiatAmount,
@@ -207,12 +320,17 @@ export async function POST(req: Request) {
       feePct: action === "buy" ? BUY_FEE_PCT * 100 : SELL_FEE_PCT * 100,
       feeFiat,
       feeCrypto,
-      totalFiat, // user pays (buy) / receives (sell)
-      totalCrypto, // user receives (buy) / sells (sell)
-      completedAt: tx.completedAt,
+      totalFiat,
+      totalCrypto,
+      fiatBalanceAfter: result.fiatBalanceAfter,
+      cryptoBalanceAfter: result.cryptoBalanceAfter,
+      completedAt: result.txRecord.completedAt,
       source: "CoinGecko",
     });
   } catch (e: any) {
+    if (e instanceof HttpError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
     return NextResponse.json(
       { error: e?.message || "Trade failed" },
       { status: 500 },
@@ -227,7 +345,7 @@ export async function POST(req: Request) {
  */
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const crypto = url.searchParams.get("crypto") || "BTC";
+  const crypto = (url.searchParams.get("crypto") || "BTC").toUpperCase();
   const fiat = (url.searchParams.get("fiat") || "NGN").toUpperCase();
 
   const cryptoMeta = CRYPTOCURRENCIES.find((c) => c.code === crypto);
@@ -248,15 +366,27 @@ export async function GET(req: Request) {
       ? directFiatPrice
       : cryptoPriceUSD * fiatPerUsd;
 
+  // Pull live wallet balances so the UI's "available" reflects prior trades.
+  const [fiatWallet, cryptoWallet] = await Promise.all([
+    db.wallet.findFirst({
+      where: { userId: DEMO_USER_ID, currency: fiat, type: "primary" },
+    }),
+    db.wallet.findFirst({
+      where: { userId: DEMO_USER_ID, currency: crypto, type: "crypto" },
+    }),
+  ]);
+
   return NextResponse.json({
     crypto,
     cryptoName: cryptoMeta.name,
     fiat,
-    marketRate, // 1 crypto = X fiat
+    marketRate,
     cryptoPriceUSD,
     fiatPerUsd,
     buyFeePct: BUY_FEE_PCT * 100,
     sellFeePct: SELL_FEE_PCT * 100,
+    availableFiatBalance: fiatWallet?.balance ?? 0,
+    availableCryptoBalance: cryptoWallet?.balance ?? 0,
     source: "CoinGecko",
   });
 }
