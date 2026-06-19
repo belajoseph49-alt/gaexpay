@@ -441,3 +441,113 @@ Ran `bun run db:push` + `bun run db:generate` to sync. Wrote `prisma/seed-phase2
 - **P3**: Wire up next-intl for multi-language (8 languages declared).
 - **P3**: Add geographic spending heatmap in analytics.
 - **P3**: Add dark/light theme persistence across sessions.
+
+---
+
+## Phase 5 — Cron Round 4: Currency Exchange, Merchant QR, Account Statements
+
+**Task ID**: 11 (webDevReview cron round)
+**Agent**: Main (Z.ai Code)
+**Date**: 2026-06-19
+
+### Current Project Status Assessment
+- Dev server running stably on port 3000 (PID 10502).
+- Lint clean (0 errors, 0 warnings).
+- QA via agent-browser confirmed all 17 views (from Phase 4) render without console/runtime errors.
+- No bugs found — app was stable. Proceeded to implement P1/P2 features recommended in Phase 4 worklog: Wallet-to-Wallet Exchange, Merchant QR Code, and PDF/Account Statements.
+
+### Work Completed This Round
+
+#### 1. Wallet-to-Wallet Currency Exchange (P1 — New Feature)
+- **New API route** `/api/exchange` (POST):
+  - Takes fromWalletId, toWalletId, amount.
+  - Validates wallets belong to user + sufficient balance.
+  - Calculates exchange rate (DB first, fallback via NGN reference rates).
+  - 0.5% exchange fee.
+  - Updates both wallet balances (debit source + fee, credit destination).
+  - Creates both debit and credit "exchange" type transactions.
+  - Creates notification.
+- **New view** `exchange-view.tsx`:
+  - Live rate ticker card with pulsing "Live" badge.
+  - From/To wallet selector cards with custom dropdown (flag, currency, balance, label).
+  - Swap button (animated, rotates wallets).
+  - Quick percentage buttons (25%/50%/75%/Max).
+  - Real-time conversion preview (amount, rate, fee, you receive).
+  - Insufficient balance validation.
+  - Success screen with animated check + rate/fee/reference summary + "New Exchange" button.
+  - Popular currency pairs grid showing buy/sell rates.
+  - Info banner about instant settlement.
+- **Verified**: Exchanged ₦1000 NGN → $0.65 USD at rate 0.00065, fee ₦5, both transactions created.
+
+#### 2. Merchant QR Code Generation (P2 — New Feature)
+- **New API route** `/api/merchant-qr` (GET):
+  - Returns merchant info + QR payload (JSON with merchant ID, name, account, QR code, timestamp).
+  - Generates a deterministic 25x25 QR matrix with finder patterns in 3 corners + center logo overlay.
+- **New view** `merchant-qr-view.tsx`:
+  - Large white QR card on mesh background with merchant header (Store icon, name, rating, verified badge).
+  - Visual QR code rendered as pixel grid (25x25 cells, 8px each) with GaexPay logo center overlay.
+  - Optional amount request field.
+  - Copy/Share/Download action buttons.
+  - Side panel: QR Details (merchant ID, QR code, category, status), "How Customers Pay" 5-step guide, Today's Activity stats.
+  - Back button to Merchant Dashboard.
+- **Updated Merchant Dashboard**: "My QR Code" button and "Generate QR" quick action card now navigate to the QR view.
+- **Verified**: Renders Spencer Supermarket QR with 25x25 matrix, all details, and step guide.
+
+#### 3. Account Statement Generation (P1 — New Feature)
+- **New API route** `/api/statement` (GET):
+  - Accepts `month` param (YYYY-MM, defaults to current month).
+  - Returns user info, wallets, month's transactions, summary (totalIn, totalOut, net, fees, count), category breakdown, month name, generation timestamp.
+- **New view** `statement-view.tsx`:
+  - Month navigator (prev/next buttons with month name + tx count).
+  - Email/Print/Download CSV action buttons.
+  - Account holder info card (name, email, phone, address) + wallet balances.
+  - 4 summary KPI cards with AnimatedNumber (Inflow, Outflow, Net Flow, Fees Paid).
+  - Spending by Category grid (name, count, amount).
+  - Full transaction details table (date, reference, description, type, amount, status) — 50 rows with "showing 50 of N" note.
+  - Empty state when no transactions in month.
+  - Footer legal note with generation timestamp.
+- **Verified**: Renders June 2026 statement with 32 transactions, ₦1.12M inflow, ₦1.90M outflow, 5 categories.
+
+#### 4. Navigation & Styling Updates
+- Added "Exchange" and "Statements" to sidebar Main section + mobile-nav.
+- Added "merchant-qr" view (accessible from Merchant Dashboard buttons).
+- Store updated with new View types: `exchange`, `statement`, `merchant-qr`.
+- All new views use consistent design: gradient accents, card-lift, Framer Motion animations, AnimatedNumber count-ups, skeleton loaders, emerald/teal accent.
+- Exchange view has custom wallet selector dropdown with flags + balances.
+- QR view has pixel-perfect QR matrix rendering with center logo.
+
+### Verification Results
+- ✅ `bun run lint` — 0 errors, 0 warnings
+- ✅ All 18 views tested via agent-browser — no console/runtime errors
+- ✅ Exchange API: POST creates debit+credit transactions, updates wallets, sends notification (₦1000→$0.65 verified)
+- ✅ Merchant QR API: returns merchant + 25x25 QR matrix
+- ✅ Statement API: returns month data with transactions, summary, categories
+- ✅ Exchange view: live rate, wallet selectors, swap, conversion preview, success screen
+- ✅ Statement view: month navigator, KPIs, category breakdown, transaction table
+- ✅ Merchant QR view: visual QR code, merchant header, action buttons, step guide
+- ✅ Merchant Dashboard "My QR Code" + "Generate QR" navigate to QR view
+- ✅ Mobile (390×844): Exchange + Statement views responsive
+- ✅ Dev log: no errors/warnings
+- ✅ Server running stably
+
+### Current App Stats
+- **20 views** (dashboard, wallets, wallet-detail, send, transactions, cards, pay, savings, budgets, scheduled, exchange, analytics, statement, merchant, merchant-qr, kyc, settings, support, admin, referral)
+- **30 API routes** (added `/api/exchange`, `/api/merchant-qr`, `/api/statement`)
+- **19 database models** (unchanged)
+- **5 nav sections** (Main, Business, Account, Platform + mobile)
+
+### Unresolved Issues / Risks
+1. **agent-browser ref click on Radix Dialog buttons**: Still present (carryover). Real user clicks work fine.
+2. **QR code is visual only**: The QR matrix is a deterministic pattern, not a scannable QR code. In production, would use a QR code library (e.g., `qrcode` npm package) to generate real scannable codes.
+3. **Statement PDF**: Currently provides CSV download + print. True PDF generation would require a PDF library (e.g., `pdfkit` or `puppeteer`).
+4. **Exchange rates**: Uses fallback static rates when DB rates unavailable. In production, would integrate a live FX API.
+
+### Priority Recommendations for Next Phase
+- **P1**: Add real QR code generation (use `qrcode` npm library for scannable codes).
+- **P1**: Add PDF statement download (use `pdfkit` or `puppeteer`).
+- **P2**: Add transaction search by date range in transactions view.
+- **P2**: WebSocket real-time notifications.
+- **P2**: Add savings goal templates (preset goals like "Emergency Fund", "Vacation", etc.).
+- **P3**: Wire up next-intl for multi-language (8 languages declared).
+- **P3**: Add geographic spending heatmap in analytics.
+- **P3**: Add dark/light theme persistence across sessions.

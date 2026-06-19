@@ -18,11 +18,13 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { useApp } from "@/lib/store";
 
 const PIE_COLORS = ["#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4"];
 
 export function MerchantView() {
   const { data } = useFetch<any>("/api/merchant-dashboard");
+  const { setView } = useApp();
 
   if (!data) {
     return (
@@ -52,7 +54,7 @@ export function MerchantView() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-1.5" /> Export</Button>
-          <Button size="sm"><QrCode className="h-4 w-4 mr-1.5" /> My QR Code</Button>
+          <Button size="sm" onClick={() => setView("merchant-qr")}><QrCode className="h-4 w-4 mr-1.5" /> My QR Code</Button>
         </div>
       </div>
 
@@ -236,13 +238,13 @@ export function MerchantView() {
       {/* Quick actions */}
       <div className="grid gap-3 sm:grid-cols-3">
         {[
-          { icon: QrCode, label: "Generate QR", desc: "Create payment QR code", color: "from-emerald-500 to-teal-600" },
-          { icon: Receipt, label: "Send Invoice", desc: "Email invoice to customer", color: "from-amber-500 to-orange-600" },
-          { icon: Zap, label: "Settle to Bank", desc: "Withdraw to bank account", color: "from-violet-500 to-purple-600" },
+          { icon: QrCode, label: "Generate QR", desc: "Create payment QR code", color: "from-emerald-500 to-teal-600", action: () => setView("merchant-qr") },
+          { icon: Receipt, label: "Send Invoice", desc: "Email invoice to customer", color: "from-amber-500 to-orange-600", action: () => {} },
+          { icon: Zap, label: "Settle to Bank", desc: "Withdraw to bank account", color: "from-violet-500 to-purple-600", action: () => {} },
         ].map((a) => {
           const Icon = a.icon;
           return (
-            <Card key={a.label} className="flex items-center gap-3 p-4 card-lift cursor-pointer">
+            <Card key={a.label} className="flex items-center gap-3 p-4 card-lift cursor-pointer" onClick={a.action}>
               <div className={cn("grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-gradient-to-br text-white shadow", a.color)}>
                 <Icon className="h-5 w-5" />
               </div>

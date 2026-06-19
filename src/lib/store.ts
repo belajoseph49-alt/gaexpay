@@ -14,12 +14,15 @@ export type View =
   | "budgets"
   | "scheduled"
   | "analytics"
+  | "exchange"
+  | "statement"
+  | "merchant"
+  | "merchant-qr"
   | "kyc"
   | "settings"
   | "support"
   | "admin"
-  | "referral"
-  | "merchant";
+  | "referral";
 
 interface AppState {
   view: View;

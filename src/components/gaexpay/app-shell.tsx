@@ -14,6 +14,9 @@ import { SavingsView } from "./views/savings-view";
 import { BudgetsView } from "./views/budgets-view";
 import { ScheduledView } from "./views/scheduled-view";
 import { AnalyticsView } from "./views/analytics-view";
+import { ExchangeView } from "./views/exchange-view";
+import { StatementView } from "./views/statement-view";
+import { MerchantQRView } from "./views/merchant-qr-view";
 import { KycView } from "./views/kyc-view";
 import { SettingsView } from "./views/settings-view";
 import { SupportView } from "./views/support-view";
@@ -38,12 +41,15 @@ export function AppShell() {
     budgets: <BudgetsView />,
     scheduled: <ScheduledView />,
     analytics: <AnalyticsView />,
+    exchange: <ExchangeView />,
+    statement: <StatementView />,
+    merchant: <MerchantView />,
+    "merchant-qr": <MerchantQRView />,
     kyc: <KycView />,
     settings: <SettingsView />,
     support: <SupportView />,
     admin: <AdminView />,
     referral: <ReferralView />,
-    merchant: <MerchantView />,
   };
 
   return (
