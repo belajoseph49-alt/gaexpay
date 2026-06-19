@@ -4,7 +4,10 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   QrCode, ScanLine, Receipt, Smartphone, Zap, Tv, Wifi, Droplet, GraduationCap,
-  Trophy, Landmark, Store, ChevronRight, Check, Loader2, X,
+  Trophy, Landmark, Store, ChevronRight, Check, Loader2, X, Flame, Phone,
+  FileWarning, ScrollText, Building2, BookOpen, School, FileText, Home,
+  Fuel, Car, Bus, Film, Gamepad2, HeartPulse, Dumbbell, Dice5, Gift, Key,
+  Package, ShieldCheck,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useFetch } from "@/hooks/use-fetch";
+import { BILL_CATEGORIES } from "@/lib/gaexpay";
 import { formatMoney, MOBILE_MONEY_PROVIDERS } from "@/lib/gaexpay";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,6 +26,14 @@ import { cn } from "@/lib/utils";
 const BILLER_ICONS: Record<string, any> = {
   electricity: Zap, water: Droplet, internet: Wifi, tv: Tv,
   education: GraduationCap, betting: Trophy, government: Landmark,
+  gas: Flame, phone: Phone, taxes: FileWarning, customs: Package,
+  fines: FileWarning, permits: ScrollText, social: Building2,
+  university: BookOpen, college: BookOpen, school: School, exams: FileText,
+  loan: Building2, insurance: ShieldCheck, mortgage: Home,
+  fuel: Fuel, toll: Car, transport: Bus,
+  streaming: Film, gaming: Gamepad2,
+  health: HeartPulse, gym: Dumbbell,
+  donations: Gift, rent: Key, other: Receipt,
 };
 
 const NETWORKS = [
@@ -36,7 +48,7 @@ export function PayView() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Pay & Bills</h1>
-        <p className="text-sm text-muted-foreground">Scan QR, pay merchants, settle bills & buy airtime</p>
+        <p className="text-sm text-muted-foreground">Pay EVERYTHING — utilities, taxes, customs, school fees, airtime & more</p>
       </div>
       <Tabs defaultValue="qr">
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
@@ -205,8 +217,16 @@ function BillsPay() {
   const [amount, setAmount] = useState("");
   const [paying, setPaying] = useState(false);
 
-  const cats = ["all", ...Array.from(new Set(billers.map((b) => b.category)))];
-  const filtered = cat === "all" ? billers : billers.filter((b) => b.category === cat);
+  // Group expanded bill categories into sections
+  const categoryGroups = [
+    { label: "Utilities", cats: ["electricity", "water", "gas", "internet", "tv", "phone"] },
+    { label: "Government & Taxes", cats: ["taxes", "customs", "fines", "permits", "social"] },
+    { label: "Education", cats: ["university", "college", "school", "exams"] },
+    { label: "Financial", cats: ["loan", "insurance", "mortgage"] },
+    { label: "Transport", cats: ["fuel", "toll", "transport"] },
+    { label: "Entertainment & Health", cats: ["streaming", "gaming", "health", "gym"] },
+    { label: "Other", cats: ["betting", "donations", "rent", "other"] },
+  ];
 
   const pay = async () => {
     setPaying(true);
@@ -215,69 +235,64 @@ function BillsPay() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         amount: Number(amount), currency: "NGN", type: "bill", category: "general",
-        counterpartyName: selected.name, method: "wallet", description: `${selected.name} bill payment`,
+        counterpartyName: selected.label || selected.name, method: "wallet", description: `${selected.label || selected.name} bill payment`,
       }),
     });
     setPaying(false);
-    toast.success(`₦${Number(amount).toLocaleString()} paid to ${selected.name}`);
+    toast.success(`₦${Number(amount).toLocaleString()} paid for ${selected.label || selected.name}`);
     setSelected(null); setAccount(""); setAmount("");
   };
 
   return (
     <div>
       {!selected ? (
-        <>
-          <div className="mb-4 flex flex-wrap gap-2">
-            {cats.map((c) => (
-              <button
-                key={c}
-                onClick={() => setCat(c)}
-                className={cn(
-                  "rounded-full border px-3 py-1.5 text-xs font-medium capitalize transition",
-                  cat === c ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted",
-                )}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((b) => {
-              const Icon = BILLER_ICONS[b.category] || Receipt;
-              return (
-                <Card key={b.id} className="card-lift cursor-pointer p-4" onClick={() => setSelected(b)}>
-                  <div className="flex items-center gap-3">
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate">{b.name}</p>
-                      <p className="text-xs text-muted-foreground capitalize">{b.category}</p>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        </>
+        <div className="space-y-6">
+          {categoryGroups.map((group) => {
+            const groupCats = BILL_CATEGORIES.filter((c) => group.cats.includes(c.id));
+            return (
+              <div key={group.label}>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">{group.label}</h3>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {groupCats.map((catItem) => (
+                    <Card
+                      key={catItem.id}
+                      className="card-lift cursor-pointer p-4"
+                      onClick={() => setSelected(catItem)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                          <span className="text-xl">{catItem.icon}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate">{catItem.label}</p>
+                          <p className="text-xs text-muted-foreground truncate">{catItem.desc}</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <Card className="mx-auto max-w-md p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="grid h-11 w-11 place-items-center rounded-lg bg-primary/10 text-primary">
-                {(() => { const I = BILLER_ICONS[selected.category] || Receipt; return <I className="h-5 w-5" />; })()}
+                <span className="text-xl">{selected.icon}</span>
               </div>
               <div>
-                <p className="font-semibold">{selected.name}</p>
-                <p className="text-xs text-muted-foreground capitalize">{selected.category}</p>
+                <p className="font-semibold">{selected.label}</p>
+                <p className="text-xs text-muted-foreground">{selected.desc}</p>
               </div>
             </div>
             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setSelected(null)}><X className="h-4 w-4" /></Button>
           </div>
           <div className="space-y-3">
             <div className="space-y-2">
-              <Label>Account / Meter Number</Label>
+              <Label>Account / Reference Number</Label>
               <Input value={account} onChange={(e) => setAccount(e.target.value)} placeholder="e.g. 0123456789" />
             </div>
             <div className="space-y-2">

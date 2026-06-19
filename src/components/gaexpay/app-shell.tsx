@@ -17,6 +17,7 @@ import { AnalyticsView } from "./views/analytics-view";
 import { CalendarView } from "./views/calendar-view";
 import { SpendingMapView } from "./views/spending-map-view";
 import { ExchangeView } from "./views/exchange-view";
+import { CryptoView } from "./views/crypto-view";
 import { StatementView } from "./views/statement-view";
 import { AchievementsView } from "./views/achievements-view";
 import { MerchantQRView } from "./views/merchant-qr-view";
@@ -50,6 +51,7 @@ export function AppShell() {
     calendar: <CalendarView />,
     "spending-map": <SpendingMapView />,
     exchange: <ExchangeView />,
+    crypto: <CryptoView />,
     statement: <StatementView />,
     achievements: <AchievementsView />,
     merchant: <MerchantView />,

@@ -17,6 +17,7 @@ export type View =
   | "analytics"
   | "spending-map"
   | "exchange"
+  | "crypto"
   | "statement"
   | "achievements"
   | "merchant"
