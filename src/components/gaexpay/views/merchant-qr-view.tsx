@@ -17,9 +17,11 @@ import { useApp } from "@/lib/store";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 export function MerchantQRView() {
   const { setView } = useApp();
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const { data } = useFetch<any>("/api/merchant-qr");
   const [amount, setAmount] = useState("");
 
@@ -203,7 +205,7 @@ export function MerchantQRView() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Total volume</span>
-                <span className="text-lg font-bold tabular-nums">{formatMoney(0, "NGN")}</span>
+                <span className="text-lg font-bold tabular-nums">{fmt(0)}</span>
               </div>
               <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => setView("merchant")}>
                 View Full Dashboard

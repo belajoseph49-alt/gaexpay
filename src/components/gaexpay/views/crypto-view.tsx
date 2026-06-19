@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AnimatedNumber } from "@/components/gaexpay/animated-number";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 const CRYPTO_META: Record<string, any> = {
   BTC: { name: "Bitcoin", icon: "🪙", color: "#F7931A", gradient: "from-amber-500 to-orange-600" },
@@ -38,6 +39,7 @@ export function CryptoView() {
   const { data: walletData, reload } = useFetch<any>("/api/crypto/wallets");
   const { data: ratesData } = useFetch<any>("/api/crypto/rates");
   const [showConverter, setShowConverter] = useState(false);
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
 
   const wallets = walletData?.wallets ?? [];
   const totalValueUSD = walletData?.totalValueUSD ?? 0;
@@ -75,7 +77,7 @@ export function CryptoView() {
               $<AnimatedNumber value={totalValueUSD} decimals={2} />
             </h2>
             <p className="mt-1 text-sm text-white/70">
-              ≈ <AnimatedNumber value={totalValueNGN} prefix="₦" decimals={2} />
+              ≈ <AnimatedNumber value={totalValueNGN} prefix={symbol} decimals={2} />
             </p>
             <div className="mt-2 flex items-center gap-2">
               <Badge className="bg-emerald-500/20 text-emerald-400 border-0">
@@ -223,7 +225,7 @@ export function CryptoView() {
                       </span>
                     </td>
                     <td className="py-2.5 pr-3 text-right tabular-nums text-xs">
-                      ₦{r.prices?.NGN ? r.prices.NGN.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
+                      {symbol}{r.prices?.NGN ? r.prices.NGN.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
                     </td>
                     <td className="py-2.5 text-right tabular-nums text-xs text-muted-foreground">
                       ${(r.marketCap / 1e9).toFixed(2)}B

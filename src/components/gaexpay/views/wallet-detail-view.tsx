@@ -35,6 +35,7 @@ const TYPE_ICONS: Record<string, any> = {
 };
 
 export function WalletDetailView() {
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const { selectedWalletId, setView } = useApp();
   const { data } = useFetch<any>(selectedWalletId ? `/api/wallets/${selectedWalletId}` : null);
 

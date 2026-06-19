@@ -19,12 +19,14 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/lib/store";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 const PIE_COLORS = ["#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4"];
 
 export function MerchantView() {
   const { data } = useFetch<any>("/api/merchant-dashboard");
   const { setView } = useApp();
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
 
   if (!data) {
     return (
@@ -39,10 +41,10 @@ export function MerchantView() {
   const { merchant, stats, recentPayments, series, topCustomers, methodBreakdown } = data;
 
   const kpis = [
-    { icon: TrendingUp, label: "Today's Sales", value: formatMoney(stats.todayVolume, "NGN"), sub: `${stats.todayCount} orders`, color: "bg-emerald-500/15 text-emerald-500" },
-    { icon: ShoppingBag, label: "This Week", value: formatMoney(stats.weekVolume, "NGN"), sub: `${stats.weekCount} orders`, color: "bg-sky-500/15 text-sky-500" },
-    { icon: Wallet, label: "This Month", value: formatMoney(stats.monthVolume, "NGN"), sub: `${stats.monthCount} orders`, color: "bg-violet-500/15 text-violet-500" },
-    { icon: Receipt, label: "Avg Order Value", value: formatMoney(stats.avgOrderValue, "NGN"), sub: `${stats.totalCount} total`, color: "bg-amber-500/15 text-amber-500" },
+    { icon: TrendingUp, label: "Today's Sales", value: fmt(stats.todayVolume), sub: `${stats.todayCount} orders`, color: "bg-emerald-500/15 text-emerald-500" },
+    { icon: ShoppingBag, label: "This Week", value: fmt(stats.weekVolume), sub: `${stats.weekCount} orders`, color: "bg-sky-500/15 text-sky-500" },
+    { icon: Wallet, label: "This Month", value: fmt(stats.monthVolume), sub: `${stats.monthCount} orders`, color: "bg-violet-500/15 text-violet-500" },
+    { icon: Receipt, label: "Avg Order Value", value: fmt(stats.avgOrderValue), sub: `${stats.totalCount} total`, color: "bg-amber-500/15 text-amber-500" },
   ];
 
   return (
@@ -84,7 +86,7 @@ export function MerchantView() {
           <div className="text-right">
             <p className="text-xs text-white/60">Total Revenue</p>
             <p className="text-3xl font-bold tabular-nums">
-              <AnimatedNumber value={stats.totalVolume} prefix="₦" decimals={2} />
+              <AnimatedNumber value={stats.totalVolume} prefix={symbol} decimals={2} />
             </p>
             <p className="text-xs text-white/50">{stats.totalCount} lifetime orders</p>
           </div>
@@ -159,7 +161,7 @@ export function MerchantView() {
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
                   {m.name}
                 </span>
-                <span className="font-medium tabular-nums">{formatMoney(m.value, "NGN")}</span>
+                <span className="font-medium tabular-nums">{fmt(m.value)}</span>
               </div>
             ))}
           </div>
@@ -227,7 +229,7 @@ export function MerchantView() {
                     <p className="text-sm font-medium truncate">{c.name}</p>
                     <p className="text-xs text-muted-foreground">{c.count} orders</p>
                   </div>
-                  <span className="text-sm font-semibold tabular-nums">{formatMoney(c.total, "NGN")}</span>
+                  <span className="text-sm font-semibold tabular-nums">{fmt(c.total)}</span>
                 </div>
               ))}
             </div>

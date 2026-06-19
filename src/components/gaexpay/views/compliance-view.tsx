@@ -36,6 +36,7 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 /* ------------------------- helpers ------------------------- */
 const fmtNum = (n: number) => new Intl.NumberFormat("en-US").format(n);
@@ -1005,6 +1006,7 @@ function KycQueueTab({ data }: { data: ComplianceData }) {
  * ========================================================= */
 function RulesTab({ data }: { data: ComplianceData }) {
   const [rules, setRules] = useState(data.rules);
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const [riskThreshold, setRiskThreshold] = useState(70);
 
   const toggleRule = (id: string) => {

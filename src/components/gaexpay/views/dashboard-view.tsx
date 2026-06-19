@@ -22,6 +22,7 @@ import {
 } from "recharts";
 import { AnimatedNumber } from "@/components/gaexpay/animated-number";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 const QUICK_ACTIONS = [
   { id: "send", label: "Send", icon: SendHorizontal, color: "from-emerald-500 to-teal-600" },
@@ -34,6 +35,7 @@ const QUICK_ACTIONS = [
 
 export function DashboardView() {
   const { setView, setSendPrefill, userCurrency } = useApp();
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const { data: walletData } = useFetch<{ wallets: any[]; totalNGN: number }>("/api/wallets");
   const { data: txData } = useFetch<{ transactions: any[] }>("/api/transactions?limit=8");
   const { data: userData } = useFetch<{ user: any }>("/api/me");
@@ -173,7 +175,7 @@ export function DashboardView() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Income (MTD)</p>
-                  <p className="text-lg font-bold tabular-nums">{formatMoney(income, "NGN")}</p>
+                  <p className="text-lg font-bold tabular-nums">{fmt(income)}</p>
                 </div>
               </div>
               <Badge variant="outline" className="text-emerald-600 border-emerald-500/30">+8.2%</Badge>
@@ -187,7 +189,7 @@ export function DashboardView() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Spending (MTD)</p>
-                  <p className="text-lg font-bold tabular-nums">{formatMoney(expense, "NGN")}</p>
+                  <p className="text-lg font-bold tabular-nums">{fmt(expense)}</p>
                 </div>
               </div>
               <Badge variant="outline" className="text-rose-600 border-rose-500/30">-3.1%</Badge>
@@ -328,7 +330,7 @@ export function DashboardView() {
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: ["#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4", "#f43f5e"][i % 6] }} />
                   <span className="capitalize">{c.name}</span>
                 </span>
-                <span className="font-medium tabular-nums">{formatMoney(c.value, "NGN")}</span>
+                <span className="font-medium tabular-nums">{fmt(c.value)}</span>
               </div>
             ))}
           </div>
@@ -458,6 +460,7 @@ function buildCategoryBreakdown(transactions: any[]) {
 }
 
 function DashboardSavingsPreview({ onClick }: { onClick: () => void }) {
+  const { fmt } = useFormatMoney();
   const { data } = useFetch<{ goals: any[]; totalSaved: number }>("/api/savings-goals");
   const goals = (data?.goals ?? []).filter((g) => g.status !== "completed").slice(0, 3);
   if (!data) return <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-12" />)}</div>;
@@ -484,7 +487,7 @@ function DashboardSavingsPreview({ onClick }: { onClick: () => void }) {
                 </div>
                 <Progress value={pct} className="h-1.5 mt-1" />
                 <p className="text-[10px] text-muted-foreground mt-0.5">
-                  {formatMoney(g.currentAmount, "NGN")} of {formatMoney(g.targetAmount, "NGN")}
+                  {fmt(g.currentAmount)} of {fmt(g.targetAmount)}
                 </p>
               </div>
             </div>
@@ -496,6 +499,7 @@ function DashboardSavingsPreview({ onClick }: { onClick: () => void }) {
 }
 
 function DashboardBudgetsPreview({ onClick }: { onClick: () => void }) {
+  const { fmt } = useFormatMoney();
   const { data } = useFetch<{ budgets: any[]; totalLimit: number; totalSpent: number }>("/api/budgets");
   const budgets = (data?.budgets ?? []).slice(0, 4);
   if (!data) return <div className="space-y-2">{[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-10" />)}</div>;
@@ -518,7 +522,7 @@ function DashboardBudgetsPreview({ onClick }: { onClick: () => void }) {
             <div className="flex items-center justify-between text-xs mb-1">
               <span className="font-medium">{b.category}</span>
               <span className={cn("tabular-nums", over ? "text-rose-600" : warn ? "text-amber-600" : "text-muted-foreground")}>
-                {formatMoney(b.spent, "NGN")} / {formatMoney(b.limit, "NGN")}
+                {fmt(b.spent)} / {fmt(b.limit)}
               </span>
             </div>
             <Progress
@@ -533,6 +537,7 @@ function DashboardBudgetsPreview({ onClick }: { onClick: () => void }) {
 }
 
 function FinancialHealthWidget({ onClick }: { onClick: () => void }) {
+  const { fmt } = useFormatMoney();
   const { data } = useFetch<any>("/api/insights");
   if (!data) return <Card className="p-5"><Skeleton className="h-32" /></Card>;
 

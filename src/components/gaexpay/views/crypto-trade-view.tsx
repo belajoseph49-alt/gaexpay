@@ -23,6 +23,7 @@ import { AnimatedNumber } from "@/components/gaexpay/animated-number";
 import { Confetti } from "@/components/gaexpay/confetti";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -90,8 +91,8 @@ function formatCrypto(amount: number, code: string): string {
 }
 
 function formatFiat(amount: number, currency: string): string {
-  const symbol = CURRENCY_SYMBOL[currency] ?? "";
-  return `${symbol}${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const sym = CURRENCY_SYMBOL[currency] ?? "";
+  return `${sym}${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatPrice(price: number): string {
@@ -110,6 +111,7 @@ export function CryptoTradeView() {
   const { data: walletData, reload: reloadWallets } = useFetch<{ wallets: any[] }>("/api/crypto/wallets");
 
   const [tab, setTab] = useState<"buy" | "sell">("buy");
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
 
   // Shared selections
   const [crypto, setCrypto] = useState("BTC");

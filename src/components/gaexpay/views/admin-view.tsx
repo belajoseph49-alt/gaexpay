@@ -22,6 +22,7 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 export function AdminView() {
   return (
@@ -158,6 +159,7 @@ function Overview() {
 function UsersTab() {
   const { data } = useFetch<{ users: any[] }>("/api/admin/users");
   const [search, setSearch] = useState("");
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const users = (data?.users ?? []).filter((u) =>
     !search || `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(search.toLowerCase())
   );

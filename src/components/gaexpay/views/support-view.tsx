@@ -18,6 +18,7 @@ import { timeAgo, formatDateTime } from "@/lib/gaexpay";
 import { useApp } from "@/lib/store";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 const FAQS = [
   { q: "How do I verify my identity (KYC)?", a: "Go to Identity (KYC) section, upload a valid government-issued ID and take a selfie. Verification usually completes within 1-2 hours." },
@@ -32,6 +33,7 @@ export function SupportView() {
   const { data } = useFetch<{ tickets: any[] }>("/api/support");
   const [activeTicket, setActiveTicket] = useState<any>(null);
   const { setAiOpen } = useApp();
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const tickets = data?.tickets ?? [];
 
   return (

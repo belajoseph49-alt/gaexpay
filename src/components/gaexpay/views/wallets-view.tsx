@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 const WALLET_GRADIENTS: Record<string, string> = {
   NGN: "from-emerald-600 to-teal-700",
@@ -35,6 +36,7 @@ export function WalletsView() {
   const { data, reload } = useFetch<{ wallets: any[]; totalNGN: number }>("/api/wallets");
   const { data: ratesData } = useFetch<{ rates: any[] }>("/api/exchange-rates");
   const { setView, setSelectedWalletId } = useApp();
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const [hidden, setHidden] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -86,7 +88,7 @@ export function WalletsView() {
           <div>
             <p className="text-sm text-white/80">Total Portfolio Value</p>
             <div className="mt-1 flex items-center gap-2">
-              <h2 className="text-3xl font-bold tabular-nums">{hidden ? "₦ • • • •" : formatMoney(totalNGN, "NGN")}</h2>
+              <h2 className="text-3xl font-bold tabular-nums">{hidden ? "₦ • • • •" : fmt(totalNGN)}</h2>
               <button onClick={() => setHidden(!hidden)} className="text-white/70 hover:text-white">
                 {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>

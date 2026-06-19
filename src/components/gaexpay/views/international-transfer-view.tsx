@@ -31,6 +31,7 @@ import { useFetch } from "@/hooks/use-fetch";
 import { useApp } from "@/lib/store";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 // ---- Types --------------------------------------------------------------
 
@@ -190,6 +191,7 @@ export function InternationalTransferView() {
 
 function HeaderStrip() {
   const { setView } = useApp();
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>

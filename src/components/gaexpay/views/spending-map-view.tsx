@@ -11,6 +11,7 @@ import { formatMoney, formatCompact } from "@/lib/gaexpay";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AnimatedNumber } from "@/components/gaexpay/animated-number";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 const COUNTRY_FLAGS: Record<string, string> = {
   Nigeria: "🇳🇬",
@@ -22,6 +23,7 @@ const COUNTRY_FLAGS: Record<string, string> = {
 };
 
 export function SpendingMapView() {
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const { data } = useFetch<any>("/api/spending-map");
 
   if (!data) {
@@ -52,7 +54,7 @@ export function SpendingMapView() {
           </div>
           <p className="text-xs text-muted-foreground">Total Spent</p>
           <p className="text-xl font-bold tabular-nums">
-            <AnimatedNumber value={totalSpent} prefix="₦" decimals={2} />
+            <AnimatedNumber value={totalSpent} prefix={symbol} decimals={2} />
           </p>
         </Card>
         <Card className="p-5 card-lift">
@@ -116,7 +118,7 @@ export function SpendingMapView() {
                         <span className="text-sm font-medium truncate">{loc.name}</span>
                         <span className="text-xs text-muted-foreground shrink-0">{loc.city}</span>
                       </div>
-                      <span className="text-sm font-semibold tabular-nums">{formatMoney(loc.totalSpent, "NGN")}</span>
+                      <span className="text-sm font-semibold tabular-nums">{fmt(loc.totalSpent)}</span>
                     </div>
                     <div className="h-3 rounded-full bg-muted overflow-hidden">
                       <motion.div
@@ -197,7 +199,7 @@ export function SpendingMapView() {
                   <td className="py-2.5 pr-3 text-xs">{COUNTRY_FLAGS[loc.country]} {loc.city}, {loc.country}</td>
                   <td className="py-2.5 pr-3 capitalize text-xs">{loc.category}</td>
                   <td className="py-2.5 pr-3 text-right tabular-nums">{loc.txCount}</td>
-                  <td className="py-2.5 text-right font-semibold tabular-nums">{formatMoney(loc.totalSpent, "NGN")}</td>
+                  <td className="py-2.5 text-right font-semibold tabular-nums">{fmt(loc.totalSpent)}</td>
                 </tr>
               ))}
             </tbody>

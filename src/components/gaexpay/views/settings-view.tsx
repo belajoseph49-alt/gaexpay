@@ -21,6 +21,7 @@ import { LANGUAGES, CURRENCIES, timeAgo } from "@/lib/gaexpay";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 export function SettingsView() {
   const { data } = useFetch<{ user: any }>("/api/me");
@@ -30,6 +31,7 @@ export function SettingsView() {
   const devices = devData?.devices ?? [];
 
   const [mfa, setMfa] = useState(user?.mfaEnabled ?? true);
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const [bio, setBio] = useState(user?.biometricEnabled ?? true);
   const [emailNotif, setEmailNotif] = useState(user?.emailNotif ?? true);
   const [pushNotif, setPushNotif] = useState(user?.pushNotif ?? true);

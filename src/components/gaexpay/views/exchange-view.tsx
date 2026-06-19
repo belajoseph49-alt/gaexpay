@@ -21,12 +21,14 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { AnimatedNumber } from "@/components/gaexpay/animated-number";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 export function ExchangeView() {
   const { data: walletData, reload } = useFetch<{ wallets: any[] }>("/api/wallets");
   const { data: ratesData } = useFetch<{ rates: any[] }>("/api/exchange-rates");
   const wallets = walletData?.wallets ?? [];
   const [fromId, setFromId] = useState<string>("");
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const [toId, setToId] = useState<string>("");
   const [amount, setAmount] = useState("");
   const [preview, setPreview] = useState<any>(null);

@@ -35,6 +35,7 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 const fmtNGN = (n: number, compact = false) => {
   if (compact) {
@@ -229,6 +230,7 @@ export function BusinessProView() {
  *  Dashboard Tab — Hero + charts + top products + heatmap
  * =========================================================== */
 function DashboardTab({ data }: { data: BusinessProData }) {
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const k = data.kpis;
   const maxHeat = Math.max(...data.heatmap.map((h) => h.value), 1);
 
@@ -261,7 +263,7 @@ function DashboardTab({ data }: { data: BusinessProData }) {
               icon={<TrendingUp className="h-4 w-4" />}
               label="MTD Revenue"
               value={k.monthRevenue}
-              prefix="₦"
+              prefix={symbol}
               format="compact"
               accent="emerald"
               sub={`${k.monthOrders} orders this month`}
@@ -277,7 +279,7 @@ function DashboardTab({ data }: { data: BusinessProData }) {
               icon={<Receipt className="h-4 w-4" />}
               label="Avg Order Value"
               value={k.avgOrderValue}
-              prefix="₦"
+              prefix={symbol}
               format="compact"
               accent="cyan"
               sub="Across all orders"
@@ -611,6 +613,7 @@ function DashboardTab({ data }: { data: BusinessProData }) {
  * =========================================================== */
 function InvoicesTab({ data }: { data: BusinessProData }) {
   const [createOpen, setCreateOpen] = useState(false);
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const [form, setForm] = useState({
     customer: "", amount: "", dueDate: "", items: "", notes: "",
   });
@@ -647,7 +650,7 @@ function InvoicesTab({ data }: { data: BusinessProData }) {
             </div>
             <p className="text-xs text-muted-foreground">Outstanding</p>
             <p className="mt-1 text-2xl font-bold tabular-nums">
-              <AnimatedNumber value={summary.outstanding} prefix="₦" decimals={0} />
+              <AnimatedNumber value={summary.outstanding} prefix={symbol} decimals={0} />
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground">Awaiting payment</p>
           </Card>
@@ -664,7 +667,7 @@ function InvoicesTab({ data }: { data: BusinessProData }) {
             </div>
             <p className="text-xs text-muted-foreground">Overdue</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-rose-600">
-              <AnimatedNumber value={summary.overdue} prefix="₦" decimals={0} />
+              <AnimatedNumber value={summary.overdue} prefix={symbol} decimals={0} />
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground">Past due date</p>
           </Card>
@@ -681,7 +684,7 @@ function InvoicesTab({ data }: { data: BusinessProData }) {
             </div>
             <p className="text-xs text-muted-foreground">Paid</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-600">
-              <AnimatedNumber value={summary.paidThisMonth} prefix="₦" decimals={0} />
+              <AnimatedNumber value={summary.paidThisMonth} prefix={symbol} decimals={0} />
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground">Collected this month</p>
           </Card>
@@ -951,6 +954,7 @@ function StaffTab({ data }: { data: BusinessProData }) {
  *  Settlements Tab — Available balance + Settle + History
  * =========================================================== */
 function SettlementsTab({ data }: { data: BusinessProData }) {
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const [settleOpen, setSettleOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [bankId, setBankId] = useState(data.settlements.bankAccounts.find((b) => b.primary)?.id || data.settlements.bankAccounts[0]?.id || "");
@@ -989,7 +993,7 @@ function SettlementsTab({ data }: { data: BusinessProData }) {
                 <span className="text-xs font-medium uppercase tracking-wider opacity-90">Available Balance</span>
               </div>
               <p className="text-3xl font-bold tabular-nums">
-                <AnimatedNumber value={s.availableBalance} prefix="₦" decimals={0} />
+                <AnimatedNumber value={s.availableBalance} prefix={symbol} decimals={0} />
               </p>
               <p className="mt-1 text-xs opacity-80">Ready to settle to your bank</p>
               <Button
@@ -1012,7 +1016,7 @@ function SettlementsTab({ data }: { data: BusinessProData }) {
               <p className="text-xs font-medium text-muted-foreground">Pending Settlements</p>
             </div>
             <p className="text-2xl font-bold tabular-nums text-amber-600">
-              <AnimatedNumber value={s.pendingSettlements} prefix="₦" decimals={0} />
+              <AnimatedNumber value={s.pendingSettlements} prefix={symbol} decimals={0} />
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground">
               Next: {new Date(s.nextSettlementDate).toLocaleDateString("en", { month: "short", day: "numeric" })}
@@ -1029,7 +1033,7 @@ function SettlementsTab({ data }: { data: BusinessProData }) {
               <p className="text-xs font-medium text-muted-foreground">Settled This Month</p>
             </div>
             <p className="text-2xl font-bold tabular-nums text-emerald-600">
-              <AnimatedNumber value={s.settledThisMonth} prefix="₦" decimals={0} />
+              <AnimatedNumber value={s.settledThisMonth} prefix={symbol} decimals={0} />
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground">Across {data.settlements.history.filter((h) => h.status === "completed").length} settlements</p>
           </Card>

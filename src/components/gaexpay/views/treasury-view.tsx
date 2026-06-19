@@ -23,6 +23,7 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 /* ------------------------- helpers ------------------------- */
 const fmtNum = (n: number) => new Intl.NumberFormat("en-US").format(Math.round(n));
@@ -167,6 +168,7 @@ const ALLOCATION_COLORS = [
  *  Main view
  * ========================================================= */
 export function TreasuryView() {
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const { data, loading, reload } = useFetch<TreasuryData>("/api/treasury");
 
   return (
@@ -257,6 +259,7 @@ export function TreasuryView() {
  *  Tab 1: Overview
  * ========================================================= */
 function OverviewTab({ data }: { data: TreasuryData }) {
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const tr = data.totalReserves;
   const liq = data.liquidity;
   const ratioGauge = [
@@ -293,7 +296,7 @@ function OverviewTab({ data }: { data: TreasuryData }) {
               <AnimatedNumber value={tr.totalUSD} prefix="$" duration={1500} />
             </p>
             <p className="mt-1 text-base font-medium text-slate-300">
-              ≈ <AnimatedNumber value={tr.totalNGN} prefix="₦" duration={1500} /> NGN
+              ≈ <AnimatedNumber value={tr.totalNGN} prefix={symbol} duration={1500} /> NGN
             </p>
 
             {/* Change + breakdown */}
@@ -667,6 +670,7 @@ function LiquidityCard({
  *  Tab 2: Reserves (currency reserve table + allocation)
  * ========================================================= */
 function ReservesTab({ data }: { data: TreasuryData }) {
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   return (
     <div className="space-y-5">
       {/* Reserves hero summary */}
@@ -746,7 +750,7 @@ function ReservesTab({ data }: { data: TreasuryData }) {
                     </td>
                     <td className="py-3 pr-3 text-right tabular-nums">
                       <p className="text-xs font-semibold">{fmtUSD(c.usdValue, true)}</p>
-                      <p className="text-[10px] text-muted-foreground">≈ ₦{fmtNum(c.usdValue * 1535)}</p>
+                      <p className="text-[10px] text-muted-foreground">≈ {symbol}{fmtNum(c.usdValue * 1535)}</p>
                     </td>
                     <td className="py-3 pr-3 text-right tabular-nums">
                       <p className="text-xs">{c.symbol}{fmtNum(c.threshold)}</p>
@@ -891,6 +895,7 @@ function HeroStat({
  *  Tab 3: FX Exposure
  * ========================================================= */
 function FxExposureTab({ data }: { data: TreasuryData }) {
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const fx = data.fxExposure;
   const maxNet = Math.max(...fx.netPositions.map((p) => Math.abs(p.netUSD)), 1);
 
@@ -1126,7 +1131,7 @@ function FxExposureTab({ data }: { data: TreasuryData }) {
                     {p.netUSD >= 0 ? "+" : "−"}{fmtUSD(Math.abs(p.netUSD))}
                   </td>
                   <td className="py-3 pr-3 text-right tabular-nums text-xs">
-                    {p.netNGN >= 0 ? "+" : "−"}₦{fmtNum(Math.abs(p.netNGN))}
+                    {p.netNGN >= 0 ? "+" : "−"}{symbol}{fmtNum(Math.abs(p.netNGN))}
                   </td>
                   <td className="py-3 pr-3">
                     <div className="w-32 h-1.5 overflow-hidden rounded-full bg-muted">

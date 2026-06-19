@@ -15,10 +15,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AnimatedNumber } from "@/components/gaexpay/animated-number";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 export function StatementView() {
   const now = new Date();
   const [month, setMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const { data } = useFetch<any>(`/api/statement?month=${month}`);
 
   const changeMonth = (delta: number) => {
@@ -114,7 +116,7 @@ export function StatementView() {
           </div>
           <p className="text-xs text-muted-foreground">Total Inflow</p>
           <p className="text-xl font-bold text-emerald-600 tabular-nums">
-            <AnimatedNumber value={summary.totalIn} prefix="₦" decimals={2} />
+            <AnimatedNumber value={summary.totalIn} prefix={symbol} decimals={2} />
           </p>
         </Card>
         <Card className="p-5 card-lift">
@@ -123,7 +125,7 @@ export function StatementView() {
           </div>
           <p className="text-xs text-muted-foreground">Total Outflow</p>
           <p className="text-xl font-bold text-rose-600 tabular-nums">
-            <AnimatedNumber value={summary.totalOut} prefix="₦" decimals={2} />
+            <AnimatedNumber value={summary.totalOut} prefix={symbol} decimals={2} />
           </p>
         </Card>
         <Card className="p-5 card-lift">
@@ -132,7 +134,7 @@ export function StatementView() {
           </div>
           <p className="text-xs text-muted-foreground">Net Flow</p>
           <p className={cn("text-xl font-bold tabular-nums", summary.net >= 0 ? "text-emerald-600" : "text-rose-600")}>
-            <AnimatedNumber value={summary.net} prefix="₦" decimals={2} />
+            <AnimatedNumber value={summary.net} prefix={symbol} decimals={2} />
           </p>
         </Card>
         <Card className="p-5 card-lift">
@@ -141,7 +143,7 @@ export function StatementView() {
           </div>
           <p className="text-xs text-muted-foreground">Fees Paid</p>
           <p className="text-xl font-bold tabular-nums">
-            <AnimatedNumber value={summary.totalFees} prefix="₦" decimals={2} />
+            <AnimatedNumber value={summary.totalFees} prefix={symbol} decimals={2} />
           </p>
         </Card>
       </div>
@@ -157,7 +159,7 @@ export function StatementView() {
                   <p className="text-sm font-medium capitalize">{c.name}</p>
                   <p className="text-xs text-muted-foreground">{c.count} transactions</p>
                 </div>
-                <span className="text-sm font-bold tabular-nums">{formatMoney(c.amount, "NGN")}</span>
+                <span className="text-sm font-bold tabular-nums">{fmt(c.amount)}</span>
               </div>
             ))}
           </div>

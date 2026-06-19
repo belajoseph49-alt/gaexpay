@@ -37,6 +37,7 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 /* ------------------------- helpers ------------------------- */
 const fmtNum = (n: number) => new Intl.NumberFormat("en-US").format(n);
@@ -245,6 +246,7 @@ export function DeveloperPortalView() {
  * ========================================================= */
 function ApiKeysTab({ data }: { data: DeveloperData }) {
   const [createOpen, setCreateOpen] = useState(false);
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const [newKey, setNewKey] = useState<{ name: string; permissions: string[]; environment: string }>({
     name: "", permissions: ["read"], environment: "production",
   });

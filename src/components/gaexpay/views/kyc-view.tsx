@@ -14,6 +14,7 @@ import { useFetch } from "@/hooks/use-fetch";
 import { KYC_TIERS, formatDate } from "@/lib/gaexpay";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 const DOC_TYPES = [
   { id: "national_id", label: "National ID Card", icon: IdCard },
@@ -25,6 +26,7 @@ const DOC_TYPES = [
 export function KycView() {
   const { data, reload } = useFetch<any>("/api/kyc");
   const [submitting, setSubmitting] = useState(false);
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
 
   const status = data?.kycStatus || "verified";
   const tier = data?.kycTier ?? 3;
@@ -112,7 +114,7 @@ export function KycView() {
                   {unlocked && !current && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
                 </div>
                 <p className="text-xs text-muted-foreground mb-2">Daily limit</p>
-                <p className="text-lg font-bold tabular-nums">₦{t.daily.toLocaleString()}</p>
+                <p className="text-lg font-bold tabular-nums">{symbol}{t.daily.toLocaleString()}</p>
                 <div className="mt-3 space-y-1">
                   {t.features.map((f) => (
                     <div key={f} className="flex items-start gap-1.5 text-xs">

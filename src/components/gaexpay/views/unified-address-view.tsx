@@ -23,6 +23,7 @@ import { useApp } from "@/lib/store";
 import { formatMoney, timeAgo } from "@/lib/gaexpay";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 // ---- Types ---------------------------------------------------------------
 
@@ -170,6 +171,7 @@ export function UnifiedAddressView() {
 
 function HeaderStrip({ onReload, loading }: { onReload: () => void; loading: boolean }) {
   const { setView } = useApp();
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
@@ -927,6 +929,7 @@ function HowItWorks() {
 // ---- Recent incoming payments --------------------------------------------
 
 function RecentIncoming({ incoming, stats }: { incoming: IncomingTx[]; stats: any }) {
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const total = useMemo(
     () => incoming.reduce((sum, t) => sum + (t.currency === "NGN" ? t.amount : 0), 0),
     [incoming],
@@ -945,7 +948,7 @@ function RecentIncoming({ incoming, stats }: { incoming: IncomingTx[]; stats: an
         </div>
         {total > 0 && (
           <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-0">
-            <TrendingUp className="h-3 w-3 mr-1" /> {formatMoney(total, "NGN")} in NGN
+            <TrendingUp className="h-3 w-3 mr-1" /> {fmt(total)} in NGN
           </Badge>
         )}
       </div>

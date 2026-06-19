@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 export function SendView() {
   return (
@@ -59,6 +60,7 @@ function SendFlow() {
     pickContacts, checkMembership, addManualContact,
   } = useContacts();
   const [step, setStep] = useState(0);
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const [recipient, setRecipient] = useState<any>(null);
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("NGN");
@@ -628,7 +630,7 @@ function SendFlow() {
                   onClick={() => setAmount(String(v))}
                   className="flex-1 rounded-lg border py-1.5 text-xs font-medium hover:bg-muted transition"
                 >
-                  ₦{v.toLocaleString()}
+                  {symbol}{v.toLocaleString()}
                 </button>
               ))}
             </div>

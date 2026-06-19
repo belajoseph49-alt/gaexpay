@@ -23,6 +23,7 @@ import {
 import { useApp } from "@/lib/store";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 const TYPE_ICONS: Record<string, any> = {
   transfer: ArrowLeftRight, deposit: ArrowDownRight, withdrawal: ArrowUpRight,
@@ -43,6 +44,7 @@ export function TransactionsView() {
   const { data: disputesData, reload: reloadDisputes } = useFetch<{ disputes: any[]; open: number }>("/api/disputes");
   const { data: tagsData } = useFetch<{ tags: any[] }>("/api/transactions/tag");
   const { setView } = useApp();
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
   const [status, setStatus] = useState("all");
@@ -151,15 +153,15 @@ export function TransactionsView() {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">Total In</p>
-          <p className="text-lg font-bold text-emerald-600 tabular-nums">{formatMoney(totalIn, "NGN")}</p>
+          <p className="text-lg font-bold text-emerald-600 tabular-nums">{fmt(totalIn)}</p>
         </Card>
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">Total Out</p>
-          <p className="text-lg font-bold text-rose-600 tabular-nums">{formatMoney(totalOut, "NGN")}</p>
+          <p className="text-lg font-bold text-rose-600 tabular-nums">{fmt(totalOut)}</p>
         </Card>
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">Net Flow</p>
-          <p className="text-lg font-bold tabular-nums">{formatMoney(totalIn - totalOut, "NGN")}</p>
+          <p className="text-lg font-bold tabular-nums">{fmt(totalIn - totalOut)}</p>
         </Card>
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">Fees Paid</p>

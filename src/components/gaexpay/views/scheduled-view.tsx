@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AnimatedNumber } from "@/components/gaexpay/animated-number";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 const METHOD_ICONS: Record<string, any> = {
   bank: Landmark, momo: Smartphone, wallet: WalletIcon, card: CreditCard,
@@ -36,6 +37,7 @@ const FREQUENCY_LABELS: Record<string, string> = {
 export function ScheduledView() {
   const { data, reload } = useFetch<{ transfers: any[]; totalMonthly: number }>("/api/scheduled-transfers");
   const [open, setOpen] = useState(false);
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
 
   const transfers = data?.transfers ?? [];
   const totalMonthly = data?.totalMonthly ?? 0;
@@ -94,7 +96,7 @@ export function ScheduledView() {
               <span className="text-sm font-medium text-white/90">Monthly Recurring</span>
             </div>
             <h2 className="text-3xl font-bold tabular-nums">
-              <AnimatedNumber value={totalMonthly} prefix="₦" decimals={2} />
+              <AnimatedNumber value={totalMonthly} prefix={symbol} decimals={2} />
             </h2>
             <p className="mt-1 text-sm text-white/80">Total scheduled per month</p>
           </div>

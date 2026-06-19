@@ -15,10 +15,12 @@ import { useFetch } from "@/hooks/use-fetch";
 import { formatMoney, timeAgo } from "@/lib/gaexpay";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 export function ReferralView() {
   const { data } = useFetch<any>("/api/referral");
   const [copied, setCopied] = useState(false);
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
 
   const code = data?.referralCode || "GXP-ADAEZE";
   const count = data?.referralCount ?? 14;
@@ -86,7 +88,7 @@ export function ReferralView() {
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard icon={Users} label="Friends Invited" value={String(count)} color="bg-sky-500/15 text-sky-500" trend="+3 this week" />
-        <StatCard icon={TrendingUp} label="Total Earnings" value={formatMoney(earnings, "NGN")} color="bg-emerald-500/15 text-emerald-500" trend="+₦2,500 this week" />
+        <StatCard icon={TrendingUp} label="Total Earnings" value={fmt(earnings)} color="bg-emerald-500/15 text-emerald-500" trend="+₦2,500 this week" />
         <StatCard icon={Sparkles} label="Reward Points" value={points.toLocaleString()} color="bg-amber-500/15 text-amber-500" trend="240 pts to next reward" />
       </div>
 

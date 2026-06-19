@@ -16,10 +16,12 @@ import {
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 export function AnalyticsView() {
   const { data } = useFetch<{ transactions: any[] }>("/api/transactions?limit=200&days=90");
   const [range, setRange] = useState("30");
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const txs = data?.transactions ?? [];
 
   const days = range === "7" ? 7 : range === "90" ? 90 : 30;
@@ -54,9 +56,9 @@ export function AnalyticsView() {
 
       {/* KPI cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard icon={ArrowDownToLine} label="Total Inflow" value={formatMoney(totalIn, "NGN")} trend="+12.4%" up color="emerald" />
-        <KpiCard icon={ArrowUpFromLine} label="Total Outflow" value={formatMoney(totalOut, "NGN")} trend="-3.1%" up={false} color="rose" />
-        <KpiCard icon={ArrowLeftRight} label="Avg. Transaction" value={formatMoney(avgTx, "NGN")} trend="+5.2%" up color="amber" />
+        <KpiCard icon={ArrowDownToLine} label="Total Inflow" value={fmt(totalIn)} trend="+12.4%" up color="emerald" />
+        <KpiCard icon={ArrowUpFromLine} label="Total Outflow" value={fmt(totalOut)} trend="-3.1%" up={false} color="rose" />
+        <KpiCard icon={ArrowLeftRight} label="Avg. Transaction" value={fmt(avgTx)} trend="+5.2%" up color="amber" />
         <KpiCard icon={Wallet} label="Success Rate" value={`${successRate.toFixed(1)}%`} trend="+1.2%" up color="violet" />
       </div>
 
@@ -116,7 +118,7 @@ export function AnalyticsView() {
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: ["#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4", "#f43f5e", "#84cc16"][i % 7] }} />
                   <span className="capitalize">{c.name}</span>
                 </span>
-                <span className="font-medium tabular-nums">{formatMoney(c.value, "NGN")}</span>
+                <span className="font-medium tabular-nums">{fmt(c.value)}</span>
               </div>
             ))}
           </div>
@@ -163,6 +165,7 @@ export function AnalyticsView() {
 }
 
 function FinancialHealthSection() {
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const { data } = useFetch<any>("/api/insights");
   if (!data) return <Card className="p-5"><Skeleton className="h-64" /></Card>;
 
@@ -228,7 +231,7 @@ function FinancialHealthSection() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">Monthly Income</p>
-          <p className="text-lg font-bold tabular-nums">{formatMoney(income, "NGN")}</p>
+          <p className="text-lg font-bold tabular-nums">{fmt(income)}</p>
           {incomeChange !== 0 && (
             <p className={cn("text-xs mt-0.5", incomeChange > 0 ? "text-emerald-600" : "text-rose-600")}>
               {incomeChange > 0 ? "↑" : "↓"} {Math.abs(incomeChange).toFixed(1)}% vs last month
@@ -237,7 +240,7 @@ function FinancialHealthSection() {
         </Card>
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">Monthly Expenses</p>
-          <p className="text-lg font-bold tabular-nums">{formatMoney(expenses, "NGN")}</p>
+          <p className="text-lg font-bold tabular-nums">{fmt(expenses)}</p>
           {expenseChange !== 0 && (
             <p className={cn("text-xs mt-0.5", expenseChange > 0 ? "text-rose-600" : "text-emerald-600")}>
               {expenseChange > 0 ? "↑" : "↓"} {Math.abs(expenseChange).toFixed(1)}% vs last month

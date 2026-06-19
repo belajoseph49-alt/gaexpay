@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 const BILLER_ICONS: Record<string, any> = {
   electricity: Zap, water: Droplet, internet: Wifi, tv: Tv,
@@ -68,6 +69,7 @@ export function PayView() {
 
 function QrPay() {
   const [scanning, setScanning] = useState(false);
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const [found, setFound] = useState<any>(null);
   const [amount, setAmount] = useState("");
   const [paying, setPaying] = useState(false);
@@ -209,6 +211,7 @@ function MerchantsPay() {
 }
 
 function BillsPay() {
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const { data } = useFetch<{ billers: any[] }>("/api/billers");
   const billers = data?.billers ?? [];
   const [cat, setCat] = useState("all");
@@ -301,7 +304,7 @@ function BillsPay() {
             </div>
             <div className="flex gap-2">
               {[1000, 5000, 10000, 20000].map((v) => (
-                <button key={v} onClick={() => setAmount(String(v))} className="flex-1 rounded-lg border py-1.5 text-xs font-medium hover:bg-muted">₦{v.toLocaleString()}</button>
+                <button key={v} onClick={() => setAmount(String(v))} className="flex-1 rounded-lg border py-1.5 text-xs font-medium hover:bg-muted">{symbol}{v.toLocaleString()}</button>
               ))}
             </div>
           </div>
@@ -315,6 +318,7 @@ function BillsPay() {
 }
 
 function AirtimePay() {
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const [network, setNetwork] = useState("mtn");
   const [phone, setPhone] = useState("");
   const [amount, setAmount] = useState("");
@@ -365,7 +369,7 @@ function AirtimePay() {
           <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" />
           <div className="flex gap-2">
             {[100, 200, 500, 1000, 2000, 5000].map((v) => (
-              <button key={v} onClick={() => setAmount(String(v))} className="flex-1 rounded-lg border py-1.5 text-xs font-medium hover:bg-muted">₦{v}</button>
+              <button key={v} onClick={() => setAmount(String(v))} className="flex-1 rounded-lg border py-1.5 text-xs font-medium hover:bg-muted">{symbol}{v}</button>
             ))}
           </div>
         </div>

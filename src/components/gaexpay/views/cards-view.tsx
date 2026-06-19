@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 const CARD_GRADIENTS: Record<string, string> = {
   emerald: "from-emerald-600 via-teal-600 to-emerald-800",
@@ -33,6 +34,7 @@ const CARD_GRADIENTS: Record<string, string> = {
 export function CardsView() {
   const { data, reload } = useFetch<{ cards: any[] }>("/api/cards");
   const [active, setActive] = useState(0);
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const [reveal, setReveal] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
 

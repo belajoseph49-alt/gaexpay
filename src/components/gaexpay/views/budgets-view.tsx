@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AnimatedNumber } from "@/components/gaexpay/animated-number";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 const CATEGORY_META: Record<string, { icon: any; color: string }> = {
   "Food & Dining": { icon: Utensils, color: "bg-amber-500/15 text-amber-500" },
@@ -38,6 +39,7 @@ const CATEGORIES = ["Food & Dining", "Transport", "Shopping", "Bills & Utilities
 export function BudgetsView() {
   const { data, reload } = useFetch<{ budgets: any[]; totalLimit: number; totalSpent: number }>("/api/budgets");
   const [open, setOpen] = useState(false);
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
 
   const budgets = data?.budgets ?? [];
   const totalLimit = data?.totalLimit ?? 0;
@@ -87,16 +89,16 @@ export function BudgetsView() {
               <span className="text-sm font-medium text-white/90">Total Monthly Budget</span>
             </div>
             <h2 className="text-3xl font-bold tabular-nums">
-              <AnimatedNumber value={totalSpent} prefix="₦" decimals={2} />
+              <AnimatedNumber value={totalSpent} prefix={symbol} decimals={2} />
             </h2>
             <p className="mt-1 text-sm text-white/80">
-              spent of <span className="font-semibold">{formatMoney(totalLimit, "NGN")}</span> · {overallPct.toFixed(1)}% used
+              spent of <span className="font-semibold">{fmt(totalLimit)}</span> · {overallPct.toFixed(1)}% used
             </p>
           </div>
           <div className="text-right">
             <p className="text-xs text-white/70">Remaining</p>
             <p className="text-2xl font-bold tabular-nums">
-              <AnimatedNumber value={Math.max(0, totalRemaining)} prefix="₦" decimals={2} />
+              <AnimatedNumber value={Math.max(0, totalRemaining)} prefix={symbol} decimals={2} />
             </p>
             <p className="text-xs text-white/70 mt-1">{budgets.length} active budgets</p>
           </div>
@@ -169,9 +171,9 @@ export function BudgetsView() {
 
                 <div className="flex items-baseline justify-between mb-1.5">
                   <span className="text-2xl font-bold tabular-nums">
-                    <AnimatedNumber value={b.spent} prefix="₦" decimals={2} />
+                    <AnimatedNumber value={b.spent} prefix={symbol} decimals={2} />
                   </span>
-                  <span className="text-sm text-muted-foreground">/ {formatMoney(b.limit, "NGN")}</span>
+                  <span className="text-sm text-muted-foreground">/ {fmt(b.limit)}</span>
                 </div>
 
                 <Progress
@@ -184,7 +186,7 @@ export function BudgetsView() {
                     {pct.toFixed(1)}% used
                   </span>
                   <span className="text-muted-foreground">
-                    {remaining >= 0 ? `${formatMoney(remaining, "NGN")} left` : `${formatMoney(Math.abs(remaining), "NGN")} over`}
+                    {remaining >= 0 ? `${fmt(remaining)} left` : `${formatMoney(Math.abs(remaining), "NGN")} over`}
                   </span>
                 </div>
               </Card>

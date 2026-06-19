@@ -23,6 +23,7 @@ import { AnimatedNumber } from "@/components/gaexpay/animated-number";
 import { Confetti } from "@/components/gaexpay/confetti";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 const GOAL_ICONS = ["🎯", "✈️", "💻", "🏠", "🚗", "💍", "🎓", "🛡️", "📱", "🎁", "🏖️", "💼"];
 const GOAL_COLORS = [
@@ -37,6 +38,7 @@ const GOAL_COLORS = [
 export function SavingsView() {
   const { data, reload } = useFetch<{ goals: any[]; totalSaved: number; totalTarget: number }>("/api/savings-goals");
   const [open, setOpen] = useState(false);
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const [contributeGoal, setContributeGoal] = useState<any>(null);
   const [celebration, setCelebration] = useState<string | null>(null);
 
@@ -69,7 +71,7 @@ export function SavingsView() {
       setTimeout(() => setCelebration(null), 4000);
       toast.success(`🎉 Goal "${goal.name}" completed! Congratulations!`);
     } else {
-      toast.success(type === "deposit" ? `Added ${formatMoney(amount, "NGN")}` : `Withdrew ${formatMoney(amount, "NGN")}`);
+      toast.success(type === "deposit" ? `Added ${fmt(amount)}` : `Withdrew ${fmt(amount)}`);
     }
     setContributeGoal(null);
     reload();
@@ -129,10 +131,10 @@ export function SavingsView() {
               <span className="text-sm font-medium text-white/90">Total Saved</span>
             </div>
             <h2 className="text-3xl font-bold tabular-nums">
-              <AnimatedNumber value={totalSaved} prefix="₦" decimals={2} />
+              <AnimatedNumber value={totalSaved} prefix={symbol} decimals={2} />
             </h2>
             <p className="mt-1 text-sm text-white/80">
-              of <span className="font-semibold">{formatMoney(totalTarget, "NGN")}</span> target · {overallProgress.toFixed(1)}% complete
+              of <span className="font-semibold">{fmt(totalTarget)}</span> target · {overallProgress.toFixed(1)}% complete
             </p>
           </div>
           <div className="text-right">
@@ -153,7 +155,7 @@ export function SavingsView() {
           <h3 className="font-semibold">Auto-Save is ON</h3>
           <p className="text-sm text-muted-foreground">
             We automatically move money to your goals every month. You've saved{" "}
-            <span className="font-semibold text-emerald-600">{formatMoney(245000, "NGN")}</span> via auto-save this year.
+            <span className="font-semibold text-emerald-600">{fmt(245000)}</span> via auto-save this year.
           </p>
         </div>
         <Button variant="outline" size="sm">Manage Auto-Save</Button>
@@ -202,21 +204,21 @@ export function SavingsView() {
                 <div className="mt-4">
                   <div className="flex items-baseline justify-between mb-1.5">
                     <span className="text-xl font-bold tabular-nums">
-                      <AnimatedNumber value={g.currentAmount} prefix="₦" decimals={2} />
+                      <AnimatedNumber value={g.currentAmount} prefix={symbol} decimals={2} />
                     </span>
-                    <span className="text-xs text-muted-foreground">/ {formatMoney(g.targetAmount, "NGN")}</span>
+                    <span className="text-xs text-muted-foreground">/ {fmt(g.targetAmount)}</span>
                   </div>
                   <Progress value={progress} className="h-2" />
                   <div className="mt-1.5 flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">{progress.toFixed(1)}% complete</span>
-                    {remaining > 0 && <span className="font-medium">{formatMoney(remaining, "NGN")} to go</span>}
+                    {remaining > 0 && <span className="font-medium">{fmt(remaining)} to go</span>}
                   </div>
                 </div>
 
                 {g.autoSaveAmount && g.status === "active" && (
                   <div className="mt-3 flex items-center gap-1.5 rounded-lg bg-muted/50 px-2.5 py-1.5 text-xs">
                     <Calendar className="h-3 w-3 text-muted-foreground" />
-                    <span>Auto-save {formatMoney(g.autoSaveAmount, "NGN")} on day {g.autoSaveDay}</span>
+                    <span>Auto-save {fmt(g.autoSaveAmount)} on day {g.autoSaveDay}</span>
                   </div>
                 )}
 
@@ -269,7 +271,7 @@ export function SavingsView() {
                     <p className="text-xs text-muted-foreground">{c.note || c.type} · {timeAgo(c.createdAt)}</p>
                   </div>
                   <span className={cn("text-sm font-semibold tabular-nums", c.type === "deposit" ? "text-emerald-600" : "text-rose-600")}>
-                    {c.type === "deposit" ? "+" : "-"}{formatMoney(c.amount, "NGN")}
+                    {c.type === "deposit" ? "+" : "-"}{fmt(c.amount)}
                   </span>
                 </div>
               ))
@@ -298,6 +300,7 @@ const SAVINGS_TEMPLATES = [
 ];
 
 function NewGoalDialog({ onSubmit }: { onSubmit: (f: any) => void }) {
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const [name, setName] = useState("");
   const [targetAmount, setTargetAmount] = useState("");
   const [currency, setCurrency] = useState("NGN");
@@ -343,7 +346,7 @@ function NewGoalDialog({ onSubmit }: { onSubmit: (f: any) => void }) {
                   <span className="text-xl">{t.icon}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold truncate">{t.name}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">₦{(t.targetAmount / 1000000).toFixed(1)}M · {t.deadlineMonths}mo</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{symbol}{(t.targetAmount / 1000000).toFixed(1)}M · {t.deadlineMonths}mo</p>
                   </div>
                 </button>
               ))}
@@ -449,6 +452,7 @@ function NewGoalDialog({ onSubmit }: { onSubmit: (f: any) => void }) {
 }
 
 function ContributeDialog({ goal, onSubmit }: { goal: any; onSubmit: (id: string, amount: number, type: "deposit" | "withdrawal") => void }) {
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const [amount, setAmount] = useState("");
   if (!goal) return null;
   const isWithdraw = goal._withdraw;
@@ -461,11 +465,11 @@ function ContributeDialog({ goal, onSubmit }: { goal: any; onSubmit: (id: string
         <div className="rounded-lg bg-muted/30 p-3 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Current balance</span>
-            <span className="font-semibold">{formatMoney(goal.currentAmount, "NGN")}</span>
+            <span className="font-semibold">{fmt(goal.currentAmount)}</span>
           </div>
           <div className="flex justify-between mt-1">
             <span className="text-muted-foreground">Target</span>
-            <span className="font-semibold">{formatMoney(goal.targetAmount, "NGN")}</span>
+            <span className="font-semibold">{fmt(goal.targetAmount)}</span>
           </div>
         </div>
         <div className="space-y-2">
@@ -474,7 +478,7 @@ function ContributeDialog({ goal, onSubmit }: { goal: any; onSubmit: (id: string
           <div className="flex gap-2">
             {[5000, 10000, 25000, 50000].map((v) => (
               <button key={v} onClick={() => setAmount(String(v))} className="flex-1 rounded-lg border py-1.5 text-xs font-medium hover:bg-muted">
-                ₦{v.toLocaleString()}
+                {symbol}{v.toLocaleString()}
               </button>
             ))}
           </div>

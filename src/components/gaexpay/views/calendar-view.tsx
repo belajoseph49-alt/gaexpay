@@ -14,6 +14,7 @@ import { formatMoney } from "@/lib/gaexpay";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AnimatedNumber } from "@/components/gaexpay/animated-number";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -21,6 +22,7 @@ const MONTHS = ["January", "February", "March", "April", "May", "June", "July", 
 export function CalendarView() {
   const now = new Date();
   const [month, setMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+  const { fmt, symbol, currency: userCur } = useFormatMoney();
   const { data } = useFetch<any>(`/api/calendar?month=${month}`);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
@@ -60,7 +62,7 @@ export function CalendarView() {
           </div>
           <p className="text-xs text-muted-foreground">Scheduled This Month</p>
           <p className="text-xl font-bold tabular-nums">
-            <AnimatedNumber value={summary.totalScheduled} prefix="₦" decimals={2} />
+            <AnimatedNumber value={summary.totalScheduled} prefix={symbol} decimals={2} />
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">{summary.scheduledCount} upcoming transfers</p>
         </Card>
@@ -70,7 +72,7 @@ export function CalendarView() {
           </div>
           <p className="text-xs text-muted-foreground">Total Spent</p>
           <p className="text-xl font-bold tabular-nums">
-            <AnimatedNumber value={summary.totalSpent} prefix="₦" decimals={2} />
+            <AnimatedNumber value={summary.totalSpent} prefix={symbol} decimals={2} />
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">{summary.txCount} transactions</p>
         </Card>
@@ -80,7 +82,7 @@ export function CalendarView() {
           </div>
           <p className="text-xs text-muted-foreground">Total Received</p>
           <p className="text-xl font-bold tabular-nums">
-            <AnimatedNumber value={summary.totalReceived} prefix="₦" decimals={2} />
+            <AnimatedNumber value={summary.totalReceived} prefix={symbol} decimals={2} />
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">inflow this month</p>
         </Card>
