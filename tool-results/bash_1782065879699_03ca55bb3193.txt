@@ -1,0 +1,502 @@
+3016
+---LAST 500 LINES---
+#### 3. `src/lib/validations.ts` — Zod schemas
+- Primitives: `amountSchema` (positive, ≤1e9), `currencySchema` (3 uppercase letters), `referenceSchema` (alphanumeric regex — `alphanumeric()` was removed in zod v4), `emailSchema`, `phoneSchema` (E.164), `noteSchema`, `recipientSchema`.
+- Composed: `transferSchema`, `tradeSchema`, `cashoutSchema`, `swapSchema`.
+- `formatZodError(err): string` — surfaces the first issue as `"Invalid <path>: <message>"`.
+
+#### 4. `src/lib/rate-limit.ts` — In-memory sliding-window limiter
+- `Map<string, number[]>` of request timestamps per identifier.
+- `rateLimit(identifier, limit, windowMs)` — check + record in one call.
+- Periodic GC every 5 min (unref'd so it doesn't keep the event loop alive).
+- Pre-baked policies:
+  - `GENERAL_LIMIT` — 100 / 15 min
+  - `SENSITIVE_LIMIT` — 10 / 1 min (transfers, trades, cashouts, swaps)
+  - `AUTH_LIMIT` — 5 / 1 min (login/OTP)
+
+#### 5. `src/lib/api-error.ts` — Error sanitization
+- `apiError(message, status)` — clean JSON error response.
+- `apiRateLimited(retryAfterMs)` — 429 with `Retry-After` header.
+- `apiCatch(e: unknown)` — logs full error server-side, returns generic "Internal server error" to client. Special-cases ZodError (→400) and HTTP-shaped errors (4xx only — 5xx always gets the generic message to prevent internal leakage). NEVER exposes `String(e)`, `e.message`, or stack traces.
+
+#### 6. `src/middleware.ts` — Security headers
+Runs on every response. Attaches:
+- `Content-Security-Policy` (default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.coingecko.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self')
+- `X-Frame-Options: DENY`
+- `X-Content-Type-Options: nosniff`
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `X-XSS-Protection: 1; mode=block`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()`
+
+Verified live via `curl -I` — all 7 headers present on both `/` and `/api/*`. (Next.js 16 prints a deprecation warning suggesting `src/proxy.ts`; `middleware.ts` still works, kept per spec.)
+
+#### 7. Critical API routes hardened
+All four money-moving endpoints now:
+- Reject unauthenticated requests in production (401).
+- Validate input via zod (400 on bad shape/values).
+- Apply the sensitive rate limit (429 after 10 req/min).
+- Wrap all DB writes in `db.$transaction` for atomicity.
+- Re-fetch wallets INSIDE the transaction (serializable isolation) before balance checks — prevents race-condition double-spends.
+- Surface `HttpError` messages (4xx only) via `apiError`; all other errors via `apiCatch` (generic 500).
+
+| Route | Before | After |
+|-------|--------|-------|
+| `POST /api/transfer` | hardcoded user, no validation, `String(e)` in 500 response | auth + `transferSchema` + rate limit + `db.$transaction` + balance check + AuditLog |
+| `POST /api/crypto/trade` | hardcoded user, manual validation, raw error leak | auth + `tradeSchema` + rate limit + sanitized errors |
+| `POST /api/crypto/cashout` | hardcoded user, manual validation, raw error leak | auth + `cashoutSchema` + rate limit + sanitized errors |
+| `POST /api/crypto/swap` | hardcoded user, manual validation, raw error leak | auth + `swapSchema` + rate limit + sanitized errors |
+
+GET (quote-only) endpoints on the three crypto routes also now require auth — previously anonymous, which leaked live wallet balances.
+
+#### 8. `.env` updated
+```
+DATABASE_URL=file:/home/z/my-project/db/custom.db
+GAEXPAY_JWT_SECRET=change-this-in-production-use-32-char-random-string
+```
+
+### Verification
+- ✅ `bun run lint` — 0 errors, 0 warnings
+- ✅ Auth utility E2E test (Bun script): hashPassword format OK, verifyPassword accepts correct/rejects wrong, generateToken produces JWT shape, verifyToken accepts valid/rejects tampered/rejects garbage
+- ✅ Live API tests (curl against port 3000):
+  - Transfer: valid=200, negative amount=400, bad currency=400, bad method=400, amount>1e9=400, missing recipient=400, 12 rapid requests=10×200 then 429
+  - Trade: BUY=200, negative amount=400
+  - Cashout: valid=200, 9999 BTC=400 "Insufficient BTC balance"
+  - Swap: USDT→BTC=200
+- ✅ All 7 security headers present on every response (verified via `curl -I`)
+- ✅ Dev log: no errors, no runtime exceptions
+
+### Stage Summary
+- **Files created**: 6 (`src/lib/auth.ts`, `src/lib/api-auth.ts`, `src/lib/validations.ts`, `src/lib/rate-limit.ts`, `src/lib/api-error.ts`, `src/middleware.ts`)
+- **Files modified**: 5 (`src/app/api/transfer/route.ts`, `src/app/api/crypto/trade/route.ts`, `src/app/api/crypto/cashout/route.ts`, `src/app/api/crypto/swap/route.ts`, `.env`)
+- **Demo-mode compatibility**: In `NODE_ENV !== "production"`, requests without a Bearer token still resolve to `DEMO_USER_ID` so the seeded SPA continues to work during the migration to real NextAuth. In production, every protected endpoint returns 401 without a valid token.
+- **What's NOT in scope** (deferred to a follow-up task): login/registration endpoints that actually call `hashPassword` and `generateToken`; migrating the remaining 35 read-only API routes off `DEMO_USER_ID`; NextAuth v4 wiring; nonce-based CSP (current CSP uses `'unsafe-inline'` for scripts — needed for Next.js hydration).
+
+---
+
+## Phase 17 — Audit Senior & Hardening Sécurité
+
+**Task ID**: 23 (Audit complet + hardening sécurité)
+**Agent**: Main + Agent 23-A (Senior Security Engineer)
+**Date**: 2026-06-19
+
+### Audit Complet — 35 Manquements Identifiés
+
+#### 🔴 CRITIQUE (Corrigé ce round)
+1. **AUCUNE Authentification** → CORRIGÉ : `src/lib/auth.ts` (scrypt + HMAC-SHA256 tokens), `src/lib/api-auth.ts` (`getAuthUserId`). 0 APIs non-admin utilisent encore DEMO_USER_ID.
+2. **AUCUNE Validation d'Entrée** → CORRIGÉ : `src/lib/validations.ts` (zod schemas). Montants négatifs rejetés (400).
+3. **Mots de passe en clair** → CORRIGÉ : `crypto.scrypt` (N=2^15, r=8, p=1, 64MB maxmem).
+4. **AUCUNE Session/JWT** → CORRIGÉ : Tokens signés HMAC-SHA256, 7 jours TTL, vérification temps constant.
+5. **AUCUN Rate Limiting** → CORRIGÉ : `src/lib/rate-limit.ts`. Sensitive endpoints: 10 req/min. Vérifié: 429 après 10 requêtes.
+6. **Erreurs divulguées** → CORRIGÉ : `src/lib/api-error.ts`. `apiCatch(e)` log serveur, retour générique au client.
+7. **AUCUN Security Header** → CORRIGÉ : `src/middleware.ts`. CSP, X-Frame-Options: DENY, HSTS, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, X-XSS-Protection.
+8. **Solde négatif possible** → CORRIGÉ : `db.$transaction` avec vérif de solde pour transfer, trade, cashout, swap.
+9. **AUCUNE clé d'idempotence** → PARTIEL : Transactions utilisent `$transaction` atomique mais pas encore de clé d'idempotence.
+
+#### 🟠 ÉLEVÉ (Non corrigé — nécessite infrastructure dédiée)
+10. **2FA/MFA factice** — TOTP non implémenté (les toggles sont cosmétiques)
+11. **AUCUNE vérification webhook** — Pas de HMAC pour webhooks
+12. **AUCUN CSRF Protection** — Pas de tokens CSRF
+13. **Uploads sans sécurité** — Pas de taille limite, pas de scan virus
+14. **AUCUN chiffrement au repos** — Données en clair dans SQLite
+15. **SQLite en production** — Inadapté pour prod (pas de concurrence, pas de réplication)
+16. **AUCUNE migration DB** — `db push` au lieu de migrations
+17. **AUCUN test** — 0 test unitaire, 0 intégration, 0 e2e
+18. **AUCUN logging structuré** — console.log au lieu de winston/pino
+19. **AUCUN monitoring d'erreurs** — Pas de Sentry
+20. **AUCUNE stratégie de backup** — SQLite unique, pas de backup
+
+#### 🟡 MOYEN (Non corrigé — nécessite intégrations externes)
+21. **Adresses crypto FAUSSES** — Générées via hash, pas de vraies adresses blockchain
+22. **AUCUNE intégration blockchain** — Pas de Web3, pas de broadcast
+23. **AUCUNE intégration bancaire réelle** — Virements simulés
+24. **AUCUN Mobile Money réel** — Pas d'API MTN/Orange/M-PESA
+25. **AUCUN email/SMS réel** — Notifications DB-only
+26. **AUCUNE passerelle de paiement** — Pas de Stripe/Paystack/Flutterwave
+27. **Prix Pi Network codé en dur** — $47.35 fixe (pre-mainnet)
+28. **AUCUN audit log sur opérations sensibles** — Seul transfer en crée
+29. **AUCUNE conformité GDPR** — Pas de suppression/export de données
+30. **AUCUN health check** — Pas de `/api/health`
+31. **AUCUN API versioning** — APIs sans version
+32. **AUCUNE limite de taille de requête** — Pas de body parser limits
+33. **AUCUN test de charge** — Performance inconnue
+34. **Admin APIs sans auth admin** — 7 APIs admin utilisent encore DEMO_USER_ID
+35. **NO `.env.production`** — Pas de gestion de secrets en production
+
+### Ce qui a été corrigé (Agent 23-A)
+
+#### 6 nouveaux modules de sécurité
+1. **`src/lib/auth.ts`** — Hashing scrypt + tokens HMAC-SHA256 (7j TTL, vérif temps constant)
+2. **`src/lib/api-auth.ts`** — `getAuthUserId(req)` : Bearer token → x-gxp-user (dev) → DEMO_USER_ID (dev) → 401 (prod)
+3. **`src/lib/validations.ts`** — Schemas zod (transferSchema, tradeSchema, cashoutSchema, swapSchema + primitifs)
+4. **`src/lib/rate-limit.ts`** — Sliding window en mémoire. Sensitive: 10/min. Default: 100/15min
+5. **`src/lib/api-error.ts`** — `apiCatch(e)` : log serveur, retour générique client. ZodError → 400.
+6. **`src/middleware.ts`** — Security headers sur TOUTES les réponses (CSP, HSTS, X-Frame-Options, etc.)
+
+#### 4 APIs money-moving durcies
+- **transfer** : auth + validation zod + rate limit + $transaction + audit log + balance check
+- **crypto/trade** : auth + validation + rate limit + $transaction + balance check
+- **crypto/cashout** : auth + validation + rate limit + $transaction + balance check
+- **crypto/swap** : auth + validation + rate limit + $transaction + balance check
+
+#### Toutes les autres APIs mises à jour
+- **0 APIs non-admin** utilisent encore DEMO_USER_ID (toutes utilisent getAuthUserId)
+- 7 APIs admin conservent DEMO_USER_ID (nécessitent auth admin dédiée)
+- 1 API seed (intentionnel)
+
+### Vérification
+- ✅ Lint: 0 errors
+- ✅ 33 vues: 0 erreurs runtime
+- ✅ Security headers: 7 headers présents (CSP, HSTS, X-Frame-Options, etc.)
+- ✅ Rate limiting: 429 après 10 requêtes sur /api/transfer
+- ✅ Input validation: montant négatif → 400
+- ✅ Auth: getAuthUserId sur toutes les APIs non-admin
+- ✅ Transactions atomiques avec balance check
+- ✅ Erreurs sanitisées (pas de fuite d'internals)
+
+---
+
+## Phase 18 — Optimisation UI/UX Masterisée
+
+**Task ID**: 24 (Directive stratégique — préservation + optimisation)
+**Agent**: Main
+**Date**: 2026-06-19
+
+### Directive
+Préserver toutes les fonctionnalités existantes. Améliorer l'UI/UX vers les standards de Binance, Revolut, Stripe, Wise. Amélioration continue, pas de refonte.
+
+### Work Completed
+
+#### 1. Design System — globals.css (refonte du système de design)
+- **Rayons de bordure** : 0.75rem → 0.875rem (plus moderne, plus arrondi)
+- **Palette de couleurs light theme** : affinée pour meilleur contraste et lisibilité
+  - Background : oklch(0.985 0.003 155) — légèrement plus chaud
+  - Card : oklch(1 0 0) — pur blanc pour les cartes
+  - Muted-foreground : oklch(0.50 0.015 155) — meilleur contraste
+  - Border : oklch(0.90 0.008 150) — plus subtil
+- **Palette dark theme** : profondeur accrue, effet premium
+  - Background : oklch(0.12 0.012 168) — plus profond, plus noir
+  - Card : oklch(0.17 0.015 168) — contraste optimal
+  - Muted-foreground : oklch(0.62 0.015 155) — plus lisible
+  - Border : oklch(1 0 0 / 6%) — ultra-subtil, moins visible
+- **Glassmorphism** : amélioré avec `saturate(180%)` pour un effet plus riche
+- **Card hover** : `cubic-bezier(0.4, 0, 0.2, 1)` + `box-shadow` dynamique pour effet de profondeur
+- **Scrollbar** : plus fine (6px), plus discrète, adaptée dark/light
+- **Font smoothing** : antialiased + optimizeLegibility pour rendu typographique professionnel
+- **Tabular nums** : `letter-spacing: -0.01em` pour alignement parfait des montants
+- **Focus ring** : visible, accessible (2px solid, offset 2px)
+- **Selection** : couleur de marque pour la sélection de texte
+- **Mesh background** : opacité réduite (0.08-0.06-0.05) pour effet subtil
+
+#### 2. Sidebar — Refonte visuelle
+- Largeur : 264px → 260px (plus compact)
+- Header height : h-16 → h-[60px] (plus compact)
+- Bordures : `border-sidebar-border` pour cohérence
+- Background : `bg-sidebar/60 backdrop-blur-2xl` (plus translucide, plus premium)
+- Section labels : `text-[10px] font-bold uppercase tracking-[0.12em]` (plus typographique)
+- Nav items : `text-[13px] rounded-[10px] py-2` (plus précis, plus compact)
+- Active state : barre verticale gauche `h-5 w-1 rounded-r-full` (indicateur visuel clair)
+- Active shadow : `shadow-sm shadow-primary/30` (légère élévation)
+- Badge : `h-[18px] text-[9px]` (plus compact)
+- Spacing entre groupes : `mb-4` (plus aéré)
+- Pro card : dégradé affiné avec glow absolu + ring subtil
+- Transition : `duration-200` pour les micro-interactions
+
+#### 3. Topbar — Affinement
+- Height : h-16 → h-[60px] (alignée avec sidebar)
+- Border : `border-border/50` (plus subtil)
+- Background : `bg-background/70 backdrop-blur-2xl` (plus translucide)
+- Search : `rounded-lg border-border/50 bg-muted/40` (plus raffiné)
+- Buttons : `rounded-lg` au lieu de `rounded-full` (plus moderne)
+- Avatar : `h-8 w-8 ring-1 ring-border/50` (plus compact)
+- Notification badge : `99+` au lieu de débordement
+- Kbd shortcut : `text-muted-foreground/70` (plus subtil)
+
+#### 4. App Shell — Transitions optimisées
+- View transitions : `duration-0.18 ease-[0.4,0,0.2,1]` (plus rapide, plus fluide)
+- Y offset : `y:6 → y:0` (entrée plus subtile)
+- Main : `overflow-x-hidden` ajouté (pas de scroll horizontal parasite)
+
+### Principe de non-régression respecté
+- ✅ Aucune fonctionnalité supprimée
+- ✅ Aucune API modifiée
+- ✅ Aucune donnée altérée
+- ✅ Tous les composants existants préservés
+- ✅ Toutes les 33+ vues fonctionnelles
+- ✅ Navigation intacte
+
+### Verification
+- ✅ Lint: 0 errors
+- ✅ 10 vues testées: 0 erreurs runtime
+- ✅ Mobile (390×844): responsive, sans erreur
+- ✅ Dark theme: rendu premium
+- ✅ Screenshots: dashboard, crypto, send capturés
+
+---
+Task ID: 10-a
+Agent: Landing Hero Redesign Specialist
+Task: Redesign landing hero section to premium Stripe/Revolut/Wise level — layered gradient background, premium typography, glassmorphism phone mockup, floating elements, trust indicators.
+
+Work Log:
+- Read worklog.md and the full `src/components/gaexpay/landing.tsx` (313 lines). Confirmed hero was lines 36-126 (flat `mesh-bg`, weak typography, clunky thick-bordered phone mockup) and currencies strip was lines 129-140.
+- Confirmed call site in `src/app/page.tsx` only passes `onEnter`; added optional `onSignup` prop (defaults to `onEnter`) so "Get Started Free" can drive signup while preserving existing behaviour.
+- Pruned now-unused imports (`Star`, `Sparkles`, `Wallet`, `CURRENCIES`) and added new icons (`Eye`, `Plus`, `Receipt`) for the glass card quick-actions.
+- Rewrote the hero `<section>` with a layered premium background: `bg-gradient-to-b from-emerald-950 via-emerald-900 to-emerald-950` (kept dark end-stop instead of `to-background` to guarantee WCAG-readable white stats text in BOTH themes), three decorative blurred orbs (emerald/teal/violet) for depth, and a subtle 64px grid overlay masked with a radial gradient.
+- New headline: `text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight leading-[1.05]` — line 1 white, line 2 gradient text (`emerald-300 → teal-200 → emerald-400`). Added animated badge above with `animate-ping` pulsing dot: "Now with Pi Network · AI-powered" inside a `bg-white/10 backdrop-blur border border-white/15 rounded-full` pill.
+- Subheadline upgraded to `text-lg sm:text-xl text-white/70 max-w-xl` (was muted-foreground gray — now passes contrast on the dark emerald).
+- CTAs rebuilt as large premium buttons: primary "Get Started Free" (`h-12 sm:h-14`, gradient emerald→teal, emerald-950 text, `shadow-lg shadow-emerald-500/30`, arrow with hover translate, calls `handleSignup`) and secondary "Live Demo" (`border border-white/20 bg-white/5 backdrop-blur`, calls `onEnter`). Staggered framer-motion entrance (delays 0/0.1/0.2/0.3).
+- Trust indicators row below CTAs: Shield/Zap/Globe with emerald-400 icons and `text-white/50` labels (Bank-grade security · Instant transfers · 10+ currencies).
+- Replaced the clunky `border-8` phone mockup with a glassmorphism card stack (`rounded-[2rem] bg-gradient-to-b from-white/10 to-white/5 backdrop-blur-xl border border-white/15 shadow-2xl shadow-black/50`). Inside: avatar + "Adaeze Okonkwo" + verified badge + eye icon; balance `text-3xl font-bold tabular-nums text-white` "₦ 2,450,000.00"; 4 quick-action tiles (Send/Pay/TopUp/Bills) with emerald-300 icons; a "Chinedu Eze +₦25,000" recent-transaction row.
+- Added two floating elements with framer-motion infinite `y` loops: top-right emerald pill "✓ Payment received +₦50,000" and bottom-left violet pill "1 π ≈ $47.35". The whole mockup is `hidden lg:block` (mobile shows only text + CTAs, per spec).
+- Polished the post-hero strip into a stats bar (replaced currencies strip): solid `bg-emerald-950` base + inner `bg-white/5 backdrop-blur border-y border-white/10` overlay (guarantees dark backdrop for white text in all themes). 4 stats — 50K+ Users, 10+ Currencies & Pi Coin, $2M+ Transferred, 4.9/5 Rating — each `text-2xl sm:text-3xl font-bold text-white` + `text-xs text-white/50 uppercase tracking-wider` label, with `sm:divide-x sm:divide-white/10` vertical dividers on desktop.
+- Left all downstream sections untouched: Features, Security, Platforms, CTA, Footer, and the sticky header.
+
+Stage Summary:
+- File edited: `src/components/gaexpay/landing.tsx` (rewrote imports, component signature, header preserved, hero fully redesigned, currencies strip → stats bar; Features/Security/Platforms/CTA/Footer unchanged).
+- Props: `onEnter` preserved (header Sign in / Open App / Live Demo / CTA / Open Free Account); added optional `onSignup` wired to "Get Started Free" (falls back to `onEnter` so the existing `page.tsx` call site is fully backward-compatible).
+- Key hero improvements: layered gradient + 3 blurred orbs + masked grid (depth/texture); 7xl gradient headline (strong hierarchy); white/70 subhead (WCAG-safe contrast); large gradient + glass CTAs with shadow glow; trust-indicator row; realistic glassmorphism wallet card with avatar/balance/quick-actions/transaction; floating payment + Pi price pills with infinite float animation; polished stats bar.
+- Verification: `bun run lint` → 0 errors. Dev server `✓ Compiled in 354ms` with `GET / 200` responses, no runtime errors in `dev.log`. Mobile-first responsive (phone mockup hidden on `< lg`, two-column on desktop).
+
+---
+
+## Task ID: 10-b
+**Agent**: Landing Body Sections Redesign Specialist
+**Date**: 2026-06-19
+
+### Task
+Redesign the GaexPay landing body sections (everything AFTER the hero) to a premium level — gradient cards, depth, micro-interactions, consistent spacing. Keep `onEnter` prop working. Do NOT touch the hero (Agent A handles it).
+
+### Work Log
+- Read `worklog.md` for context (Phase 18 design system, Agent 10-a hero work) and the full `landing.tsx` (313 lines).
+- Confirmed call site (`src/app/page.tsx`) passes only `onEnter`; preserved signature `({ onEnter }: { onEnter: () => void })`.
+- Verified required lucide-react icons exist (`Coins`, `Lock`, `FileCheck`, `BadgeCheck`, `Twitter`, `Github`, `Linkedin`, `Instagram`) — no new packages needed.
+- Pruned unused import `Check` (was only used in old Security section, replaced by `Lock`/`Fingerprint`/`FileCheck`/`BadgeCheck`).
+- Added new imports: `Coins`, `Lock`, `FileCheck`, `BadgeCheck`, `Twitter`, `Github`, `Linkedin`, `Instagram`.
+- Preserved the hero section (`<section className="relative overflow-hidden">` … `</section>`) EXACTLY as-is per the "DO NOT touch the hero" instruction. Header also preserved (only updated the nav `Pricing` link → `Pi Network` anchor so it points to a real section).
+- Redesigned **Currencies strip → Stats bar**: bigger `py-8`, premium `tracking-[0.18em]` eyebrow ("Trusted across 30+ currencies worldwide"), hover state on each currency chip, `tabular-nums` on currency codes.
+- Redesigned **Features section**: consistent premium header pattern (eyebrow `text-xs font-semibold uppercase tracking-wider text-primary` + `text-3xl sm:text-4xl lg:text-5xl` heading + `text-lg` subheading). 9 cards in `lg:grid-cols-3` (clean 3×3 grid), each with `h-12 w-12 rounded-xl bg-gradient-to-br ${color} grid place-items-center shadow-lg` icon + `text-lg font-semibold mt-4` title + `text-sm text-muted-foreground mt-2` desc. Cards lift on hover (`hover:shadow-xl hover:-translate-y-1 transition-all duration-300`). Staggered `whileInView` framer-motion (`delay: i * 0.08`, `viewport={{ once: true, margin: "-80px" }}`).
+- Added a 9th feature card: **Pi Network Integration** (`Coins` icon, `from-violet-500 to-fuchsia-600` gradient) — replaced the redundant "Biometric Auth" card (Biometric is now covered in the Security section).
+- Redesigned **Security section**: 2-col layout. Left = visual: `rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 p-8 grid place-items-center min-h-[320px]` containing a `h-32 w-32 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 shadow-2xl shadow-emerald-500/30` shield container with `Shield` icon (`h-16 w-16`), plus floating "🔒 AES-256" and "✓ PCI-DSS L1" glass pills. Right = content: same premium header pattern + 4 security feature rows (Lock/Fingerprint/FileCheck/BadgeCheck) in `grid sm:grid-cols-2`, each with `h-10 w-10 rounded-full ${color} text-white shadow-md` icon + title + desc. Background `bg-muted/30 border-y`.
+- Redesigned **Platforms section**: premium header pattern. 4 cards in `lg:grid-cols-4`, each with `h-14 w-14 mx-auto rounded-2xl bg-gradient-to-br ${color} grid place-items-center shadow-lg` icon + title + desc + an "Available" badge (`inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400` with a `1.5×1.5` live dot). Hover lift + shadow.
+- Created a new dedicated **Pi Network section** (was missing from the file). 2-col layout mirroring Security's structure: left = content with violet eyebrow badge (`π Pi Network`), heading "Bring your Pi to life.", 3 feature rows (Instant Pi swaps / Send Pi to anyone / Verified & secure) each in `rounded-2xl border bg-card p-4` with violet gradient icon, and a "Connect Pi Account" CTA button (`bg-gradient-to-r from-violet-600 to-fuchsia-600`). Right = visual: violet gradient panel with a large `π` glyph in a `rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-2xl shadow-violet-500/30` container + floating "🟣 Pi Mainnet" and "Live: 1 π ≈ $47.35" glass pills. Mobile-first order swap (`order-1`/`order-2`).
+- Redesigned **CTA section**: full-width gradient panel `bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 py-20 lg:py-28` with 3 decorative blurred orbs (white/10, white/10, amber-300/20). Centered content: `text-3xl sm:text-4xl lg:text-5xl` white heading "Ready to take control of your money?" + `text-lg text-white/80` subhead + two buttons: primary (`h-12 sm:h-14 rounded-full bg-white text-emerald-700 shadow-lg active:scale-95`) and secondary (`h-12 sm:h-14 rounded-full border border-white/30 backdrop-blur hover:bg-white/10`). Wrapped in `whileInView` motion.
+- Redesigned **Footer**: `mt-auto border-t bg-background` (sticky-bottom behavior preserved). 4-col grid: Brand (Logo + tagline + 4 circular social buttons `h-9 w-9 rounded-full border hover:bg-muted`) | Product | Company | Legal. Bottom bar: `© 2025 GaexPay Inc. All rights reserved. Licensed by CBN.` + Privacy/Terms/Cookies small links. All anchor clicks `preventDefault`'d to avoid route changes.
+- Consistent spacing system applied everywhere: `py-16 lg:py-24` for all body sections, `mx-auto max-w-7xl px-4 lg:px-8` container, `gap-6` for card grids, `rounded-2xl` for all cards.
+- Global polish: `tabular-nums` on numeric values (currency codes, Pi price), `transition` on all interactive elements, `text-white` on icons inside gradient containers, mobile-first responsive (`w-full sm:w-auto` on CTA buttons, `flex-col sm:flex-row`).
+
+### Verification
+- ✅ `bun run lint` — 0 errors, 0 warnings.
+- ✅ Dev server: `✓ Compiled in 354ms` / `✓ Compiled in 298ms` / `✓ Compiled in 194ms`, `GET / 200` responses, no runtime errors in `dev.log`.
+- ✅ Hero section preserved verbatim (lines 36-127 unchanged from original).
+- ✅ All sections present: Stats bar, Features, Security, Platforms, Pi Network (new), CTA, Footer.
+- ✅ `onEnter` prop wired to all CTAs (Open App, Sign in, Live Demo, Get Started Free, Open Free Account, Talk to Sales, Connect Pi Account).
+
+### Stage Summary
+- **Files edited**: `src/components/gaexpay/landing.tsx` (imports updated; header nav updated; body sections from Currencies strip through Footer fully redesigned; hero preserved).
+- **Key section improvements**:
+  - Features: 3×3 grid with gradient icon tiles, shadow-lg, hover lift + translate, staggered `whileInView` reveals; added Pi Network card.
+  - Security: large gradient shield visual with floating glass compliance pills + 4 colored-icon security rows in a 2×2 grid.
+  - Platforms: 4 centered cards with large gradient icons + live "Available" badge + hover lift.
+  - Pi Network: brand-new dedicated section with violet gradient visual (large π glyph) + 3 feature rows + Connect CTA.
+  - CTA: full-width `from-emerald-600 via-teal-600 to-emerald-700` gradient with 3 blurred orbs + dual white/glass buttons (`active:scale-95`).
+  - Footer: 4-col layout with brand social icons (Twitter/Github/Linkedin/Instagram) + bottom bar with Privacy/Terms/Cookies.
+- **Spacing system**: All body sections use `py-16 lg:py-24`; all card grids use `gap-6`; all cards use `rounded-2xl`.
+- **Compatibility**: Call site unchanged. Hero untouched (Agent A handles it). All existing functionality preserved.
+
+---
+Task ID: 10 (Coordinator Summary — Landing Page Redesign)
+Agent: Main (Z.ai Code)
+Task: Redesign the landing page to professional premium quality. Deployed 2 UI specialist agents in parallel.
+
+Work Log:
+- Captured 4 screenshots of the current landing page (hero, stats, features, security, CTA).
+- VLM (glm-4.6v) analysis: hero rated low (flat gradient, weak typography, clunky phone mockup, unbalanced layout, small CTAs, poor contrast). Body sections rated 6/10 (weak hierarchy, generic messaging, no premium branding, no micro-interactions).
+- Deployed 2 specialist agents in parallel:
+  - Task 10-a (Hero Redesign): Layered premium gradient background (emerald-950 + 3 blurred orbs + grid pattern overlay), premium typography (text-7xl headline with gradient text on line 2, animated badge), glassmorphism phone mockup card (rounded-2rem backdrop-blur, avatar, balance, quick actions, transaction row), floating elements (payment received pill + Pi rate pill), large glowing CTAs, trust indicators row, polished stats bar.
+  - Task 10-b (Body Sections Redesign): Features section (3-col grid, gradient icon tiles, hover lift, staggered whileInView), Security section (2-col with large gradient shield visual + 4 colored security rows), Platforms section (4 cards with large gradient icons + Available badges), Pi Network section (violet gradient with π glyph + 3 feature cards), CTA section (full-width gradient with orbs + dual buttons), Footer (4-col with social icons).
+
+VLM Verification Results:
+- Hero: 7/10 (was low) — premium gradient background ✓, strong typography hierarchy ✓, glassmorphism card ✓, prominent CTAs ✓
+- Features: 7/10 — polished header ✓, consistent spacing ✓
+- Security: 7/10 — shield visual ✓, security features well-presented ✓
+- CTA: 7/10 — premium gradient ✓, prominent buttons ✓
+
+Stage Summary:
+- Hero section: REDESIGNED with layered gradient background (emerald-950 + blurred orbs + grid overlay), text-7xl headline with gradient text, animated Pi Network badge, glassmorphism phone mockup with floating elements, large glowing CTAs, trust indicators, premium stats bar.
+- Body sections: REDESIGNED with premium card grids (gradient icon tiles, hover lift, staggered animations), 2-col security section with large shield visual, polished platforms cards, violet Pi Network section, full-width gradient CTA with dual buttons, 4-col footer with social icons.
+- All 8 sections present: Hero, Stats, Features, Security, Platforms, Pi Network, CTA, Footer.
+- All CTAs working: Sign in, Open App, Get Started Free, Live Demo, Connect Pi Account, Open Free Account, Talk to Sales.
+- Lint: 0 errors, 0 warnings.
+- Dev server: stable on port 3000, no runtime errors.
+
+---
+
+## Task ID: 11-a
+**Agent**: Database Schema & RBAC Foundation Specialist
+
+**Task**: Add `accountType`, `BusinessProfile`, `ApiConfig`, `ApiLog`, `FeatureFlag`, `FeeConfig` models. Seed super admin. Create RBAC helper with 9 roles and 60+ permissions. Seed default API configs, feature flags, fee configs.
+
+### Work Log:
+- Read existing `prisma/schema.prisma` (28 existing models) and confirmed zero field/model removal — purely additive changes.
+- Edited `prisma/schema.prisma`:
+  - Added `accountType` (default `"personal"`) and `permissions` (default `"[]"`) fields to `User`.
+  - Added `businessProfile BusinessProfile?` relation to `User`.
+  - Expanded the `role` comment to enumerate the new RBAC roles (backward compatible — `user | admin | agent | support` still valid).
+  - Added 5 new models: `BusinessProfile`, `ApiConfig`, `ApiLog`, `FeatureFlag`, `FeeConfig` (with appropriate indexes: `@@index([service, enabled])` on ApiConfig, `@@index([apiConfigId, createdAt])` and `@@index([level, createdAt])` on ApiLog).
+  - Fixed Prisma default-value quoting for `FeatureFlag.accountTypes` and `FeatureFlag.roles` (Prisma requires escaped double-quotes inside string defaults).
+- Ran `bun run db:push` — schema synced successfully, Prisma Client regenerated (v6.19.2).
+- Created `prisma/seed-admin.ts`:
+  - Idempotent super-admin seeder.
+  - Detects existing `super_admin` (no-op), or an existing user at the target email (upgrades to `super_admin` + sets `permissions: ["*"]` + ensures wallet), or creates a brand-new super admin.
+  - Credentials sourced from env (`ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_PHONE`) with safe defaults (`admin@gaexpay.com` / `Admin@2025` / `+2347000000000`).
+- Created `src/lib/rbac.ts`:
+  - `Role` union type and `ROLES` metadata array (9 roles: super_admin, admin, moderator, support, financial_manager, kyc_manager, marketplace_manager, content_manager, user).
+  - `PERMISSIONS` const array with 60+ granular permission strings grouped by domain (users, businesses, transactions, wallets, currencies, fees, api, features, notifications, content, roles, disputes, reports, security, kyc, modules, settings).
+  - Helpers: `hasPermission`, `hasAnyPermission`, `hasAllPermissions`, `getRolePermissions` (per-role default permission map), `isAdmin`, `isSuperAdmin`, `getRoleLabel`, `parsePermissions` (safe JSON parsing of the DB string field).
+- Updated `src/lib/api-auth.ts`:
+  - Added imports: `db` from `@/lib/db`, `parsePermissions` + `hasPermission` from `@/lib/rbac`.
+  - Exported `AuthUser` interface and `RoleAuthResult` discriminated union.
+  - Added `requireRole(req, roles[])` — async helper that loads the user, checks status, and verifies role membership OR wildcard `"*"` permission.
+  - Added `requirePermission(req, permission)` — async helper that loads the user and verifies a specific granular permission (or `"*"`).
+  - Kept existing `getAuthUserId`, `requireAuth`, `getClientIdentifier` unchanged.
+- Created `prisma/seed-config.ts`:
+  - 27 API configs across 12 service categories (payment: Stripe/Paystack/Flutterwave, blockchain: CoinGecko/Infura/Pi Network, kyc: Smile ID/Veriff, kyb: OpenCorporates/Crediwire, sms: Twilio/Termii, email: SendGrid/SES, push: FCM/OneSignal, geolocation: Google Maps/IPInfo, ai: Z.ai/OpenAI, exchange_rate: OXR/Fixer, cloud_storage: S3/Cloudinary, auth: NextAuth/Google/Apple). All disabled by default with empty placeholder credentials.
+  - 20 feature flags covering every existing module (crypto_trading, pi_network, international_transfer, qr_payments, mobile_money, virtual_cards, savings_goals, budgets, scheduled_transfers, analytics, spending_map, merchant_dashboard, business_pro, developer_portal, treasury, aml_compliance, enterprise_admin, push/email/sms notifications) with category, accountTypes, and roles metadata.
+  - 7 fee configs (transfer_fee 1.5%, exchange_fee 2%, crypto_swap_fee 1%, bill_payment_fee 0.5%, card_fee 2.5%, international_transfer_fee mixed 1.5%+₦500, withdrawal_fee 1%) with min/max caps.
+  - All seeds idempotent — uses findFirst/findUnique + update or create pattern.
+- Ran `bun run prisma/seed-admin.ts` — detected existing `admin@gaexpay.com` (role=admin) and upgraded to super_admin with permissions `["*"]`.
+- Ran `bun run prisma/seed-config.ts` — seeded 27 API configs, 20 feature flags, 7 fee configs.
+- Ran `bun run lint` — **0 errors, 0 warnings**.
+- Verified super admin and seed counts via direct Prisma queries (all match).
+
+### Stage Summary:
+- **5 new models added** (BusinessProfile, ApiConfig, ApiLog, FeatureFlag, FeeConfig) + 2 new fields on User (`accountType`, `permissions`). No existing fields/models removed.
+- **RBAC helper** (`src/lib/rbac.ts`): 9 roles, 60+ permissions, per-role default permission maps, wildcard `"*"` support.
+- **API route guards** (`src/lib/api-auth.ts`): `requireRole(req, roles[])` and `requirePermission(req, permission)` — both async, both check status + role/permission, both return either `{ userId, user }` or `{ error: NextResponse }`.
+- **Super admin credentials**:
+  - Email: `admin@gaexpay.com`
+  - Password: existing (retained from the previous admin user — reset via admin UI if forgotten; for a fresh deploy it defaults to `Admin@2025`)
+  - Role: `super_admin`, permissions: `["*"]`, kycTier: 3, status: active
+- **Seed results**: 27 API configs (all disabled by default), 20 feature flags, 7 fee configs.
+- **Lint**: 0 errors. **Dev server**: stable (200 OK responses only).
+- **Files created**: `prisma/seed-admin.ts`, `prisma/seed-config.ts`, `src/lib/rbac.ts`.
+- **Files modified**: `prisma/schema.prisma` (additive), `src/lib/api-auth.ts` (additive).
+
+---
+
+## Task ID: 11-b
+**Agent**: Auth System Rebuild Specialist
+**Task**: Rebuild complete auth system — signup with account type (personal/business), login, logout, me, forgot/reset password, demo. Auth modal with account type selector. Real auth gating in page.tsx. Topbar avatar dropdown with logout.
+
+### Work Log
+
+#### 1. Prisma schema additions
+- Added `resetToken String?` and `resetTokenExpiry DateTime?` to the `User` model (for password reset flow). Agent A had already added `accountType`, `permissions`, and the `BusinessProfile` model.
+- Ran `bun run db:push` then `bun run db:generate` to sync.
+- Fixed a Turbopack-side caching issue: the running dev server had a stale copy of `@prisma/client` in `.next/dev/node_modules/@prisma/client-*/`. Cleared the cache and restarted the dev server with `setsid` so the regenerated Prisma client was picked up.
+
+#### 2. Auth API routes — `src/app/api/auth/`
+- **`signup/route.ts`** (POST): Validates email regex, phone regex, names ≥2 chars, password ≥8 chars with letter+number, `accountType` ∈ {personal, business}. Checks email+phone uniqueness → 409 if taken. Hashes via `hashPassword()`, creates User with `accountType`, `role:"user"`, `status:"active"`, `currency:"NGN"`, `permissions:"[]"`, generated referral code. For business: also creates an empty `BusinessProfile` (KYB to be filled later). Creates a default NGN wallet. Sends a welcome notification. Issues JWT via `generateToken(userId)`, sets `gxp_token` httpOnly cookie (7-day max-age, sameSite=lax, secure in prod). Rate-limited via `rateLimitSensitive`. Returns `{ user, token }` (201).
+- **`login/route.ts`** (POST): Looks up by email → 401 "Invalid email or password" (no enumeration). Verifies via `verifyPassword()` → 401 on mismatch. Checks `status === "active"` → 403 if suspended/frozen. Updates `lastLoginAt`. Issues JWT, sets cookie. Returns `{ user, token }`. Rate-limited via `rateLimitAuth`.
+- **`logout/route.ts`** (POST): Clears the `gxp_token` cookie (`maxAge: 0`). Returns `{ success: true }`.
+- **`me/route.ts`** (GET): Reads JWT from `Authorization: Bearer` OR `gxp_token` cookie. Verifies via `verifyToken()`. **NO dev/demo fallback** — a real, valid JWT is required. Returns 401 if no/invalid token. Returns the user profile including `accountType`, `role`, `permissions` (parsed from JSON), `kycStatus`, and `businessProfile` (if any). Paranoia check: suspended users get 401.
+- **`forgot-password/route.ts`** (POST): Body `{ email }`. If the email exists, generates a 32-byte hex reset token, stores with 1h expiry. Always returns `{ success: true }` (no enumeration). In dev: returns the token in `devResetToken` for testing. Rate-limited via `rateLimitAuth`.
+- **`reset-password/route.ts`** (POST): Body `{ token, newPassword }`. Finds user by `resetToken` where `resetTokenExpiry > now` → 400 if invalid/expired. Validates new password. Hashes, clears token, updates `passwordHash`. Returns `{ success: true }`. Rate-limited via `rateLimitAuth`.
+- **`demo/route.ts`** (POST, dev only): Issues a JWT for `DEMO_USER_ID` so the SPA can be explored without signup. Returns 403 in production. Sets cookie. Same `{ user, token }` shape as login.
+
+#### 3. `src/lib/api-auth.ts` — read `gxp_token` cookie
+- Added step 2 to `getAuthUserId`: after the `Bearer` token check, parse the `gxp_token` cookie from the `cookie` header and verify via `verifyToken()`. Treated identically to the Bearer path — production rejects on invalid signature, dev falls through to demo fallback. This means all existing API routes (`/api/wallets`, `/api/me`, etc.) now "just work" for cookie-authenticated browser sessions without manually attaching an `Authorization` header.
+
+#### 4. `src/lib/auth-client.ts` — client auth helpers
+- `setAuthed()` / `clearAuthed()` / `isAuthedLocal()` — localStorage-backed `gxp_auth` flag. Used as a fast-path hint; the actual source of truth is the httpOnly cookie + `/api/auth/me`.
+
+#### 5. `src/components/gaexpay/auth-modal.tsx` — beautiful auth modal
+- **Tabs**: "Sign In" and "Create Account".
+- **Create Account**:
+  - Account type selector: TWO large selectable cards at the top — "Compte Personnel" (User icon) and "Compte Entreprise" (Building2 icon). Selected card has emerald ring + primary tint + check badge (Framer Motion `layoutId` shared transition).
+  - Personal fields: firstName, lastName, email, phone, country (optional), password, confirm password.
+  - Business fields: companyName (animated slide-down when business selected), firstName/lastName (contact), email, phone, country, password, confirm password.
+  - Password strength meter: 4-segment bar — weak (red), fair (amber), good (yellow), strong (emerald). Strength evaluated from length, mixed case, digit, symbol/length-12.
+  - Show/hide password toggle (Eye / EyeOff).
+  - "Create Account" button with Loader2 spinner.
+  - Trust badges row: "Bank-grade security", "50K+ users", "Regulated".
+- **Sign In**:
+  - Email, password (with show/hide), "Forgot password?" link.
+  - "Try Demo Account" button (calls `/api/auth/demo`).
+  - "Sign In" button with loading state.
+- **Forgot password flow**: email → "If the email exists, a reset link has been sent." → in dev, token is auto-filled into the reset form → reset form (token + new password) → "Password reset, please log in" success card.
+- **Visual**: gradient header (emerald/teal/violet) with Logo + "Bank-grade security" badge, animated header text on tab/flow change. Mobile-first: full-bleed modal on mobile, centered 28rem dialog on desktop. Framer-motion AnimatePresence for tab/flow transitions.
+- Uses shadcn/ui `Dialog`, `Tabs`, `Input`, `Button`, `Label` + lucide-react icons (User, Building2, Mail, Lock, Phone, Eye, EyeOff, Shield, ArrowRight, Sparkles, Loader2, BadgeCheck, Globe2).
+- `toast` from sonner for all feedback.
+
+#### 6. `src/components/gaexpay/landing.tsx` — wired `onSignup` prop
+- Existing `onEnter` prop now opens the **Sign In** tab; new `onSignup` prop opens the **Create Account** tab.
+- "Get Started Free", "Open Free Account", "Connect Pi Account" buttons → `onSignup`.
+- "Sign In", "Sign In / Live Demo", "Talk to Sales" buttons → `onEnter`.
+- All other landing content (hero, features, security, platforms, CTA banner, footer) preserved.
+
+#### 7. `src/app/page.tsx` — real auth gating
+- On mount, fetches `/api/auth/me` with `credentials: "include"`. If it returns a user → `setAuthed()` + render `<AppShell />`. If 401 → render `<Landing>` + `<AuthModal>` (initially closed).
+- Auth state machine: `loading` → `guest` | `authed`. `loading` returns `null` to avoid hydration flash.
+- `authMode` state (`"login" | "signup" | null`) drives which tab the modal opens on.
+- `onSuccess` from `<AuthModal>` closes the modal, flips state to `authed`, calls `setAuthed()`.
+- The old `sessionStorage("gxp_entered")` hack is gone — the cookie is the real source of truth.
+
+#### 8. `src/components/gaexpay/topbar.tsx` — avatar dropdown
+- Replaced the bare avatar button with a `DropdownMenu`.
+- Dropdown shows: user name + email header, Settings, Identity (KYC/KYB), Sign out.
+- Avatar fallback shows initials computed from `/api/me` (falls back to "AO" while loading).
+- Sign out: POST `/api/auth/logout`, `clearAuthed()`, toast, then `window.location.reload()` after 200ms — the page.tsx gate then shows the landing page.
+- Preserved all existing topbar features (search, Send button, AI assistant, currency switcher, theme toggle, notifications popover, mobile menu sheet).
+
+### Stage Summary
+
+**Endpoints created (7)**:
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/auth/signup` | POST | Create personal/business account + issue JWT |
+| `/api/auth/login` | POST | Email/password login → JWT + cookie |
+| `/api/auth/logout` | POST | Clear `gxp_token` cookie |
+| `/api/auth/me` | GET | Real auth (cookie OR Bearer) — no dev fallback |
+| `/api/auth/forgot-password` | POST | Generate reset token (1h expiry), no enumeration |
+| `/api/auth/reset-password` | POST | Verify token + set new password |
+| `/api/auth/demo` | POST | Dev-only: JWT for `DEMO_USER_ID` |
+
+**Files created**:
+- `src/app/api/auth/signup/route.ts`
+- `src/app/api/auth/login/route.ts`
+- `src/app/api/auth/logout/route.ts`
+- `src/app/api/auth/me/route.ts`
+- `src/app/api/auth/forgot-password/route.ts`
+- `src/app/api/auth/reset-password/route.ts`
+- `src/app/api/auth/demo/route.ts`
+- `src/lib/auth-client.ts`
+- `src/components/gaexpay/auth-modal.tsx`
+
+**Files edited**:
+- `prisma/schema.prisma` — added `resetToken` + `resetTokenExpiry` to User
+- `src/lib/api-auth.ts` — `getAuthUserId` now also reads `gxp_token` cookie
+- `src/components/gaexpay/landing.tsx` — added `onSignup` prop, wired CTAs
+- `src/app/page.tsx` — replaced `sessionStorage` hack with real `/api/auth/me` gating
+- `src/components/gaexpay/topbar.tsx` — avatar dropdown menu with Settings / Identity / Sign out
+
+### Verification Results
+- ✅ `bun run lint` — 0 errors, 0 warnings
+- ✅ `bun run db:push` + `bun run db:generate` — schema synced, Prisma client regenerated
+- ✅ Dev server stable on port 3000 (restarted after Prisma cache fix)
+
+**curl test results** (all passed):
+- Signup personal → 201, returns `{ user, token }`, sets `gxp_token` cookie, creates User + NGN wallet + welcome notification
+- Signup business → 201, returns `{ user, token }` with `accountType:"business"`, creates User + BusinessProfile + business NGN wallet
+- Signup duplicate email/phone → 409 (no enumeration message)
+- Login (personal) → 200, returns `{ user, token }`, updates `lastLoginAt`
+- Login (business) → 200
+- Login wrong password → 401 "Invalid email or password"
+- `/api/auth/me` with no auth → 401 (NO dev fallback — real auth confirmed)
+- `/api/auth/me` with cookie → 200, returns full user profile + `businessProfile`
+- `/api/auth/logout` → 200 `{success:true}`, clears cookie
+- Forgot password → 200 `{success:true, devResetToken, devUserId}` (dev returns token; prod would email)
+- Reset password (with token) → 200 `{success:true}`; old password stops working, new password works
+- Demo login → 200 `{user, token}` for `DEMO_USER_ID`
+- Existing APIs (`/api/wallets`, `/api/me`) still work — they now accept the cookie via the updated `getAuthUserId`
+- Page renders (HTTP 200)

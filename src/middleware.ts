@@ -48,8 +48,10 @@ const SECURITY_HEADERS: Record<string, string> = {
   "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "X-XSS-Protection": "1; mode=block",
-  // Don't allow permissions (camera, mic, geolocation) to be silently requested.
-  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+  // Allow camera + geolocation on self-origin so the KYC selfie capture and
+  // the GPS address auto-detect features work in-browser. Mic stays disabled
+  // (we have no voice features). interest-cohort stays disabled (no FLoC).
+  "Permissions-Policy": "camera=(self), microphone=(), geolocation=(self), interest-cohort=()",
 };
 
 export function middleware(_req: NextRequest) {

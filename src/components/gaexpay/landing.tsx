@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CURRENCIES } from "@/lib/gaexpay";
 
-export function Landing({ onEnter }: { onEnter: () => void }) {
+export function Landing({ onEnter, onSignup }: { onEnter: () => void; onSignup: () => void }) {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
@@ -27,7 +27,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
           </nav>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" className="hidden sm:inline-flex" onClick={onEnter}>Sign in</Button>
-            <Button size="sm" onClick={onEnter}>Open App <ArrowRight className="h-4 w-4 ml-1" /></Button>
+            <Button size="sm" onClick={onSignup}>Get Started <ArrowRight className="h-4 w-4 ml-1" /></Button>
           </div>
         </div>
       </header>
@@ -51,11 +51,11 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
                   bank transfers, QR payments and virtual cards — all in one beautiful wallet.
                 </p>
                 <div className="mt-7 flex flex-wrap gap-3">
-                  <Button size="lg" onClick={onEnter} className="rounded-full">
+                  <Button size="lg" onClick={onSignup} className="rounded-full">
                     Get Started Free <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                   <Button size="lg" variant="outline" className="rounded-full" onClick={onEnter}>
-                    Live Demo
+                    Sign In / Live Demo
                   </Button>
                 </div>
                 <div className="mt-8 flex items-center gap-6 text-sm text-muted-foreground">
@@ -342,7 +342,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
                 </div>
                 <Button
                   size="lg"
-                  onClick={onEnter}
+                  onClick={onSignup}
                   className="mt-8 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg transition hover:from-violet-700 hover:to-fuchsia-700 hover:shadow-xl"
                 >
                   Connect Pi Account <ArrowRight className="h-4 w-4 ml-2" />
@@ -396,7 +396,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Button
                   size="lg"
-                  onClick={onEnter}
+                  onClick={onSignup}
                   className="h-12 w-full rounded-full bg-white px-8 font-semibold text-emerald-700 shadow-lg transition hover:bg-white/90 active:scale-95 sm:h-14 sm:w-auto"
                 >
                   Open Free Account <ArrowRight className="h-4 w-4 ml-2" />

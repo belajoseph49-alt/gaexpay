@@ -1,19 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireRole } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
-
-// ---------------------------------------------------------------------------
-// ADMIN-ONLY ROUTE — PRODUCTION HARDENING TODO:
-//   1. Verify the caller has role === "admin" via requireAuth + role check.
-//   2. Gate the route behind an admin rate-limit policy (separate from the
-//      user-facing SENSITIVE_LIMIT) so a compromised user token can't
-//      enumerate platform-wide metrics.
-//   3. Wrap the handler in try/catch + apiCatch to avoid leaking Prisma
-//      errors to the client.
-//   The DEMO_USER_ID-less impl below is acceptable in the dev/demo build
-//   but MUST be hardened before any production deploy.
-// ---------------------------------------------------------------------------
 
 // USD-normalized currency conversion rates for aggregation
 const USD_RATE: Record<string, number> = {
@@ -58,7 +47,10 @@ function build14DaySeries(transactions: any[], field: "volume" | "revenue") {
   return out;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const auth = await requireRole(req, ["super_admin", "admin"]);
+  if ("error" in auth) return auth.error;
+
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
   const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);

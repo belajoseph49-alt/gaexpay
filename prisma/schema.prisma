@@ -47,10 +47,18 @@ model User {
 
   // Status
   status          String   @default("active") // active | suspended | frozen | closed
-  role            String   @default("user") // user | admin | agent | support
+  role            String   @default("user") // user | admin | agent | support | super_admin | moderator | financial_manager | kyc_manager | marketplace_manager | content_manager
   lastLoginAt     DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  // Account type & RBAC
+  accountType     String   @default("personal") // personal | business
+  permissions     String   @default("[]") // JSON array of permission strings (granular RBAC)
+
+  // Password reset
+  resetToken      String?
+  resetTokenExpiry DateTime?
 
   wallets         Wallet[]
   transactions    Transaction[] @relation("TxUser")
@@ -68,6 +76,7 @@ model User {
   referralCount   Int      @default(0)
   rewardPoints    Int      @default(0)
   kycDocuments    KycDocument[]
+  businessProfile BusinessProfile?
 }
 
 model Wallet {
@@ -361,4 +370,158 @@ model Dispute {
   resolvedAt    DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+// ============================================================
+// Business Profile (KYB — Know Your Business)
+// ============================================================
+model BusinessProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Company info
+  companyName       String
+  companyType       String?  // LLC | corporation | partnership | sole_proprietor | other
+  registrationNumber String?
+  taxId             String?
+  commercialRegistry String?
+  legalAddress      String?
+  legalCity         String?
+  legalCountry      String?
+  website           String?
+  industry          String?
+
+  // Directors & beneficial owners (JSON)
+  directors         String   @default("[]") // JSON array of {name, idNumber, role, dob}
+  beneficialOwners  String   @default("[]") // JSON array of {name, idNumber, ownershipPercent, dob}
+
+  // Documents (JSON array of {type, url, uploadedAt, verified})
+  documents         String   @default("[]")
+
+  // KYB status
+  kybStatus         String   @default("unverified") // unverified | pending | verified | rejected
+  kybSubmittedAt    DateTime?
+  kybVerifiedAt     DateTime?
+  kybRejectionReason String?
+  kybTier           Int      @default(0)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// ============================================================
+// Centralized API configuration management
+// ============================================================
+model ApiConfig {
+  id          String   @id @default(cuid())
+  service     String   // payment | blockchain | kyc | kyb | sms | email | push | geolocation | ai | exchange_rate | cloud_storage | auth | other
+  name        String   // human-readable name e.g. "Stripe", "CoinGecko", "Twilio SMS"
+  provider    String?  // e.g. "stripe", "coingecko", "twilio"
+
+  // Credentials (JSON — stores apiKey, secret, endpoint, etc.)
+  credentials String   @default("{}") // JSON object
+
+  // Configuration
+  baseUrl     String?
+  webhookUrl  String?
+  environment String   @default("sandbox") // sandbox | production
+
+  // Status
+  enabled     Boolean  @default(false)
+  isDefault   Boolean  @default(false)
+
+  // Rate limits
+  rateLimitPerMin Int?
+  rateLimitPerDay Int?
+
+  // Metadata
+  description String?
+  category    String?  // grouping for UI
+  icon        String?
+
+  // Monitoring
+  lastUsedAt  DateTime?
+  lastErrorAt DateTime?
+  lastError   String?
+  totalRequests Int    @default(0)
+  failedRequests Int   @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  logs        ApiLog[]
+
+  @@index([service, enabled])
+}
+
+// API request/error logs (per ApiConfig)
+model ApiLog {
+  id          String   @id @default(cuid())
+  apiConfigId String
+  apiConfig   ApiConfig @relation(fields: [apiConfigId], references: [id], onDelete: Cascade)
+
+  level       String   // info | warn | error
+  message     String
+  endpoint    String?
+  statusCode  Int?
+  responseTimeMs Int?
+  requestBody String?  // JSON (sanitized — no secrets)
+  responseBody String? // JSON (truncated)
+
+  createdAt   DateTime @default(now())
+
+  @@index([apiConfigId, createdAt])
+  @@index([level, createdAt])
+}
+
+// ============================================================
+// Feature flags — toggle platform modules/features on/off
+// ============================================================
+model FeatureFlag {
+  id          String   @id @default(cuid())
+  key         String   @unique // e.g. "crypto_trading", "pi_network", "international_transfer"
+  name        String
+  description String?
+  enabled     Boolean  @default(true)
+
+  // Visibility — which account types/roles see this feature
+  accountTypes String  @default("[\"personal\",\"business\"]") // JSON array
+  roles       String   @default("[\"user\",\"admin\"]") // JSON array
+
+  // Category for grouping in admin UI
+  category    String   @default("general") // payments | crypto | security | communication | analytics | other
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================================
+// Fee configuration (configurable fees/commissions)
+// ============================================================
+model FeeConfig {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g. "transfer_fee", "crypto_swap_fee", "bill_payment_fee"
+  description String?
+
+  // Fee structure
+  feeType     String   @default("percentage") // percentage | fixed | mixed
+  feeValue    Float    @default(0) // percentage (0-100) or fixed amount
+  fixedFee    Float    @default(0) // for mixed type
+  currency    String   @default("NGN")
+
+  // Limits
+  minFee      Float    @default(0)
+  maxFee      Float?
+  minAmount   Float?
+  maxAmount   Float?
+
+  // Applicability
+  transactionType String? // transfer | exchange | crypto_trade | bill | card | etc.
+  accountType String  @default("all") // all | personal | business
+
+  enabled     Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

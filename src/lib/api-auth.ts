@@ -14,6 +14,8 @@
 
 import { NextResponse } from "next/server";
 import { verifyToken, DEMO_USER_ID } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { parsePermissions, hasPermission } from "@/lib/rbac";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -39,7 +41,19 @@ export function getAuthUserId(req: Request): string | null {
     }
   }
 
-  // 2. Dev-mode `x-gxp-user` header — used by the demo SPA + browser tools.
+  // 2. gxp_token cookie (set by /api/auth/login, /signup, /demo). Lets the
+  //    authenticated SPA call APIs without manually attaching an
+  //    Authorization header. Treated identically to the Bearer token —
+  //    production rejects on invalid signature, dev falls through.
+  const cookieHeader = req.headers.get("cookie") || "";
+  const cookieMatch = /(?:^|;\s*)gxp_token=([^;]+)/.exec(cookieHeader);
+  if (cookieMatch) {
+    const decoded = verifyToken(cookieMatch[1]);
+    if (decoded?.userId) return decoded.userId;
+    if (isProd) return null;
+  }
+
+  // 3. Dev-mode `x-gxp-user` header — used by the demo SPA + browser tools.
   if (!isProd) {
     const devUserHeader = req.headers.get("x-gxp-user");
     if (devUserHeader && /^[a-zA-Z0-9_-]{10,40}$/.test(devUserHeader)) {
@@ -47,7 +61,7 @@ export function getAuthUserId(req: Request): string | null {
     }
   }
 
-  // 3. Demo fallback — dev-mode ONLY. Lets the seeded SPA call APIs without
+  // 4. Demo fallback — dev-mode ONLY. Lets the seeded SPA call APIs without
   //    a login flow while we migrate to real NextAuth.
   if (!isProd) {
     return DEMO_USER_ID;
@@ -103,4 +117,148 @@ export function getClientIdentifier(req: Request, userId?: string | null): strin
   const realIp = req.headers.get("x-real-ip");
   if (realIp) return `ip:${realIp.trim()}`;
   return "anonymous";
+}
+
+// ============================================================
+// RBAC helpers — role & permission checks for API routes.
+// ============================================================
+
+export interface AuthUser {
+  id: string;
+  role: string;
+  permissions: string[];
+  accountType: string;
+  status: string;
+}
+
+export type RoleAuthResult =
+  | { userId: string; user: AuthUser }
+  | { error: NextResponse };
+
+/**
+ * Require that the authenticated user has one of the given roles (or the
+ * wildcard permission "*"). Returns `{ userId, user }` on success, or
+ * `{ error }` which the caller should return immediately.
+ *
+ * Usage:
+ *   const auth = await requireRole(req, ["admin", "super_admin"]);
+ *   if ("error" in auth) return auth.error;
+ *   const { userId, user } = auth;
+ */
+export async function requireRole(req: Request, roles: string[]): Promise<RoleAuthResult> {
+  const userId = getAuthUserId(req);
+  if (!userId) {
+    return {
+      error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    };
+  }
+
+  const dbUser = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      role: true,
+      permissions: true,
+      accountType: true,
+      status: true,
+    },
+  });
+
+  if (!dbUser) {
+    return {
+      error: NextResponse.json({ error: "User not found" }, { status: 404 }),
+    };
+  }
+  if (dbUser.status !== "active") {
+    return {
+      error: NextResponse.json({ error: "Account suspended" }, { status: 403 }),
+    };
+  }
+
+  const userPermissions = parsePermissions(dbUser.permissions);
+  const hasAccess = roles.includes(dbUser.role) || userPermissions.includes("*");
+
+  if (!hasAccess) {
+    return {
+      error: NextResponse.json(
+        { error: "Insufficient permissions", requiredRoles: roles },
+        { status: 403 },
+      ),
+    };
+  }
+
+  return {
+    userId,
+    user: {
+      id: dbUser.id,
+      role: dbUser.role,
+      permissions: userPermissions,
+      accountType: dbUser.accountType,
+      status: dbUser.status,
+    },
+  };
+}
+
+/**
+ * Require that the authenticated user has a specific permission (or the
+ * wildcard permission "*"). Returns `{ userId, user }` on success, or
+ * `{ error }` which the caller should return immediately.
+ *
+ * Usage:
+ *   const auth = await requirePermission(req, "users.delete");
+ *   if ("error" in auth) return auth.error;
+ */
+export async function requirePermission(
+  req: Request,
+  permission: string,
+): Promise<RoleAuthResult> {
+  const userId = getAuthUserId(req);
+  if (!userId) {
+    return {
+      error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    };
+  }
+
+  const dbUser = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      role: true,
+      permissions: true,
+      accountType: true,
+      status: true,
+    },
+  });
+
+  if (!dbUser) {
+    return {
+      error: NextResponse.json({ error: "User not found" }, { status: 404 }),
+    };
+  }
+  if (dbUser.status !== "active") {
+    return {
+      error: NextResponse.json({ error: "Account suspended" }, { status: 403 }),
+    };
+  }
+
+  const userPermissions = parsePermissions(dbUser.permissions);
+  if (!hasPermission(userPermissions, permission)) {
+    return {
+      error: NextResponse.json(
+        { error: "Insufficient permissions", requiredPermission: permission },
+        { status: 403 },
+      ),
+    };
+  }
+
+  return {
+    userId,
+    user: {
+      id: dbUser.id,
+      role: dbUser.role,
+      permissions: userPermissions,
+      accountType: dbUser.accountType,
+      status: dbUser.status,
+    },
+  };
 }

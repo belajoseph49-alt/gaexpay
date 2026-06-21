@@ -28,6 +28,13 @@ import { StatementView } from "./views/statement-view";
 import { AchievementsView } from "./views/achievements-view";
 import { MerchantQRView } from "./views/merchant-qr-view";
 import { KycView } from "./views/kyc-view";
+import { KybView } from "./views/kyb-view";
+import { BusinessDashboardView } from "./views/business-dashboard-view";
+import { TeamView } from "./views/team-view";
+import { InvoicesView } from "./views/invoices-view";
+import { PayrollView } from "./views/payroll-view";
+import { AdminPanelView } from "./views/admin-panel-view";
+import { ApiManagementView } from "./views/api-management-view";
 import { SecurityView } from "./views/security-view";
 import { SettingsView } from "./views/settings-view";
 import { SupportView } from "./views/support-view";
@@ -64,6 +71,7 @@ export function AppShell() {
 
   const views: Record<string, React.ReactNode> = {
     dashboard: <DashboardView />,
+    "business-dashboard": <BusinessDashboardView />,
     wallets: <WalletsView />,
     "wallet-detail": <WalletDetailView />,
     send: <SendView />,
@@ -88,11 +96,17 @@ export function AppShell() {
     merchant: <MerchantView />,
     "merchant-qr": <MerchantQRView />,
     "business-pro": <BusinessProView />,
+    team: <TeamView />,
+    invoices: <InvoicesView />,
+    payroll: <PayrollView />,
     kyc: <KycView />,
+    kyb: <KybView />,
     security: <SecurityView />,
     settings: <SettingsView />,
     support: <SupportView />,
     admin: <AdminView />,
+    "admin-panel": <AdminPanelView />,
+    "api-management": <ApiManagementView />,
     "enterprise-admin": <EnterpriseAdminView />,
     compliance: <ComplianceView />,
     treasury: <TreasuryView />,

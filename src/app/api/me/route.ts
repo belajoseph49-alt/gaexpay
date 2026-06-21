@@ -19,13 +19,35 @@ export async function GET(req: Request) {
         gender: true, kycStatus: true, kycTier: true, mfaEnabled: true,
         biometricEnabled: true, twoFactorMethod: true, language: true,
         currency: true, themePreference: true, emailNotif: true, pushNotif: true,
-        smsNotif: true, status: true, role: true, referralCode: true,
+        smsNotif: true, status: true, role: true, accountType: true,
+        permissions: true, referralCode: true,
         referralEarnings: true, referralCount: true, rewardPoints: true,
         lastLoginAt: true, createdAt: true,
+        businessProfile: {
+          select: {
+            id: true, companyName: true, kybStatus: true, kybTier: true,
+            industry: true, legalCountry: true, legalCity: true, website: true,
+          },
+        },
       },
     });
     if (!user) return apiError("User not found", 404);
-    return NextResponse.json({ user });
+
+    // Parse permissions JSON string → string[]
+    let parsedPermissions: string[] = [];
+    try {
+      const parsed = JSON.parse(user.permissions || "[]");
+      if (Array.isArray(parsed)) parsedPermissions = parsed.filter((p): p is string => typeof p === "string");
+    } catch {
+      parsedPermissions = [];
+    }
+
+    return NextResponse.json({
+      user: {
+        ...user,
+        permissions: parsedPermissions,
+      },
+    });
   } catch (e) {
     return apiCatch(e);
   }
