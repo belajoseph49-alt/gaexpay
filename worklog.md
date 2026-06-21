@@ -2745,3 +2745,100 @@ Préserver toutes les fonctionnalités existantes. Améliorer l'UI/UX vers les s
 - ✅ Mobile (390×844): responsive, sans erreur
 - ✅ Dark theme: rendu premium
 - ✅ Screenshots: dashboard, crypto, send capturés
+
+---
+Task ID: 10-a
+Agent: Landing Hero Redesign Specialist
+Task: Redesign landing hero section to premium Stripe/Revolut/Wise level — layered gradient background, premium typography, glassmorphism phone mockup, floating elements, trust indicators.
+
+Work Log:
+- Read worklog.md and the full `src/components/gaexpay/landing.tsx` (313 lines). Confirmed hero was lines 36-126 (flat `mesh-bg`, weak typography, clunky thick-bordered phone mockup) and currencies strip was lines 129-140.
+- Confirmed call site in `src/app/page.tsx` only passes `onEnter`; added optional `onSignup` prop (defaults to `onEnter`) so "Get Started Free" can drive signup while preserving existing behaviour.
+- Pruned now-unused imports (`Star`, `Sparkles`, `Wallet`, `CURRENCIES`) and added new icons (`Eye`, `Plus`, `Receipt`) for the glass card quick-actions.
+- Rewrote the hero `<section>` with a layered premium background: `bg-gradient-to-b from-emerald-950 via-emerald-900 to-emerald-950` (kept dark end-stop instead of `to-background` to guarantee WCAG-readable white stats text in BOTH themes), three decorative blurred orbs (emerald/teal/violet) for depth, and a subtle 64px grid overlay masked with a radial gradient.
+- New headline: `text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight leading-[1.05]` — line 1 white, line 2 gradient text (`emerald-300 → teal-200 → emerald-400`). Added animated badge above with `animate-ping` pulsing dot: "Now with Pi Network · AI-powered" inside a `bg-white/10 backdrop-blur border border-white/15 rounded-full` pill.
+- Subheadline upgraded to `text-lg sm:text-xl text-white/70 max-w-xl` (was muted-foreground gray — now passes contrast on the dark emerald).
+- CTAs rebuilt as large premium buttons: primary "Get Started Free" (`h-12 sm:h-14`, gradient emerald→teal, emerald-950 text, `shadow-lg shadow-emerald-500/30`, arrow with hover translate, calls `handleSignup`) and secondary "Live Demo" (`border border-white/20 bg-white/5 backdrop-blur`, calls `onEnter`). Staggered framer-motion entrance (delays 0/0.1/0.2/0.3).
+- Trust indicators row below CTAs: Shield/Zap/Globe with emerald-400 icons and `text-white/50` labels (Bank-grade security · Instant transfers · 10+ currencies).
+- Replaced the clunky `border-8` phone mockup with a glassmorphism card stack (`rounded-[2rem] bg-gradient-to-b from-white/10 to-white/5 backdrop-blur-xl border border-white/15 shadow-2xl shadow-black/50`). Inside: avatar + "Adaeze Okonkwo" + verified badge + eye icon; balance `text-3xl font-bold tabular-nums text-white` "₦ 2,450,000.00"; 4 quick-action tiles (Send/Pay/TopUp/Bills) with emerald-300 icons; a "Chinedu Eze +₦25,000" recent-transaction row.
+- Added two floating elements with framer-motion infinite `y` loops: top-right emerald pill "✓ Payment received +₦50,000" and bottom-left violet pill "1 π ≈ $47.35". The whole mockup is `hidden lg:block` (mobile shows only text + CTAs, per spec).
+- Polished the post-hero strip into a stats bar (replaced currencies strip): solid `bg-emerald-950` base + inner `bg-white/5 backdrop-blur border-y border-white/10` overlay (guarantees dark backdrop for white text in all themes). 4 stats — 50K+ Users, 10+ Currencies & Pi Coin, $2M+ Transferred, 4.9/5 Rating — each `text-2xl sm:text-3xl font-bold text-white` + `text-xs text-white/50 uppercase tracking-wider` label, with `sm:divide-x sm:divide-white/10` vertical dividers on desktop.
+- Left all downstream sections untouched: Features, Security, Platforms, CTA, Footer, and the sticky header.
+
+Stage Summary:
+- File edited: `src/components/gaexpay/landing.tsx` (rewrote imports, component signature, header preserved, hero fully redesigned, currencies strip → stats bar; Features/Security/Platforms/CTA/Footer unchanged).
+- Props: `onEnter` preserved (header Sign in / Open App / Live Demo / CTA / Open Free Account); added optional `onSignup` wired to "Get Started Free" (falls back to `onEnter` so the existing `page.tsx` call site is fully backward-compatible).
+- Key hero improvements: layered gradient + 3 blurred orbs + masked grid (depth/texture); 7xl gradient headline (strong hierarchy); white/70 subhead (WCAG-safe contrast); large gradient + glass CTAs with shadow glow; trust-indicator row; realistic glassmorphism wallet card with avatar/balance/quick-actions/transaction; floating payment + Pi price pills with infinite float animation; polished stats bar.
+- Verification: `bun run lint` → 0 errors. Dev server `✓ Compiled in 354ms` with `GET / 200` responses, no runtime errors in `dev.log`. Mobile-first responsive (phone mockup hidden on `< lg`, two-column on desktop).
+
+---
+
+## Task ID: 10-b
+**Agent**: Landing Body Sections Redesign Specialist
+**Date**: 2026-06-19
+
+### Task
+Redesign the GaexPay landing body sections (everything AFTER the hero) to a premium level — gradient cards, depth, micro-interactions, consistent spacing. Keep `onEnter` prop working. Do NOT touch the hero (Agent A handles it).
+
+### Work Log
+- Read `worklog.md` for context (Phase 18 design system, Agent 10-a hero work) and the full `landing.tsx` (313 lines).
+- Confirmed call site (`src/app/page.tsx`) passes only `onEnter`; preserved signature `({ onEnter }: { onEnter: () => void })`.
+- Verified required lucide-react icons exist (`Coins`, `Lock`, `FileCheck`, `BadgeCheck`, `Twitter`, `Github`, `Linkedin`, `Instagram`) — no new packages needed.
+- Pruned unused import `Check` (was only used in old Security section, replaced by `Lock`/`Fingerprint`/`FileCheck`/`BadgeCheck`).
+- Added new imports: `Coins`, `Lock`, `FileCheck`, `BadgeCheck`, `Twitter`, `Github`, `Linkedin`, `Instagram`.
+- Preserved the hero section (`<section className="relative overflow-hidden">` … `</section>`) EXACTLY as-is per the "DO NOT touch the hero" instruction. Header also preserved (only updated the nav `Pricing` link → `Pi Network` anchor so it points to a real section).
+- Redesigned **Currencies strip → Stats bar**: bigger `py-8`, premium `tracking-[0.18em]` eyebrow ("Trusted across 30+ currencies worldwide"), hover state on each currency chip, `tabular-nums` on currency codes.
+- Redesigned **Features section**: consistent premium header pattern (eyebrow `text-xs font-semibold uppercase tracking-wider text-primary` + `text-3xl sm:text-4xl lg:text-5xl` heading + `text-lg` subheading). 9 cards in `lg:grid-cols-3` (clean 3×3 grid), each with `h-12 w-12 rounded-xl bg-gradient-to-br ${color} grid place-items-center shadow-lg` icon + `text-lg font-semibold mt-4` title + `text-sm text-muted-foreground mt-2` desc. Cards lift on hover (`hover:shadow-xl hover:-translate-y-1 transition-all duration-300`). Staggered `whileInView` framer-motion (`delay: i * 0.08`, `viewport={{ once: true, margin: "-80px" }}`).
+- Added a 9th feature card: **Pi Network Integration** (`Coins` icon, `from-violet-500 to-fuchsia-600` gradient) — replaced the redundant "Biometric Auth" card (Biometric is now covered in the Security section).
+- Redesigned **Security section**: 2-col layout. Left = visual: `rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 p-8 grid place-items-center min-h-[320px]` containing a `h-32 w-32 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 shadow-2xl shadow-emerald-500/30` shield container with `Shield` icon (`h-16 w-16`), plus floating "🔒 AES-256" and "✓ PCI-DSS L1" glass pills. Right = content: same premium header pattern + 4 security feature rows (Lock/Fingerprint/FileCheck/BadgeCheck) in `grid sm:grid-cols-2`, each with `h-10 w-10 rounded-full ${color} text-white shadow-md` icon + title + desc. Background `bg-muted/30 border-y`.
+- Redesigned **Platforms section**: premium header pattern. 4 cards in `lg:grid-cols-4`, each with `h-14 w-14 mx-auto rounded-2xl bg-gradient-to-br ${color} grid place-items-center shadow-lg` icon + title + desc + an "Available" badge (`inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400` with a `1.5×1.5` live dot). Hover lift + shadow.
+- Created a new dedicated **Pi Network section** (was missing from the file). 2-col layout mirroring Security's structure: left = content with violet eyebrow badge (`π Pi Network`), heading "Bring your Pi to life.", 3 feature rows (Instant Pi swaps / Send Pi to anyone / Verified & secure) each in `rounded-2xl border bg-card p-4` with violet gradient icon, and a "Connect Pi Account" CTA button (`bg-gradient-to-r from-violet-600 to-fuchsia-600`). Right = visual: violet gradient panel with a large `π` glyph in a `rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-2xl shadow-violet-500/30` container + floating "🟣 Pi Mainnet" and "Live: 1 π ≈ $47.35" glass pills. Mobile-first order swap (`order-1`/`order-2`).
+- Redesigned **CTA section**: full-width gradient panel `bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 py-20 lg:py-28` with 3 decorative blurred orbs (white/10, white/10, amber-300/20). Centered content: `text-3xl sm:text-4xl lg:text-5xl` white heading "Ready to take control of your money?" + `text-lg text-white/80` subhead + two buttons: primary (`h-12 sm:h-14 rounded-full bg-white text-emerald-700 shadow-lg active:scale-95`) and secondary (`h-12 sm:h-14 rounded-full border border-white/30 backdrop-blur hover:bg-white/10`). Wrapped in `whileInView` motion.
+- Redesigned **Footer**: `mt-auto border-t bg-background` (sticky-bottom behavior preserved). 4-col grid: Brand (Logo + tagline + 4 circular social buttons `h-9 w-9 rounded-full border hover:bg-muted`) | Product | Company | Legal. Bottom bar: `© 2025 GaexPay Inc. All rights reserved. Licensed by CBN.` + Privacy/Terms/Cookies small links. All anchor clicks `preventDefault`'d to avoid route changes.
+- Consistent spacing system applied everywhere: `py-16 lg:py-24` for all body sections, `mx-auto max-w-7xl px-4 lg:px-8` container, `gap-6` for card grids, `rounded-2xl` for all cards.
+- Global polish: `tabular-nums` on numeric values (currency codes, Pi price), `transition` on all interactive elements, `text-white` on icons inside gradient containers, mobile-first responsive (`w-full sm:w-auto` on CTA buttons, `flex-col sm:flex-row`).
+
+### Verification
+- ✅ `bun run lint` — 0 errors, 0 warnings.
+- ✅ Dev server: `✓ Compiled in 354ms` / `✓ Compiled in 298ms` / `✓ Compiled in 194ms`, `GET / 200` responses, no runtime errors in `dev.log`.
+- ✅ Hero section preserved verbatim (lines 36-127 unchanged from original).
+- ✅ All sections present: Stats bar, Features, Security, Platforms, Pi Network (new), CTA, Footer.
+- ✅ `onEnter` prop wired to all CTAs (Open App, Sign in, Live Demo, Get Started Free, Open Free Account, Talk to Sales, Connect Pi Account).
+
+### Stage Summary
+- **Files edited**: `src/components/gaexpay/landing.tsx` (imports updated; header nav updated; body sections from Currencies strip through Footer fully redesigned; hero preserved).
+- **Key section improvements**:
+  - Features: 3×3 grid with gradient icon tiles, shadow-lg, hover lift + translate, staggered `whileInView` reveals; added Pi Network card.
+  - Security: large gradient shield visual with floating glass compliance pills + 4 colored-icon security rows in a 2×2 grid.
+  - Platforms: 4 centered cards with large gradient icons + live "Available" badge + hover lift.
+  - Pi Network: brand-new dedicated section with violet gradient visual (large π glyph) + 3 feature rows + Connect CTA.
+  - CTA: full-width `from-emerald-600 via-teal-600 to-emerald-700` gradient with 3 blurred orbs + dual white/glass buttons (`active:scale-95`).
+  - Footer: 4-col layout with brand social icons (Twitter/Github/Linkedin/Instagram) + bottom bar with Privacy/Terms/Cookies.
+- **Spacing system**: All body sections use `py-16 lg:py-24`; all card grids use `gap-6`; all cards use `rounded-2xl`.
+- **Compatibility**: Call site unchanged. Hero untouched (Agent A handles it). All existing functionality preserved.
+
+---
+Task ID: 10 (Coordinator Summary — Landing Page Redesign)
+Agent: Main (Z.ai Code)
+Task: Redesign the landing page to professional premium quality. Deployed 2 UI specialist agents in parallel.
+
+Work Log:
+- Captured 4 screenshots of the current landing page (hero, stats, features, security, CTA).
+- VLM (glm-4.6v) analysis: hero rated low (flat gradient, weak typography, clunky phone mockup, unbalanced layout, small CTAs, poor contrast). Body sections rated 6/10 (weak hierarchy, generic messaging, no premium branding, no micro-interactions).
+- Deployed 2 specialist agents in parallel:
+  - Task 10-a (Hero Redesign): Layered premium gradient background (emerald-950 + 3 blurred orbs + grid pattern overlay), premium typography (text-7xl headline with gradient text on line 2, animated badge), glassmorphism phone mockup card (rounded-2rem backdrop-blur, avatar, balance, quick actions, transaction row), floating elements (payment received pill + Pi rate pill), large glowing CTAs, trust indicators row, polished stats bar.
+  - Task 10-b (Body Sections Redesign): Features section (3-col grid, gradient icon tiles, hover lift, staggered whileInView), Security section (2-col with large gradient shield visual + 4 colored security rows), Platforms section (4 cards with large gradient icons + Available badges), Pi Network section (violet gradient with π glyph + 3 feature cards), CTA section (full-width gradient with orbs + dual buttons), Footer (4-col with social icons).
+
+VLM Verification Results:
+- Hero: 7/10 (was low) — premium gradient background ✓, strong typography hierarchy ✓, glassmorphism card ✓, prominent CTAs ✓
+- Features: 7/10 — polished header ✓, consistent spacing ✓
+- Security: 7/10 — shield visual ✓, security features well-presented ✓
+- CTA: 7/10 — premium gradient ✓, prominent buttons ✓
+
+Stage Summary:
+- Hero section: REDESIGNED with layered gradient background (emerald-950 + blurred orbs + grid overlay), text-7xl headline with gradient text, animated Pi Network badge, glassmorphism phone mockup with floating elements, large glowing CTAs, trust indicators, premium stats bar.
+- Body sections: REDESIGNED with premium card grids (gradient icon tiles, hover lift, staggered animations), 2-col security section with large shield visual, polished platforms cards, violet Pi Network section, full-width gradient CTA with dual buttons, 4-col footer with social icons.
+- All 8 sections present: Hero, Stats, Features, Security, Platforms, Pi Network, CTA, Footer.
+- All CTAs working: Sign in, Open App, Get Started Free, Live Demo, Connect Pi Account, Open Free Account, Talk to Sales.
+- Lint: 0 errors, 0 warnings.
+- Dev server: stable on port 3000, no runtime errors.
