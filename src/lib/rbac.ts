@@ -63,6 +63,16 @@ export const PERMISSIONS = [
   "transactions.view", "transactions.reverse", "transactions.flag", "transactions.export",
   // Wallets
   "wallets.view", "wallets.adjust", "wallets.freeze",
+  // Cards
+  "cards.view", "cards.freeze", "cards.adjust", "cards.block", "cards.delete",
+  // Savings & Budgets
+  "savings.view", "savings.adjust", "savings.delete",
+  // Scheduled transfers
+  "scheduled.view", "scheduled.pause", "scheduled.cancel", "scheduled.execute",
+  // Crypto management
+  "crypto.view", "crypto.adjust", "crypto.settings",
+  // Exchange rates
+  "exchange_rates.view", "exchange_rates.edit", "exchange_rates.refresh",
   // Currencies
   "currencies.view", "currencies.add", "currencies.edit", "currencies.toggle",
   // Fees
@@ -89,6 +99,28 @@ export const PERMISSIONS = [
   "modules.view", "modules.toggle",
   // Settings
   "settings.view", "settings.edit",
+  // AML & Compliance
+  "aml.view", "aml.edit", "aml.report",
+  // Treasury
+  "treasury.view", "treasury.edit",
+  // Templates (email / SMS / push)
+  "templates.view", "templates.edit", "templates.create",
+  // Limits & Tiers
+  "limits.view", "limits.edit",
+  // Transfer Corridors
+  "corridors.view", "corridors.edit", "corridors.create",
+  // Platform Analytics
+  "analytics.view",
+  // Merchants
+  "merchants.view", "merchants.approve", "merchants.reject", "merchants.suspend", "merchants.create", "merchants.qrcode",
+  // Referral & Rewards
+  "referral.view", "referral.edit",
+  // Achievements / Gamification
+  "achievements.view", "achievements.create", "achievements.edit", "achievements.delete",
+  // Support Tickets
+  "support.view", "support.assign", "support.reply", "support.resolve",
+  // Developer Portal
+  "developer_portal.view", "developer_portal.create", "developer_portal.revoke", "developer_portal.webhooks",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -141,6 +173,10 @@ export function getRolePermissions(role: Role): string[] {
       "users.view",
       "tickets.view",
       "tickets.resolve",
+      "support.view",
+      "support.assign",
+      "support.reply",
+      "support.resolve",
       "notifications.view",
     ],
     financial_manager: [
@@ -151,6 +187,21 @@ export function getRolePermissions(role: Role): string[] {
       "wallets.view",
       "wallets.adjust",
       "wallets.freeze",
+      "cards.view",
+      "cards.freeze",
+      "cards.adjust",
+      "cards.block",
+      "savings.view",
+      "savings.adjust",
+      "scheduled.view",
+      "scheduled.pause",
+      "scheduled.cancel",
+      "scheduled.execute",
+      "crypto.view",
+      "crypto.adjust",
+      "exchange_rates.view",
+      "exchange_rates.edit",
+      "exchange_rates.refresh",
       "fees.view",
       "fees.edit",
       "reports.view",
@@ -172,6 +223,11 @@ export function getRolePermissions(role: Role): string[] {
       "products.view",
       "products.edit",
       "merchants.view",
+      "merchants.approve",
+      "merchants.reject",
+      "merchants.suspend",
+      "merchants.create",
+      "merchants.qrcode",
     ],
     content_manager: [
       "content.view",

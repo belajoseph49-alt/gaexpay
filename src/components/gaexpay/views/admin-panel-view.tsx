@@ -6,6 +6,9 @@ import {
   LayoutDashboard, Users, Building2, ArrowLeftRight, Wallet, Coins,
   Percent, ShoppingBag, Bell, FileText, Shield, AlertTriangle, BarChart3,
   Lock, Boxes, ScrollText, ShieldCheck,
+  FileCheck, Landmark, Settings, Mail, Gauge, UserCheck, Globe, Activity,
+  CreditCard, PiggyBank, CalendarClock, Bitcoin, TrendingUp,
+  Store, Gift, Trophy, Headphones, Code2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -28,11 +31,33 @@ import { ReportsSection } from "./admin-panel/section-reports";
 import { SecuritySection } from "./admin-panel/section-security";
 import { FeaturesSection } from "./admin-panel/section-features";
 import { AuditSection } from "./admin-panel/section-audit";
+import { AmlSection } from "./admin-panel/section-aml";
+import { TreasurySection } from "./admin-panel/section-treasury";
+import { SystemSettingsSection } from "./admin-panel/section-system-settings";
+import { TemplatesSection } from "./admin-panel/section-templates";
+import { LimitsSection } from "./admin-panel/section-limits";
+import { KycReviewSection } from "./admin-panel/section-kyc-review";
+import { CorridorsSection } from "./admin-panel/section-corridors";
+import { AnalyticsSection } from "./admin-panel/section-analytics";
+import { CardsSection } from "./admin-panel/section-cards";
+import { SavingsSection } from "./admin-panel/section-savings";
+import { ScheduledSection } from "./admin-panel/section-scheduled";
+import { CryptoSection } from "./admin-panel/section-crypto";
+import { ExchangeRatesSection } from "./admin-panel/section-exchange-rates";
+import { MerchantsSection } from "./admin-panel/section-merchants";
+import { ReferralSection } from "./admin-panel/section-referral";
+import { AchievementsSection } from "./admin-panel/section-achievements";
+import { SupportSection } from "./admin-panel/section-support";
+import { DeveloperPortalSection } from "./admin-panel/section-developer-portal";
 
 export type AdminSection =
   | "overview" | "users" | "businesses" | "transactions" | "wallets"
   | "currencies" | "fees" | "products" | "notifications" | "content"
-  | "roles" | "disputes" | "reports" | "security" | "features" | "audit";
+  | "roles" | "disputes" | "reports" | "security" | "features" | "audit"
+  | "aml" | "treasury" | "system-settings" | "templates" | "limits"
+  | "kyc-review" | "corridors" | "analytics"
+  | "cards" | "savings" | "scheduled" | "crypto" | "exchange-rates"
+  | "merchants" | "referral" | "achievements" | "support" | "developer-portal";
 
 interface NavItem {
   id: AdminSection;
@@ -60,6 +85,24 @@ const NAV_GROUPS: { group: string; items: NavItem[] }[] = [
     ],
   },
   {
+    group: "Compliance",
+    items: [
+      { id: "aml", label: "AML & Compliance", icon: FileCheck, description: "Anti-money laundering rules", color: "bg-red-500/15 text-red-500" },
+      { id: "kyc-review", label: "KYC Review", icon: UserCheck, description: "Identity verification queue", color: "bg-emerald-500/15 text-emerald-500" },
+      { id: "limits", label: "Limits & Tiers", icon: Gauge, description: "KYC tier limits", color: "bg-orange-500/15 text-orange-500" },
+    ],
+  },
+  {
+    group: "Financial",
+    items: [
+      { id: "cards", label: "Cards", icon: CreditCard, description: "User card management", color: "bg-indigo-500/15 text-indigo-500" },
+      { id: "savings", label: "Savings & Budgets", icon: PiggyBank, description: "User savings goals & budgets", color: "bg-emerald-500/15 text-emerald-500" },
+      { id: "scheduled", label: "Scheduled Transfers", icon: CalendarClock, description: "Recurring & scheduled transfers", color: "bg-amber-500/15 text-amber-500" },
+      { id: "crypto", label: "Crypto", icon: Bitcoin, description: "Crypto wallets & trading", color: "bg-orange-500/15 text-orange-500" },
+      { id: "exchange-rates", label: "Exchange Rates", icon: TrendingUp, description: "Manual & auto rates", color: "bg-cyan-500/15 text-cyan-500" },
+    ],
+  },
+  {
     group: "Configuration",
     items: [
       { id: "currencies", label: "Currencies", icon: Coins, description: "Fiat & crypto + rates", color: "bg-cyan-500/15 text-cyan-500" },
@@ -71,12 +114,32 @@ const NAV_GROUPS: { group: string; items: NavItem[] }[] = [
     ],
   },
   {
+    group: "Platform",
+    items: [
+      { id: "system-settings", label: "System Settings", icon: Settings, description: "Platform configuration", color: "bg-slate-500/15 text-slate-500" },
+      { id: "templates", label: "Templates", icon: Mail, description: "Email, SMS & push templates", color: "bg-indigo-500/15 text-indigo-500" },
+      { id: "corridors", label: "Transfer Corridors", icon: Globe, description: "International transfer routes", color: "bg-cyan-500/15 text-cyan-500" },
+      { id: "analytics", label: "Platform Analytics", icon: Activity, description: "Deep-dive metrics", color: "bg-purple-500/15 text-purple-500" },
+      { id: "treasury", label: "Treasury", icon: Landmark, description: "Platform liquidity & reserves", color: "bg-teal-500/15 text-teal-500" },
+    ],
+  },
+  {
     group: "Administration",
     items: [
       { id: "roles", label: "Roles & Permissions", icon: Shield, description: "RBAC matrix", color: "bg-fuchsia-500/15 text-fuchsia-500" },
       { id: "security", label: "Security", icon: Lock, description: "Logins, fraud rules", color: "bg-red-500/15 text-red-500" },
       { id: "reports", label: "Reports", icon: BarChart3, description: "Analytics & exports", color: "bg-green-500/15 text-green-500" },
       { id: "audit", label: "Audit Log", icon: ScrollText, description: "Admin action trail", color: "bg-yellow-500/15 text-yellow-500" },
+    ],
+  },
+  {
+    group: "Services",
+    items: [
+      { id: "merchants", label: "Merchants", icon: Store, description: "Merchant approvals & QR codes", color: "bg-violet-500/15 text-violet-500" },
+      { id: "referral", label: "Referral & Rewards", icon: Gift, description: "Referral program & reward points", color: "bg-pink-500/15 text-pink-500" },
+      { id: "achievements", label: "Achievements", icon: Trophy, description: "Badges & gamification", color: "bg-yellow-500/15 text-yellow-500" },
+      { id: "support", label: "Support Tickets", icon: Headphones, description: "Customer support center", color: "bg-blue-500/15 text-blue-500" },
+      { id: "developer-portal", label: "Developer Portal", icon: Code2, description: "API keys & webhooks", color: "bg-slate-500/15 text-slate-500" },
     ],
   },
 ];
@@ -97,14 +160,14 @@ export function AdminPanelView() {
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight">Admin Panel</h1>
-            <p className="text-sm text-muted-foreground">Comprehensive platform management · 16 sections</p>
+            <p className="text-sm text-muted-foreground">Comprehensive platform management · {ALL_ITEMS.length} sections</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Badge className="bg-rose-500/15 text-rose-600 border-0">
             <Lock className="h-3 w-3 mr-1" /> Admin Access
           </Badge>
-          <Badge variant="outline" className="text-[10px]">v2.0</Badge>
+          <Badge variant="outline" className="text-[10px]">v2.1</Badge>
         </div>
       </div>
 
@@ -196,6 +259,24 @@ export function AdminPanelView() {
             {section === "security" && <SecuritySection />}
             {section === "features" && <FeaturesSection />}
             {section === "audit" && <AuditSection />}
+            {section === "aml" && <AmlSection />}
+            {section === "treasury" && <TreasurySection />}
+            {section === "system-settings" && <SystemSettingsSection />}
+            {section === "templates" && <TemplatesSection />}
+            {section === "limits" && <LimitsSection />}
+            {section === "kyc-review" && <KycReviewSection />}
+            {section === "corridors" && <CorridorsSection />}
+            {section === "analytics" && <AnalyticsSection />}
+            {section === "cards" && <CardsSection />}
+            {section === "savings" && <SavingsSection />}
+            {section === "scheduled" && <ScheduledSection />}
+            {section === "crypto" && <CryptoSection />}
+            {section === "exchange-rates" && <ExchangeRatesSection />}
+            {section === "merchants" && <MerchantsSection />}
+            {section === "referral" && <ReferralSection />}
+            {section === "achievements" && <AchievementsSection />}
+            {section === "support" && <SupportSection />}
+            {section === "developer-portal" && <DeveloperPortalSection />}
           </motion.div>
         </div>
       </div>

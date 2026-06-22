@@ -77,6 +77,7 @@ model User {
   rewardPoints    Int      @default(0)
   kycDocuments    KycDocument[]
   businessProfile BusinessProfile?
+  achievements    UserAchievement[]
 }
 
 model Wallet {
@@ -272,9 +273,17 @@ model Merchant {
   account   String
   phone     String?
   email     String?
-  status    String   @default("active")
+  status    String   @default("active") // pending | approved | active | suspended | rejected
   rating    Float    @default(4.5)
+  // Admin/Platform fields
+  ownerName String?
+  volume    Float    @default(0)
+  qrCount   Int      @default(1)
+  rejectionReason String?
+  approvedAt DateTime?
+  approvedBy String?
   createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model Biller {
@@ -497,6 +506,21 @@ model FeatureFlag {
 }
 
 // ============================================================
+// System settings — platform-wide key/value configuration
+// (general settings, AML rules, templates, KYC tier configs,
+// transfer corridors, treasury wallets, compliance reports, etc.)
+// Complex values are stored as JSON strings.
+// ============================================================
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   @default("")
+  category  String   @default("general")
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+// ============================================================
 // Fee configuration (configurable fees/commissions)
 // ============================================================
 model FeeConfig {
@@ -524,4 +548,96 @@ model FeeConfig {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// ============================================================
+// Achievement definitions & user unlocks (gamification)
+// ============================================================
+model Achievement {
+  id            String   @id @default(cuid())
+  code          String   @unique // e.g. "first_send", "tx_100", "referral_10"
+  name          String
+  description   String
+  icon          String   @default("🏆")
+  category      String   @default("general") // onboarding | transactions | volume | social | savings | wallets | security | milestone
+  rewardPoints  Int      @default(0)
+  targetCount   Int      @default(1)
+  enabled       Boolean  @default(true)
+  rarity        String   @default("common") // common | rare | epic | legendary
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  unlocks       UserAchievement[]
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([achievementId])
+}
+
+// ============================================================
+// Developer Portal — apps, API keys, webhooks
+// ============================================================
+model DeveloperApp {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  developerId   String
+  developerName String
+  developerEmail String?
+  type          String   @default("web") // web | mobile | backend | integration | plugin
+  status        String   @default("active") // active | suspended | deleted
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  apiKeys       DeveloperApiKey[]
+  webhooks      Webhook[]
+}
+
+model DeveloperApiKey {
+  id            String   @id @default(cuid())
+  appId         String
+  app           DeveloperApp @relation(fields: [appId], references: [id], onDelete: Cascade)
+  developerId   String
+  developerName String
+  keyPrefix     String   // first 8 chars (e.g. "gxp_live_")
+  keyMasked     String   // e.g. gxp_live_abcd••••••wxyz
+  keyHash       String   @unique // sha256 hash of full key for lookup
+  scopes        String   @default("[]") // JSON array of scope strings
+  status        String   @default("active") // active | revoked
+  lastUsedAt    DateTime?
+  createdAt     DateTime @default(now())
+  revokedAt     DateTime?
+  revokedReason String?
+
+  @@index([developerId])
+}
+
+model Webhook {
+  id            String   @id @default(cuid())
+  appId         String
+  app           DeveloperApp @relation(fields: [appId], references: [id], onDelete: Cascade)
+  developerId   String
+  developerName String
+  url           String
+  events        String   @default("[]") // JSON array of event types
+  secretMasked  String?
+  status        String   @default("active") // active | disabled | failing
+  lastDeliveryAt DateTime?
+  lastStatus    String? // success | failed | pending
+  lastStatusCode Int?
+  successRate   Float    @default(100)
+  totalDelivered Int     @default(0)
+  failedDelivered Int    @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([developerId])
 }
