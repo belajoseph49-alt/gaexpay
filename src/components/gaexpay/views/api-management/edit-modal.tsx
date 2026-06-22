@@ -474,11 +474,11 @@ export function ApiEditModal({ open, config, onClose, onSaved }: Props) {
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <span className="text-muted-foreground">Total requests:</span>{" "}
-                      <span className="font-medium tabular-nums">{config.totalRequests.toLocaleString()}</span>
+                      <span className="font-medium tabular-nums">{(config.totalRequests ?? 0).toLocaleString()}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Failed:</span>{" "}
-                      <span className="font-medium tabular-nums text-rose-600">{config.failedRequests.toLocaleString()}</span>
+                      <span className="font-medium tabular-nums text-rose-600">{(config.failedRequests ?? 0).toLocaleString()}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Last used:</span>{" "}

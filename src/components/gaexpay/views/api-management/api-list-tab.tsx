@@ -88,7 +88,7 @@ export function ApiListTab({
         const bv = b.lastUsedAt ? new Date(b.lastUsedAt).getTime() : 0;
         return bv - av;
       }
-      if (sortKey === "requests") return b.totalRequests - a.totalRequests;
+      if (sortKey === "requests") return (b.totalRequests ?? 0) - (a.totalRequests ?? 0);
       if (sortKey === "errorRate") {
         const ar = a.totalRequests > 0 ? a.failedRequests / a.totalRequests : 0;
         const br = b.totalRequests > 0 ? b.failedRequests / b.totalRequests : 0;
@@ -238,7 +238,7 @@ export function ApiListTab({
                       </Badge>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-right tabular-nums text-xs">
-                      {c.totalRequests.toLocaleString()}
+                      {(c.totalRequests ?? 0).toLocaleString()}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-right">
                       <span className={cn("text-xs tabular-nums font-medium",
