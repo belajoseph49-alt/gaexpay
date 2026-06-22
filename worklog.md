@@ -3598,3 +3598,106 @@ Stage Summary:
 - New RBAC permissions: 36+ new permissions added across cards/savings/scheduled/crypto/exchange_rates/merchants/referral/achievements/support/developer_portal domains
 - Lint: 0 errors, 0 warnings
 - Dev server: stable on port 3000
+
+---
+Task ID: 14-a
+Agent: Brand & Logo Design Specialist
+Task: Create real GaexPay animated logo (G+arrow mark with shimmer/glow/gradient effects), update favicon/icons, add CSS animations, remove any Z.ai branding.
+
+Work Log:
+- Read worklog and audited current branding state:
+  - Old logo (`src/components/gaexpay/logo.tsx`) was a generic "G" shape (squiggly path on oklch emerald gradient) — no arrow motif, no animations.
+  - Found a hidden Z.ai-branded SVG at `public/logo.svg` (rounded square with a stylized white "Z" + "z-breathe" animation keyframe — clearly a leftover from the Z.ai template). NOT referenced anywhere in `src/` code but reachable via direct URL → replaced with a real GaexPay logo SVG so the file no longer exposes Z.ai branding.
+  - Verified `src/` contains zero user-visible Z.ai strings (the only `ZAI` references are the backend SDK import in `src/app/api/ai-chat/route.ts` which is invisible to users — left untouched per spec).
+  - Verified AI assistant is branded "Gaxie AI" everywhere (`ai-assistant.tsx`, `support-view.tsx`, admin `section-support.tsx`) with NO "powered by Z.ai" attribution — nothing to fix.
+- Designed a distinctive GaexPay brand mark:
+  - Concept: "G" arc + payment-arrow chevron → represents wallet (circle of money) + payment/transfer direction. A center dot conveys closure / settled balance.
+  - Geometry: 40×40 viewBox. G is a 270° arc (top → CCW → right edge) + horizontal bar (the G's spine) + chevron arrow at the right edge pointing right. Stroke = 2.9px white→#ecfeff gradient for a glassy premium feel. Stroke-linecap/linejoin=round keeps it crisp at small sizes.
+  - Fill: emerald (#34d399) → teal-green (#10b981) → teal (#14b8a6) → cyan (#06b6d4) linear gradient at 135° — vivid on both light and dark backgrounds.
+  - Depth: top-half white sheen overlay (22% → 0% opacity) + soft inner drop-shadow filter on the mark.
+- Rewrote `src/components/gaexpay/logo.tsx`:
+  - Exports `Logo` (icon + wordmark) and `LogoMark` (icon only).
+  - Props: `className`, `size` (default 32), `showText` (default true), `animated` (default true), `textScale` (default 1).
+  - When `animated=true`: applies `gxp-glow` + `gxp-gradient-animate` classes + renders the `gxp-shimmer-overlay` element. When `false`: all three animations off (for print/static contexts).
+  - Wordmark: "Gaex" in `text-foreground`, "Pay" in `text-primary`, `font-bold tracking-tight`. Font-size scales with icon size (size × 0.56) so the lockup stays balanced at any size.
+  - Uses `useId()` to generate unique SVG gradient IDs per instance (prevents ID collisions when multiple logos appear on the same page — sidebar, topbar, landing header, footer, auth modal).
+  - Built on a 40×40 viewBox with vector strokes → crisp at 16px (favicon) up to 128px+ (hero).
+- Added 5 CSS keyframe animations to `src/app/globals.css` (append-only — no existing CSS removed):
+  - `@keyframes gxp-shimmer` + `.gxp-shimmer-overlay` (+ `::after`) — light highlight strip (45% wide, white→transparent gradient, skewed -15°) sweeps across the mark every 3.5s with a 1.2s start delay. Overlay has `overflow:hidden` + `border-radius:inherit` so the sweep is clipped to the rounded square.
+  - `@keyframes gxp-glow` + `.gxp-glow` — outer emerald box-shadow breathes (0.30→0.55→0.30 opacity, 12→18px blur) over 3s. Includes a base drop shadow for grounding.
+  - `@keyframes gxp-gradient-shift` + `.gxp-gradient-animate` — background-position cycles 0%→100%→0% over 5s with `background-size:220% 220%` so the gradient hue rotates emerald↔cyan.
+  - `@keyframes gxp-float` + `.gxp-float` — 4px vertical bob over 3s (for hero usage).
+  - `@keyframes gxp-rotate` + `.gxp-rotate` — 360° rotation over 8s linear (for decorative hero ring).
+  - Added `@media (prefers-reduced-motion: reduce)` block that disables all 5 GaexPay animations for accessibility.
+- Created/updated SVG icon files in `public/`:
+  - `public/icon.svg` — rewrote as 512×512 GaexPay mark (gradient bg + G+arrow+dot, with drop-shadow filter for depth). Used as the primary app icon.
+  - `public/favicon.svg` — NEW 32×32 simplified version (same mark, slightly thicker stroke 3.1px for visibility at 16px browser tab size, no shadow filter).
+  - `public/logo.svg` — REPLACED the orphan Z.ai "Z" logo with the new GaexPay mark so any external direct-URL access shows the correct brand.
+  - Kept existing PNGs (`favicon-32.png`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`) as fallbacks.
+- Updated `src/app/layout.tsx` `metadata.icons`:
+  - `icon` array now prioritizes `/favicon.svg` and `/icon.svg` (SVG first), then PNGs by size (32 → 192 → 512).
+  - `shortcut` now points to `/favicon.svg` (was `/favicon-32.png`).
+  - `apple` unchanged (still `/apple-touch-icon.png` 180×180 — iOS Safari ignores SVG for touch icons).
+- Updated `public/manifest.json` `icons` array to include the new SVG icon first (`{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }`), keeping the PNG maskable entries for Android.
+- Updated `src/components/gaexpay/auth-modal.tsx`:
+  - Removed the redundant wrapper `<div className="grid h-8 w-8 place-items-center rounded-lg bg-white/15 backdrop-blur">` + separate `<span>GaexPay</span>` (which would have created an awkward nested-background effect with the new logo's own gradient).
+  - Replaced with `<Logo size={28} className="text-white [&_span]:text-white" />` so the wordmark is legible white on the gradient header.
+
+Stage Summary:
+- Files created (1):
+  - `public/favicon.svg` (NEW — 32×32 simplified GaexPay mark)
+- Files rewritten/edited (6):
+  - `src/components/gaexpay/logo.tsx` — full rewrite: distinctive G+arrow+dot mark, 4 animation layers (shimmer/glow/gradient/optional float/rotate), `animated` prop toggle, `useId()` for unique SVG IDs, exports `Logo` + `LogoMark`.
+  - `src/app/globals.css` — appended 5 keyframe animations + `.gxp-*` utility classes + `prefers-reduced-motion` guard.
+  - `public/icon.svg` — replaced generic emerald mark with new GaexPay mark (gradient + G + arrow + dot + drop-shadow).
+  - `public/logo.svg` — replaced hidden Z.ai "Z" logo with new GaexPay mark (eliminates the only Z.ai-branded asset in the repo).
+  - `public/manifest.json` — added SVG icon as first entry.
+  - `src/app/layout.tsx` — `metadata.icons` now SVG-first; `shortcut` → `/favicon.svg`.
+  - `src/components/gaexpay/auth-modal.tsx` — replaced nested-logo wrapper with clean `<Logo size={28} />` (white wordmark variant).
+- Logo design description:
+  - The mark is a stylized "G" (270° arc + horizontal spine) on a rounded-square gradient background (emerald → teal → cyan). At the G's right edge, the spine terminates in a chevron arrow pointing right → the G "becomes" an arrow, conveying money-flow + payment direction (GaexPay = wallet + pay). A small white dot at center provides visual closure. Top-half white sheen + soft drop-shadow give the mark a glassy, premium depth. Stroke uses a subtle white→#ecfeff gradient for a polished, glassy look.
+- Animation behavior:
+  - Shimmer: white highlight strip sweeps across every 3.5s (1.2s initial delay so it doesn't fire on every page load simultaneously).
+  - Glow: outer emerald box-shadow breathes 0.30→0.55→0.30 opacity over 3s.
+  - Gradient: background-position cycles every 5s, slowly rotating hue emerald↔cyan.
+  - All three are toggleable via `animated={false}` (for print, static exports, or anywhere motion is undesired).
+  - `prefers-reduced-motion: reduce` users get NO logo animations (accessibility).
+- Z.ai branding removal verification:
+  - Searched entire `src/` and `public/` for "Z.ai", "z-ai", "ZAI", "zhipu", "chatglm" — only matches are the legitimate backend SDK import in `src/app/api/ai-chat/route.ts` (invisible to users).
+  - Replaced the orphan Z.ai `public/logo.svg` with a real GaexPay mark.
+  - Confirmed AI assistant is branded "Gaxie AI" everywhere — no "powered by Z.ai" attribution exists.
+- Verification Results:
+  - ✅ `bun run lint` — 0 errors, 0 warnings.
+  - ✅ `tail -25 dev.log` — clean compiles, all routes returning 200, no runtime errors.
+  - ✅ Logo renders in all 4 verified contexts: topbar, sidebar, landing header + footer, auth-modal header (all use the same `<Logo />` component which now renders the new animated mark).
+  - ✅ Mobile-first: logo `size` prop scales the icon + wordmark proportionally; default 32px works in 60px-tall headers (sidebar/mobile-nav) and 64px-tall headers (landing/auth-modal).
+  - ✅ PWA install prompt: uses its own gradient icons (Apple/Chrome/Smartphone) which already match the GaexPay emerald palette — no logo change needed there.
+  - ✅ Existing PNG icons (`icon-192.png`, `icon-512.png`, `favicon-32.png`, `apple-touch-icon.png`) preserved as fallbacks for browsers that don't support SVG icons (older iOS, some Android WebViews).
+
+---
+Task ID: 14 (Coordinator Summary — GaexPay Logo & Branding)
+Agent: Main (Z.ai Code)
+Task: Remove all Z.ai branding, create real GaexPay animated logo with effects.
+
+Work Log:
+- Audited codebase: found NO user-visible Z.ai branding (AI assistant is "Gaxie", not Z.ai). Only backend SDK import in ai-chat/route.ts (invisible).
+- Found orphan Z.ai "Z" logo in public/logo.svg — replaced with GaexPay mark.
+- Deployed specialist agent to create new logo + favicon + CSS animations.
+- Agent created: new Logo component (G + arrow mark with shimmer/glow/gradient animations), favicon.svg, icon.svg, logo.svg, 5 CSS keyframe animations in globals.css.
+- Updated layout.tsx to use SVG-first favicon.
+- Removed redundant logo wrapper in auth-modal.
+
+VLM Verification:
+- Landing page: logo present top-left, says "GaexPay", no Z.ai branding, premium design ✓
+- App sidebar: logo with "G" mark + "GaexPay" text, no Z.ai branding ✓
+- VLM rated logo 7/10 (clean, recognizable, fits fintech aesthetic)
+
+Stage Summary:
+- Z.ai branding: FULLY REMOVED (only backend SDK import remains, invisible to users)
+- GaexPay logo: NEW premium "G + arrow" mark on gradient background (emerald→teal→cyan)
+- Animations: shimmer (3.5s sweep), glow pulse (3s breathe), gradient shift (5s hue cycle), float, rotate
+- Accessibility: prefers-reduced-motion disables all animations
+- Favicon: SVG-first (favicon.svg, icon.svg), PNG fallbacks kept
+- Logo renders in: topbar, sidebar, landing header, auth modal, PWA icon
+- Lint: 0 errors, 0 warnings
+- Dev server: stable on port 3000

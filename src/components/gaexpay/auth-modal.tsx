@@ -364,12 +364,7 @@ export function AuthModal({ open, mode, onClose, onSuccess }: AuthModalProps) {
             <div className="absolute -left-10 bottom-0 h-24 w-24 rounded-full bg-teal-300/30 blur-2xl" />
           </div>
           <div className="relative flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="grid h-8 w-8 place-items-center rounded-lg bg-white/15 backdrop-blur">
-                <Logo />
-              </div>
-              <span className="text-sm font-semibold tracking-tight">GaexPay</span>
-            </div>
+            <Logo size={28} className="text-white [&_span]:text-white" />
             <div className="hidden items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-medium backdrop-blur sm:flex">
               <Shield className="h-3 w-3" /> Bank-grade security
             </div>

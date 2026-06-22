@@ -296,3 +296,102 @@
 ::selection {
   background: oklch(0.70 0.16 158 / 0.2);
 }
+
+/* ─────────────────────────────────────────────
+   GAEXPAY LOGO ANIMATIONS
+   Premium, subtle motion for the brand mark.
+   - Shimmer: light highlight sweeps across every 3.5s
+   - Glow:    outer emerald box-shadow breathes
+   - Gradient: background-position slowly cycles hue
+   - Float:   gentle vertical bob for hero contexts
+   - Rotate:  decorative ring rotation for hero
+   ───────────────────────────────────────────── */
+
+/* Shimmer sweep — a soft white highlight crosses the mark */
+@keyframes gxp-shimmer {
+  0% { transform: translateX(-120%) skewX(-15deg); }
+  60%, 100% { transform: translateX(220%) skewX(-15deg); }
+}
+.gxp-shimmer-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
+}
+.gxp-shimmer-overlay::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 45%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 100%
+  );
+  transform: translateX(-120%) skewX(-15deg);
+  animation: gxp-shimmer 3.5s ease-in-out infinite;
+  animation-delay: 1.2s;
+}
+
+/* Glow pulse — outer emerald box-shadow breathes */
+@keyframes gxp-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 12px rgba(16, 185, 129, 0.30),
+      0 0 24px rgba(16, 185, 129, 0.15),
+      0 4px 10px rgba(6, 78, 59, 0.18);
+  }
+  50% {
+    box-shadow:
+      0 0 18px rgba(16, 185, 129, 0.55),
+      0 0 36px rgba(16, 185, 129, 0.25),
+      0 6px 14px rgba(6, 78, 59, 0.22);
+  }
+}
+.gxp-glow {
+  animation: gxp-glow 3s ease-in-out infinite;
+}
+
+/* Gradient hue shift — the background gradient slowly cycles */
+@keyframes gxp-gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.gxp-gradient-animate {
+  background-size: 220% 220%;
+  animation: gxp-gradient-shift 5s ease infinite;
+}
+
+/* Subtle float — for landing page hero logo */
+@keyframes gxp-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.gxp-float {
+  animation: gxp-float 3s ease-in-out infinite;
+}
+
+/* Rotate ring — decorative ring around the logo on hero */
+@keyframes gxp-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.gxp-rotate {
+  animation: gxp-rotate 8s linear infinite;
+}
+
+/* Respect reduced-motion preferences: disable all GaexPay logo animations */
+@media (prefers-reduced-motion: reduce) {
+  .gxp-glow,
+  .gxp-shimmer-overlay::after,
+  .gxp-gradient-animate,
+  .gxp-float,
+  .gxp-rotate {
+    animation: none !important;
+  }
+}
