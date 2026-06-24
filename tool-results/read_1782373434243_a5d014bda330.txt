@@ -1,0 +1,827 @@
+     1→"use client";
+     2→
+     3→import { useState } from "react";
+     4→import { motion, AnimatePresence } from "framer-motion";
+     5→import {
+     6→  Shield, ShieldCheck, ShieldAlert, Lock, Fingerprint, KeyRound,
+     7→  AlertTriangle, CheckCircle2, XCircle, Smartphone, Monitor, Tablet,
+     8→  Laptop, Globe, Clock, Activity,
+     9→  RefreshCw, Trash2, Sparkles, FileLock2, BadgeCheck,
+    10→  ScanFace, UserCheck, Wifi, MapPin, Server, Bot, Lightbulb, ArrowRight,
+    11→} from "lucide-react";
+    12→import { Card } from "@/components/ui/card";
+    13→import { Button } from "@/components/ui/button";
+    14→import { Badge } from "@/components/ui/badge";
+    15→import { Progress } from "@/components/ui/progress";
+    16→import { Skeleton } from "@/components/ui/skeleton";
+    17→import { useFetch } from "@/hooks/use-fetch";
+    18→import { AnimatedNumber } from "@/components/gaexpay/animated-number";
+    19→import { timeAgo, formatDateTime, formatMoney } from "@/lib/gaexpay";
+    20→import { toast } from "sonner";
+    21→import { cn } from "@/lib/utils";
+    22→
+    23→type SecurityOverview = {
+    24→  user: { firstName: string; lastName: string; email: string };
+    25→  score: number;
+    26→  grade: "A" | "B" | "C" | "D" | "F";
+    27→  breakdown: {
+    28→    label: string;
+    29→    points: number;
+    30→    max: number;
+    31→    status: "pass" | "warn" | "fail";
+    32→  }[];
+    33→  encryption: {
+    34→    algorithm: string;
+    35→    transport: string;
+    36→    endToEnd: boolean;
+    37→    keyRotation: string;
+    38→    lastKeyRotation: string;
+    39→    cardData: string;
+    40→    secretsVault: string;
+    41→    quantumResistant: boolean;
+    42→  };
+    43→  compliance: {
+    44→    pciDss: { status: string; level: string; lastAudit: string };
+    45→    aml: { status: string; framework: string; lastCheck: string };
+    46→    gdpr: { status: string; framework: string };
+    47→    iso27001: { status: string; framework: string };
+    48→    soc2: { status: string; type: string };
+    49→  };
+    50→  mfaEnabled: boolean;
+    51→  biometricEnabled: boolean;
+    52→  twoFactorMethod: string | null;
+    53→  kycTier: number;
+    54→  kycStatus: string;
+    55→  lastLoginAt: string | null;
+    56→  lastPasswordChange: string;
+    57→  passwordAgeDays: number;
+    58→  devices: {
+    59→    total: number;
+    60→    active: number;
+    61→    trusted: number;
+    62→    list: any[];
+    63→  };
+    64→  blockedLoginAttempts: number;
+    65→  fraudAlerts: {
+    66→    total: number;
+    67→    recent: number;
+    68→    list: any[];
+    69→  };
+    70→  securityEvents: any[];
+    71→  recommendations: {
+    72→    id: string;
+    73→    title: string;
+    74→    desc: string;
+    75→    severity: "high" | "medium" | "low";
+    76→    icon: string;
+    77→  }[];
+    78→};
+    79→
+    80→function gradeColor(grade: string) {
+    81→  switch (grade) {
+    82→    case "A": return { ring: "#10b981", text: "text-emerald-500", glow: "shadow-emerald-500/30", bg: "from-emerald-500 to-teal-600" };
+    83→    case "B": return { ring: "#14b8a6", text: "text-teal-500", glow: "shadow-teal-500/30", bg: "from-teal-500 to-cyan-600" };
+    84→    case "C": return { ring: "#f59e0b", text: "text-amber-500", glow: "shadow-amber-500/30", bg: "from-amber-500 to-orange-600" };
+    85→    case "D": return { ring: "#f97316", text: "text-orange-500", glow: "shadow-orange-500/30", bg: "from-orange-500 to-rose-600" };
+    86→    default: return { ring: "#f43f5e", text: "text-rose-500", glow: "shadow-rose-500/30", bg: "from-rose-500 to-red-700" };
+    87→  }
+    88→}
+    89→
+    90→function CircularGauge({ value, grade }: { value: number; grade: string }) {
+    91→  const size = 220;
+    92→  const strokeWidth = 14;
+    93→  const radius = (size - strokeWidth) / 2;
+    94→  const circumference = 2 * Math.PI * radius;
+    95→  const offset = circumference - (value / 100) * circumference;
+    96→  const color = gradeColor(grade);
+    97→
+    98→  return (
+    99→    <div className="relative" style={{ width: size, height: size }}>
+   100→      <svg width={size} height={size} className="-rotate-90">
+   101→        <defs>
+   102→          <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+   103→            <stop offset="0%" stopColor={color.ring} stopOpacity="0.4" />
+   104→            <stop offset="100%" stopColor={color.ring} />
+   105→          </linearGradient>
+   106→          <filter id="glow">
+   107→            <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+   108→            <feMerge>
+   109→              <feMergeNode in="coloredBlur" />
+   110→              <feMergeNode in="SourceGraphic" />
+   111→            </feMerge>
+   112→          </filter>
+   113→        </defs>
+   114→        {/* Track */}
+   115→        <circle
+   116→          cx={size / 2}
+   117→          cy={size / 2}
+   118→          r={radius}
+   119→          fill="none"
+   120→          stroke="currentColor"
+   121→          strokeWidth={strokeWidth}
+   122→          className="text-accent"
+   123→          opacity={0.25}
+   124→        />
+   125→        {/* Progress */}
+   126→        <motion.circle
+   127→          cx={size / 2}
+   128→          cy={size / 2}
+   129→          r={radius}
+   130→          fill="none"
+   131→          stroke="url(#scoreGrad)"
+   132→          strokeWidth={strokeWidth}
+   133→          strokeLinecap="round"
+   134→          strokeDasharray={circumference}
+   135→          initial={{ strokeDashoffset: circumference }}
+   136→          animate={{ strokeDashoffset: offset }}
+   137→          transition={{ duration: 1.6, ease: "easeOut" }}
+   138→          filter="url(#glow)"
+   139→        />
+   140→      </svg>
+   141→      <div className="absolute inset-0 flex flex-col items-center justify-center">
+   142→        <span className={cn("text-7xl font-black", color.text)}>
+   143→          {grade}
+   144→        </span>
+   145→        <AnimatedNumber
+   146→          value={value}
+   147→          className="text-3xl font-bold tabular-nums"
+   148→          suffix="/100"
+   149→        />
+   150→        <span className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">
+   151→          Security Score
+   152→        </span>
+   153→      </div>
+   154→    </div>
+   155→  );
+   156→}
+   157→
+   158→function DeviceIcon({ type }: { type: string }) {
+   159→  const Icon = type === "mobile" ? Smartphone : type === "desktop" ? Laptop : type === "tablet" ? Tablet : Monitor;
+   160→  return <Icon className="h-5 w-5" />;
+   161→}
+   162→
+   163→function EventIcon({ action }: { action: string }) {
+   164→  const act = action || "";
+   165→  if (act.includes("login") || act.includes("logout")) return { icon: UserCheck, color: "text-sky-500 bg-sky-500/10" };
+   166→  if (act.includes("password")) return { icon: KeyRound, color: "text-violet-500 bg-violet-500/10" };
+   167→  if (act.includes("mfa")) return { icon: Shield, color: "text-emerald-500 bg-emerald-500/10" };
+   168→  if (act.includes("suspicious") || act.includes("blocked")) return { icon: AlertTriangle, color: "text-rose-500 bg-rose-500/10" };
+   169→  if (act.includes("biometric")) return { icon: Fingerprint, color: "text-amber-500 bg-amber-500/10" };
+   170→  if (act.includes("device")) return { icon: Monitor, color: "text-teal-500 bg-teal-500/10" };
+   171→  return { icon: Activity, color: "text-muted-foreground bg-accent" };
+   172→}
+   173→
+   174→function RecIcon({ name }: { name: string }) {
+   175→  const map: Record<string, any> = {
+   176→    KeyRound, Fingerprint, Lock, ShieldCheck, Monitor, AlertTriangle, CheckCircle2,
+   177→  };
+   178→  const Icon = map[name] || Lightbulb;
+   179→  return <Icon className="h-4 w-4" />;
+   180→}
+   181→
+   182→const FEATURES = [
+   183→  { key: "encryption", icon: FileLock2, title: "End-to-End Encryption", subtitle: "AES-256-GCM" },
+   184→  { key: "mfa", icon: KeyRound, title: "Two-Factor Authentication", subtitle: "TOTP / SMS / Email" },
+   185→  { key: "biometric", icon: Fingerprint, title: "Biometric Login", subtitle: "Face ID / Touch ID" },
+   186→  { key: "pci", icon: BadgeCheck, title: "PCI-DSS Compliance", subtitle: "Level 1 Service Provider" },
+   187→  { key: "aml", icon: ShieldCheck, title: "AML Compliance", subtitle: "FATF / NFIU Framework" },
+   188→  { key: "fraud", icon: Bot, title: "AI Fraud Detection", subtitle: "Real-time risk scoring" },
+   189→];
+   190→
+   191→export function SecurityView() {
+   192→  const { data, loading, reload } = useFetch<SecurityOverview>("/api/security/overview");
+   193→  const [revokingId, setRevokingId] = useState<string | null>(null);
+   194→
+   195→  const handleRevoke = async (deviceId: string, name: string) => {
+   196→    setRevokingId(deviceId);
+   197→    try {
+   198→      const res = await fetch(`/api/devices?id=${deviceId}`, { method: "DELETE" });
+   199→      if (!res.ok) throw new Error("Failed to revoke");
+   200→      toast.success(`Revoked session for ${name}`);
+   201→      reload();
+   202→    } catch {
+   203→      toast.error("Failed to revoke device");
+   204→    } finally {
+   205→      setRevokingId(null);
+   206→    }
+   207→  };
+   208→
+   209→  if (loading || !data) return <SecuritySkeleton />;
+   210→
+   211→  const color = gradeColor(data.grade);
+   212→
+   213→  return (
+   214→    <div className="space-y-6">
+   215→      {/* Header */}
+   216→      <div className="flex flex-wrap items-start justify-between gap-3">
+   217→        <div>
+   218→          <div className="flex items-center gap-2">
+   219→            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20">
+   220→              <Shield className="h-5 w-5" />
+   221→            </div>
+   222→            <div>
+   223→              <h1 className="text-2xl font-bold tracking-tight">Security Center</h1>
+   224→              <p className="text-sm text-muted-foreground">
+   225→                Monitor your account protection, devices & compliance
+   226→              </p>
+   227→            </div>
+   228→          </div>
+   229→        </div>
+   230→        <Button variant="outline" size="sm" onClick={() => reload()}>
+   231→          <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh
+   232→        </Button>
+   233→      </div>
+   234→
+   235→      {/* Hero — Security Score + Encryption summary */}
+   236→      <motion.div
+   237→        initial={{ opacity: 0, y: 12 }}
+   238→        animate={{ opacity: 1, y: 0 }}
+   239→        transition={{ duration: 0.4 }}
+   240→      >
+   241→        <Card className={cn(
+   242→          "relative overflow-hidden border-0 p-6 text-white shadow-xl",
+   243→          "bg-gradient-to-br",
+   244→          color.bg,
+   245→          color.glow,
+   246→        )}>
+   247→          <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+   248→          <div className="absolute -left-12 -bottom-12 h-40 w-40 rounded-full bg-black/10 blur-2xl" />
+   249→          <div className="relative grid gap-6 lg:grid-cols-[auto_1fr]">
+   250→            {/* Gauge */}
+   251→            <div className="flex justify-center lg:justify-start">
+   252→              <div className="rounded-3xl bg-black/15 p-4 backdrop-blur-sm">
+   253→                <CircularGauge value={data.score} grade={data.grade} />
+   254→              </div>
+   255→            </div>
+   256→            {/* Summary */}
+   257→            <div className="flex flex-col justify-center gap-4">
+   258→              <div>
+   259→                <div className="flex items-center gap-2">
+   260→                  <ShieldCheck className="h-5 w-5" />
+   261→                  <h2 className="text-xl font-bold">
+   262→                    {data.grade === "A" || data.grade === "B"
+   263→                      ? "Excellent protection"
+   264→                      : data.grade === "C"
+   265→                      ? "Good, with room to improve"
+   266→                      : data.grade === "D"
+   267→                      ? "Needs attention"
+   268→                      : "Action required"}
+   269→                  </h2>
+   270→                </div>
+   271→                <p className="mt-1 text-sm text-white/85 max-w-md">
+   272→                  Your account scored <strong>{data.score}/100</strong> (Grade {data.grade}).{
+   273→                    data.recommendations.length > 0
+   274→                      ? ` ${data.recommendations.length} recommendation${data.recommendations.length > 1 ? "s" : ""} below.`
+   275→                      : " Keep up the great security hygiene!"
+   276→                  }
+   277→                </p>
+   278→              </div>
+   279→
+   280→              {/* Encryption pills */}
+   281→              <div className="flex flex-wrap gap-2">
+   282→                {[
+   283→                  { icon: Lock, label: data.encryption.algorithm },
+   284→                  { icon: Globe, label: data.encryption.transport },
+   285→                  { icon: Server, label: "End-to-End" },
+   286→                  { icon: RefreshCw, label: `Keys rotate / ${data.encryption.keyRotation}` },
+   287→                ].map((p) => {
+   288→                  const Icon = p.icon;
+   289→                  return (
+   290→                    <span
+   291→                      key={p.label}
+   292→                      className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur"
+   293→                    >
+   294→                      <Icon className="h-3 w-3" /> {p.label}
+   295→                    </span>
+   296→                  );
+   297→                })}
+   298→              </div>
+   299→
+   300→              {/* Quick stats */}
+   301→              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   302→                <StatPill label="Active Devices" value={data.devices.active} icon={Monitor} />
+   303→                <StatPill label="Blocked Logins" value={data.blockedLoginAttempts} icon={ShieldAlert} />
+   304→                <StatPill label="Fraud Alerts" value={data.fraudAlerts.recent} icon={AlertTriangle} />
+   305→                <StatPill label="KYC Tier" value={data.kycTier} icon={BadgeCheck} />
+   306→              </div>
+   307→            </div>
+   308→          </div>
+   309→        </Card>
+   310→      </motion.div>
+   311→
+   312→      {/* Security Score Breakdown */}
+   313→      <Card className="p-5">
+   314→        <div className="flex items-center justify-between mb-4">
+   315→          <div>
+   316→            <h3 className="font-semibold">Score Breakdown</h3>
+   317→            <p className="text-xs text-muted-foreground">How your security score is calculated</p>
+   318→          </div>
+   319→          <Sparkles className="h-4 w-4 text-primary" />
+   320→        </div>
+   321→        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+   322→          {data.breakdown.map((b, i) => {
+   323→            const pct = (b.points / b.max) * 100;
+   324→            const sc =
+   325→              b.status === "pass"
+   326→                ? "text-emerald-600 bg-emerald-500/10"
+   327→                : b.status === "warn"
+   328→                ? "text-amber-600 bg-amber-500/10"
+   329→                : "text-rose-600 bg-rose-500/10";
+   330→            return (
+   331→              <motion.div
+   332→                key={b.label}
+   333→                initial={{ opacity: 0, y: 8 }}
+   334→                animate={{ opacity: 1, y: 0 }}
+   335→                transition={{ delay: i * 0.04 }}
+   336→                className="rounded-xl border p-3.5"
+   337→              >
+   338→                <div className="flex items-center justify-between mb-2">
+   339→                  <span className="text-sm font-medium">{b.label}</span>
+   340→                  <span className={cn("rounded-md px-1.5 py-0.5 text-[10px] font-bold", sc)}>
+   341→                    {b.status.toUpperCase()}
+   342→                  </span>
+   343→                </div>
+   344→                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
+   345→                  <span>{b.points} / {b.max} pts</span>
+   346→                  <span>{Math.round(pct)}%</span>
+   347→                </div>
+   348→                <Progress value={pct} className="h-1.5" />
+   349→              </motion.div>
+   350→            );
+   351→          })}
+   352→        </div>
+   353→      </Card>
+   354→
+   355→      {/* Security Features Grid */}
+   356→      <div>
+   357→        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+   358→          Protection Layers
+   359→        </h3>
+   360→        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+   361→          {FEATURES.map((f, i) => {
+   362→            const Icon = f.icon;
+   363→            let active = false;
+   364→            let statusLabel = "";
+   365→            let statusColor = "";
+   366→            if (f.key === "encryption") {
+   367→              active = true;
+   368→              statusLabel = "Active";
+   369→              statusColor = "bg-emerald-500/15 text-emerald-600";
+   370→            } else if (f.key === "mfa") {
+   371→              active = data.mfaEnabled;
+   372→              statusLabel = active ? "Enabled" : "Disabled";
+   373→              statusColor = active ? "bg-emerald-500/15 text-emerald-600" : "bg-rose-500/15 text-rose-600";
+   374→            } else if (f.key === "biometric") {
+   375→              active = data.biometricEnabled;
+   376→              statusLabel = active ? "Enabled" : "Disabled";
+   377→              statusColor = active ? "bg-emerald-500/15 text-emerald-600" : "bg-amber-500/15 text-amber-600";
+   378→            } else if (f.key === "pci") {
+   379→              active = data.compliance.pciDss.status === "verified";
+   380→              statusLabel = active ? "Verified" : "Pending";
+   381→              statusColor = active ? "bg-emerald-500/15 text-emerald-600" : "bg-amber-500/15 text-amber-600";
+   382→            } else if (f.key === "aml") {
+   383→              active = data.compliance.aml.status === "compliant";
+   384→              statusLabel = active ? "Compliant" : "Pending";
+   385→              statusColor = active ? "bg-emerald-500/15 text-emerald-600" : "bg-amber-500/15 text-amber-600";
+   386→            } else if (f.key === "fraud") {
+   387→              active = true;
+   388→              statusLabel = "AI Active";
+   389→              statusColor = "bg-emerald-500/15 text-emerald-600";
+   390→            }
+   391→            return (
+   392→              <motion.div
+   393→                key={f.key}
+   394→                initial={{ opacity: 0, y: 8 }}
+   395→                animate={{ opacity: 1, y: 0 }}
+   396→                transition={{ delay: i * 0.05 }}
+   397→              >
+   398→                <Card className="group relative h-full overflow-hidden p-4 transition-all hover:shadow-md hover:-translate-y-0.5">
+   399→                  <div className="flex items-start justify-between mb-2.5">
+   400→                    <div className={cn(
+   401→                      "grid h-10 w-10 place-items-center rounded-xl",
+   402→                      active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+   403→                    )}>
+   404→                      <Icon className="h-5 w-5" />
+   405→                    </div>
+   406→                    <Badge className={cn("border-0 text-[10px] font-semibold", statusColor)}>
+   407→                      {active ? <CheckCircle2 className="h-3 w-3 mr-0.5" /> : <XCircle className="h-3 w-3 mr-0.5" />}
+   408→                      {statusLabel}
+   409→                    </Badge>
+   410→                  </div>
+   411→                  <p className="text-sm font-semibold">{f.title}</p>
+   412→                  <p className="text-xs text-muted-foreground mt-0.5">{f.subtitle}</p>
+   413→                </Card>
+   414→              </motion.div>
+   415→            );
+   416→          })}
+   417→        </div>
+   418→      </div>
+   419→
+   420→      {/* Two-column: Devices + Events */}
+   421→      <div className="grid gap-6 lg:grid-cols-2">
+   422→        {/* Active Devices */}
+   423→        <Card className="p-5">
+   424→          <div className="flex items-center justify-between mb-4">
+   425→            <div>
+   426→              <h3 className="font-semibold">Active Devices</h3>
+   427→              <p className="text-xs text-muted-foreground">
+   428→                {data.devices.active} active · {data.devices.trusted} trusted · {data.devices.total} total
+   429→              </p>
+   430→            </div>
+   431→            <Monitor className="h-4 w-4 text-muted-foreground" />
+   432→          </div>
+   433→          <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+   434→            {data.devices.list.length === 0 && (
+   435→              <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+   436→                No devices registered
+   437→              </div>
+   438→            )}
+   439→            <AnimatePresence>
+   440→              {data.devices.list.map((d) => (
+   441→                <motion.div
+   442→                  key={d.id}
+   443→                  layout
+   444→                  initial={{ opacity: 0, x: -8 }}
+   445→                  animate={{ opacity: 1, x: 0 }}
+   446→                  exit={{ opacity: 0, x: 8 }}
+   447→                  className={cn(
+   448→                    "flex items-center gap-3 rounded-xl border p-3 transition",
+   449→                    d.trusted ? "border-emerald-500/20 bg-emerald-500/[0.03]" : "border-amber-500/20 bg-amber-500/[0.03]",
+   450→                  )}
+   451→                >
+   452→                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+   453→                    <DeviceIcon type={d.type} />
+   454→                  </div>
+   455→                  <div className="flex-1 min-w-0">
+   456→                    <div className="flex items-center gap-1.5">
+   457→                      <p className="text-sm font-medium truncate">{d.name}</p>
+   458→                      {d.trusted && <BadgeCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
+   459→                    </div>
+   460→                    <p className="text-xs text-muted-foreground truncate">
+   461→                      {d.os || "Unknown OS"} · {d.browser || "Unknown"}
+   462→                    </p>
+   463→                    <div className="flex items-center gap-3 mt-0.5 text-[11px] text-muted-foreground">
+   464→                      <span className="flex items-center gap-0.5"><MapPin className="h-2.5 w-2.5" />{d.location || "Unknown"}</span>
+   465→                      <span className="flex items-center gap-0.5"><Clock className="h-2.5 w-2.5" />{timeAgo(d.lastActive)}</span>
+   466→                    </div>
+   467→                  </div>
+   468→                  <Button
+   469→                    size="sm"
+   470→                    variant="ghost"
+   471→                    disabled={revokingId === d.id}
+   472→                    onClick={() => handleRevoke(d.id, d.name)}
+   473→                    className="h-8 shrink-0 text-rose-600 hover:bg-rose-500/10 hover:text-rose-700"
+   474→                  >
+   475→                    {revokingId === d.id ? (
+   476→                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+   477→                    ) : (
+   478→                      <>
+   479→                        <Trash2 className="h-3.5 w-3.5 mr-1" /> Revoke
+   480→                      </>
+   481→                    )}
+   482→                  </Button>
+   483→                </motion.div>
+   484→              ))}
+   485→            </AnimatePresence>
+   486→          </div>
+   487→        </Card>
+   488→
+   489→        {/* Recent Security Events */}
+   490→        <Card className="p-5">
+   491→          <div className="flex items-center justify-between mb-4">
+   492→            <div>
+   493→              <h3 className="font-semibold">Security Activity</h3>
+   494→              <p className="text-xs text-muted-foreground">Recent login & security events</p>
+   495→            </div>
+   496→            <Activity className="h-4 w-4 text-muted-foreground" />
+   497→          </div>
+   498→          <div className="relative max-h-[420px] overflow-y-auto pr-1">
+   499→            <div className="absolute left-[19px] top-2 bottom-2 w-px bg-accent" />
+   500→            <div className="space-y-3">
+   501→              {data.securityEvents.length === 0 && (
+   502→                <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+   503→                  No security events yet
+   504→                </div>
+   505→              )}
+   506→              {data.securityEvents.map((e, i) => {
+   507→                const { icon: Icon, color: icColor } = EventIcon(e.action);
+   508→                return (
+   509→                  <motion.div
+   510→                    key={e.id}
+   511→                    initial={{ opacity: 0, x: -8 }}
+   512→                    animate={{ opacity: 1, x: 0 }}
+   513→                    transition={{ delay: i * 0.03 }}
+   514→                    className="relative flex items-start gap-3"
+   515→                  >
+   516→                    <div className={cn("relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full ring-4 ring-background", icColor)}>
+   517→                      <Icon className="h-4 w-4" />
+   518→                    </div>
+   519→                    <div className="flex-1 min-w-0 pt-0.5">
+   520→                      <p className="text-sm font-medium capitalize">
+   521→                        {e.action.replace(/_/g, " ")}
+   522→                      </p>
+   523→                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+   524→                        <span className="capitalize">{e.actor}</span>
+   525→                        {e.ip && <span>· {e.ip}</span>}
+   526→                        {e.userAgent && <span className="truncate">· {e.userAgent}</span>}
+   527→                      </div>
+   528→                      <p className="text-[11px] text-muted-foreground mt-0.5">{timeAgo(e.createdAt)} · {formatDateTime(e.createdAt)}</p>
+   529→                    </div>
+   530→                    {e.severity === "critical" && (
+   531→                      <Badge className="bg-rose-500/15 text-rose-600 border-0 text-[10px]">Critical</Badge>
+   532→                    )}
+   533→                    {e.severity === "warning" && (
+   534→                      <Badge className="bg-amber-500/15 text-amber-600 border-0 text-[10px]">Warning</Badge>
+   535→                    )}
+   536→                  </motion.div>
+   537→                );
+   538→              })}
+   539→            </div>
+   540→          </div>
+   541→        </Card>
+   542→      </div>
+   543→
+   544→      {/* Fraud Alerts + Recommendations */}
+   545→      <div className="grid gap-6 lg:grid-cols-2">
+   546→        {/* Fraud Alerts */}
+   547→        <Card className="p-5">
+   548→          <div className="flex items-center justify-between mb-4">
+   549→            <div>
+   550→              <h3 className="font-semibold">Fraud Alerts</h3>
+   551→              <p className="text-xs text-muted-foreground">
+   552→                {data.fraudAlerts.total} flagged · {data.fraudAlerts.recent} in last 30d
+   553→              </p>
+   554→            </div>
+   555→            <AlertTriangle className={cn("h-4 w-4", data.fraudAlerts.recent > 0 ? "text-amber-500" : "text-muted-foreground")} />
+   556→          </div>
+   557→          <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+   558→            {data.fraudAlerts.list.length === 0 && (
+   559→              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+   560→                <div className="grid h-12 w-12 place-items-center rounded-full bg-emerald-500/10 text-emerald-500 mb-2">
+   561→                  <CheckCircle2 className="h-6 w-6" />
+   562→                </div>
+   563→                <p className="text-sm font-medium">No fraud alerts</p>
+   564→                <p className="text-xs text-muted-foreground mt-0.5">All your transactions look clean</p>
+   565→              </div>
+   566→            )}
+   567→            {data.fraudAlerts.list.map((t, i) => {
+   568→              const risk = Math.min(100, Math.round((t.riskScore || 0) * 100));
+   569→              return (
+   570→                <motion.div
+   571→                  key={t.id}
+   572→                  initial={{ opacity: 0, y: 6 }}
+   573→                  animate={{ opacity: 1, y: 0 }}
+   574→                  transition={{ delay: i * 0.03 }}
+   575→                  className="rounded-xl border border-amber-500/20 bg-amber-500/[0.03] p-3"
+   576→                >
+   577→                  <div className="flex items-start justify-between gap-2 mb-2">
+   578→                    <div className="min-w-0">
+   579→                      <p className="text-sm font-medium truncate">{t.description}</p>
+   580→                      <p className="text-xs text-muted-foreground truncate">
+   581→                        {t.counterpartyName || "Unknown"} · {t.reference}
+   582→                      </p>
+   583→                    </div>
+   584→                    <Badge className="bg-rose-500/15 text-rose-600 border-0 text-[10px] shrink-0">
+   585→                      {t.status}
+   586→                    </Badge>
+   587→                  </div>
+   588→                  <div className="flex items-center justify-between gap-3">
+   589→                    <span className="text-sm font-semibold tabular-nums">
+   590→                      {formatMoney(t.amount, t.currency)}
+   591→                    </span>
+   592→                    <div className="flex items-center gap-2 flex-1 max-w-[160px]">
+   593→                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">Risk</span>
+   594→                      <div className="flex-1 h-1.5 rounded-full bg-accent overflow-hidden">
+   595→                        <div
+   596→                          className={cn(
+   597→                            "h-full rounded-full",
+   598→                            risk >= 80 ? "bg-rose-500" : risk >= 60 ? "bg-amber-500" : "bg-emerald-500",
+   599→                          )}
+   600→                          style={{ width: `${risk}%` }}
+   601→                        />
+   602→                      </div>
+   603→                      <span className="text-[11px] font-bold tabular-nums">
+   604→                        {risk}%
+   605→                      </span>
+   606→                    </div>
+   607→                  </div>
+   608→                  <p className="text-[11px] text-muted-foreground mt-1.5">{timeAgo(t.createdAt)}</p>
+   609→                </motion.div>
+   610→              );
+   611→            })}
+   612→          </div>
+   613→        </Card>
+   614→
+   615→        {/* Security Recommendations */}
+   616→        <Card className="p-5">
+   617→          <div className="flex items-center justify-between mb-4">
+   618→            <div>
+   619→              <h3 className="font-semibold">Recommendations</h3>
+   620→              <p className="text-xs text-muted-foreground">Actionable tips to improve your security</p>
+   621→            </div>
+   622→            <Lightbulb className="h-4 w-4 text-amber-500" />
+   623→          </div>
+   624→          <div className="space-y-2.5">
+   625→            {data.recommendations.map((r, i) => {
+   626→              const sc =
+   627→                r.severity === "high"
+   628→                  ? "border-rose-500/30 bg-rose-500/[0.04]"
+   629→                  : r.severity === "medium"
+   630→                  ? "border-amber-500/30 bg-amber-500/[0.04]"
+   631→                  : "border-emerald-500/30 bg-emerald-500/[0.04]";
+   632→              const icColor =
+   633→                r.severity === "high"
+   634→                  ? "bg-rose-500/10 text-rose-500"
+   635→                  : r.severity === "medium"
+   636→                  ? "bg-amber-500/10 text-amber-500"
+   637→                  : "bg-emerald-500/10 text-emerald-500";
+   638→              return (
+   639→                <motion.div
+   640→                  key={r.id}
+   641→                  initial={{ opacity: 0, y: 6 }}
+   642→                  animate={{ opacity: 1, y: 0 }}
+   643→                  transition={{ delay: i * 0.04 }}
+   644→                  className={cn("rounded-xl border p-3.5", sc)}
+   645→                >
+   646→                  <div className="flex items-start gap-3">
+   647→                    <div className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-lg", icColor)}>
+   648→                      <RecIcon name={r.icon} />
+   649→                    </div>
+   650→                    <div className="flex-1 min-w-0">
+   651→                      <div className="flex items-center justify-between gap-2">
+   652→                        <p className="text-sm font-semibold">{r.title}</p>
+   653→                        {r.severity !== "low" && (
+   654→                          <Badge className={cn("border-0 text-[10px] capitalize",
+   655→                            r.severity === "high" ? "bg-rose-500/15 text-rose-600" : "bg-amber-500/15 text-amber-600")}>
+   656→                            {r.severity}
+   657→                          </Badge>
+   658→                        )}
+   659→                      </div>
+   660→                      <p className="text-xs text-muted-foreground mt-0.5">{r.desc}</p>
+   661→                      {r.severity !== "low" && (
+   662→                        <button className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+   663→                          Take action <ArrowRight className="h-3 w-3" />
+   664→                        </button>
+   665→                      )}
+   666→                    </div>
+   667→                  </div>
+   668→                </motion.div>
+   669→              );
+   670→            })}
+   671→          </div>
+   672→        </Card>
+   673→      </div>
+   674→
+   675→      {/* Account security meta */}
+   676→      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+   677→        <MetaCard
+   678→          icon={Clock}
+   679→          label="Last Login"
+   680→          value={data.lastLoginAt ? timeAgo(data.lastLoginAt) : "Never"}
+   681→          sub={data.lastLoginAt ? formatDateTime(data.lastLoginAt) : "—"}
+   682→        />
+   683→        <MetaCard
+   684→          icon={KeyRound}
+   685→          label="Password Age"
+   686→          value={`${data.passwordAgeDays} days`}
+   687→          sub={`Changed ${timeAgo(data.lastPasswordChange)}`}
+   688→          tone={data.passwordAgeDays > 90 ? "warn" : "ok"}
+   689→        />
+   690→        <MetaCard
+   691→          icon={ScanFace}
+   692→          label="2FA Method"
+   693→          value={data.mfaEnabled ? (data.twoFactorMethod || "Authenticator") : "Disabled"}
+   694→          sub={data.mfaEnabled ? "Active" : "Not enabled"}
+   695→          tone={data.mfaEnabled ? "ok" : "warn"}
+   696→        />
+   697→        <MetaCard
+   698→          icon={Wifi}
+   699→          label="Encrypted Channel"
+   700→          value={data.encryption.transport}
+   701→          sub={data.encryption.algorithm}
+   702→          tone="ok"
+   703→        />
+   704→      </div>
+   705→
+   706→      {/* Compliance footer */}
+   707→      <Card className="p-5">
+   708→        <div className="flex items-center justify-between mb-4">
+   709→          <div>
+   710→            <h3 className="font-semibold">Certifications & Compliance</h3>
+   711→            <p className="text-xs text-muted-foreground">GaexPay is independently audited & certified</p>
+   712→          </div>
+   713→          <BadgeCheck className="h-5 w-5 text-emerald-500" />
+   714→        </div>
+   715→        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+   716→          {[
+   717→            { name: "PCI-DSS", detail: `${data.compliance.pciDss.level}`, sub: `Audited ${data.compliance.pciDss.lastAudit}`, icon: Lock },
+   718→            { name: "AML", detail: data.compliance.aml.status, sub: data.compliance.aml.framework, icon: ShieldCheck },
+   719→            { name: "GDPR", detail: data.compliance.gdpr.status, sub: data.compliance.gdpr.framework, icon: FileLock2 },
+   720→            { name: "ISO 27001", detail: data.compliance.iso27001.status, sub: data.compliance.iso27001.framework, icon: Globe },
+   721→            { name: "SOC 2", detail: data.compliance.soc2.type, sub: "Type II audit", icon: Server },
+   722→          ].map((c) => {
+   723→            const Icon = c.icon;
+   724→            return (
+   725→              <div key={c.name} className="rounded-xl border p-3.5 text-center">
+   726→                <div className="mx-auto mb-2 grid h-10 w-10 place-items-center rounded-lg bg-emerald-500/10 text-emerald-500">
+   727→                  <Icon className="h-5 w-5" />
+   728→                </div>
+   729→                <p className="text-sm font-semibold">{c.name}</p>
+   730→                <p className="text-[11px] capitalize text-emerald-600 font-medium">{c.detail}</p>
+   731→                <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{c.sub}</p>
+   732→              </div>
+   733→            );
+   734→          })}
+   735→        </div>
+   736→      </Card>
+   737→    </div>
+   738→  );
+   739→}
+   740→
+   741→function StatPill({ label, value, icon: Icon }: { label: string; value: number; icon: any }) {
+   742→  return (
+   743→    <div className="rounded-xl bg-white/10 p-3 backdrop-blur-sm">
+   744→      <div className="flex items-center gap-1.5 text-white/70 text-xs mb-1">
+   745→        <Icon className="h-3 w-3" />
+   746→        {label}
+   747→      </div>
+   748→      <p className="text-2xl font-bold tabular-nums">
+   749→        <AnimatedNumber value={value} />
+   750→      </p>
+   751→    </div>
+   752→  );
+   753→}
+   754→
+   755→function MetaCard({
+   756→  icon: Icon, label, value, sub, tone = "default",
+   757→}: {
+   758→  icon: any; label: string; value: string; sub: string; tone?: "default" | "ok" | "warn";
+   759→}) {
+   760→  const toneClass =
+   761→    tone === "ok" ? "bg-emerald-500/10 text-emerald-500"
+   762→    : tone === "warn" ? "bg-amber-500/10 text-amber-500"
+   763→    : "bg-primary/10 text-primary";
+   764→  return (
+   765→    <Card className="p-4">
+   766→      <div className="flex items-center gap-2 mb-2">
+   767→        <div className={cn("grid h-8 w-8 place-items-center rounded-lg", toneClass)}>
+   768→          <Icon className="h-4 w-4" />
+   769→        </div>
+   770→        <span className="text-xs text-muted-foreground">{label}</span>
+   771→      </div>
+   772→      <p className="text-base font-semibold truncate">{value}</p>
+   773→      <p className="text-xs text-muted-foreground truncate">{sub}</p>
+   774→    </Card>
+   775→  );
+   776→}
+   777→
+   778→function SecuritySkeleton() {
+   779→  return (
+   780→    <div className="space-y-6">
+   781→      <div className="flex items-center gap-3">
+   782→        <Skeleton className="h-10 w-10 rounded-xl" />
+   783→        <div className="space-y-2">
+   784→          <Skeleton className="h-6 w-48" />
+   785→          <Skeleton className="h-3 w-64" />
+   786→        </div>
+   787→      </div>
+   788→      <Card className="relative overflow-hidden border-0 p-6 bg-gradient-to-br from-emerald-600 to-teal-700 text-white">
+   789→        <div className="grid gap-6 lg:grid-cols-[auto_1fr]">
+   790→          <Skeleton className="h-[220px] w-[220px] rounded-3xl bg-white/15" />
+   791→          <div className="space-y-4">
+   792→            <Skeleton className="h-6 w-56 bg-white/20" />
+   793→            <Skeleton className="h-4 w-80 bg-white/20" />
+   794→            <div className="flex flex-wrap gap-2">
+   795→              {Array.from({ length: 4 }).map((_, i) => (
+   796→                <Skeleton key={i} className="h-6 w-24 rounded-full bg-white/20" />
+   797→              ))}
+   798→            </div>
+   799→            <div className="grid grid-cols-4 gap-3">
+   800→              {Array.from({ length: 4 }).map((_, i) => (
+   801→                <Skeleton key={i} className="h-16 rounded-xl bg-white/15" />
+   802→              ))}
+   803→            </div>
+   804→          </div>
+   805→        </div>
+   806→      </Card>
+   807→      <Card className="p-5">
+   808→        <Skeleton className="h-5 w-40 mb-4" />
+   809→        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+   810→          {Array.from({ length: 6 }).map((_, i) => (
+   811→            <Skeleton key={i} className="h-20 rounded-xl" />
+   812→          ))}
+   813→        </div>
+   814→      </Card>
+   815→      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+   816→        {Array.from({ length: 6 }).map((_, i) => (
+   817→          <Skeleton key={i} className="h-28 rounded-xl" />
+   818→        ))}
+   819→      </div>
+   820→      <div className="grid gap-6 lg:grid-cols-2">
+   821→        <Skeleton className="h-80 rounded-xl" />
+   822→        <Skeleton className="h-80 rounded-xl" />
+   823→      </div>
+   824→    </div>
+   825→  );
+   826→}
+   827→

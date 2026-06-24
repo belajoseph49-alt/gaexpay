@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { useFetch } from "@/hooks/use-fetch";
 import { hasPermission, isAdmin as isAdminRole } from "@/lib/rbac";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "@/hooks/use-translation";
 
 // ---- Types -----------------------------------------------------------------
 
@@ -70,103 +71,134 @@ interface NavGroup {
 //   3. RBAC permission (if `permission` is set)
 //   4. feature flag (if `featureFlag` is set)
 // Sections with zero visible items are hidden entirely.
+//
+// `labelKey` is the i18n translation key (resolved at render-time). The
+// `label` field is kept as a fallback for environments where the hook is
+// unavailable (e.g. tooling snapshots).
 
+interface NavItem {
+  id: View;
+  label: string;
+  labelKey: string;
+  icon: any;
+  badge?: string;
+  /** Feature flag key — item is hidden if the flag is disabled for this user */
+  featureFlag?: string;
+  /** Required RBAC permission — item is hidden if the user lacks it */
+  permission?: string;
+  /** Account types that can see this item. If omitted, all can. */
+  accountTypes?: string[];
+  /** Roles that can see this item. If omitted, all can. */
+  roles?: string[];
+}
+
+interface NavGroup {
+  section: string;
+  sectionKey: string;
+  items: NavItem[];
+}
+
+// ---- Nav catalog -----------------------------------------------------------
 const NAV: NavGroup[] = [
   {
     section: "Main",
+    sectionKey: "nav.main",
     items: [
       // Personal & Business share these
-      { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, accountTypes: ["personal"] },
-      { id: "business-dashboard", label: "Business Dashboard", icon: Building2, accountTypes: ["business"] },
-      { id: "wallets", label: "Wallets", icon: Wallet },
-      { id: "send", label: "Send & Receive", icon: SendHorizontal },
+      { id: "dashboard", label: "Dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard, accountTypes: ["personal"] },
+      { id: "business-dashboard", label: "Business Dashboard", labelKey: "nav.businessDashboard", icon: Building2, accountTypes: ["business"] },
+      { id: "wallets", label: "Wallets", labelKey: "nav.wallets", icon: Wallet },
+      { id: "send", label: "Send & Receive", labelKey: "nav.sendReceive", icon: SendHorizontal },
       {
-        id: "international", label: "International Transfer", icon: Globe,
+        id: "international", label: "International Transfer", labelKey: "nav.internationalTransfer", icon: Globe,
         featureFlag: "international_transfer",
       },
-      { id: "unified-address", label: "My Payment Address", icon: AtSign },
-      { id: "transactions", label: "Transactions", icon: ArrowLeftRight },
+      { id: "unified-address", label: "My Payment Address", labelKey: "nav.myPaymentAddress", icon: AtSign },
+      { id: "transactions", label: "Transactions", labelKey: "nav.transactions", icon: ArrowLeftRight },
       {
-        id: "cards", label: "Cards", icon: CreditCard,
+        id: "cards", label: "Cards", labelKey: "nav.cards", icon: CreditCard,
         featureFlag: "virtual_cards",
       },
-      { id: "pay", label: "Pay & Bills", icon: QrCode, featureFlag: "qr_payments" },
+      { id: "pay", label: "Pay & Bills", labelKey: "nav.payBills", icon: QrCode, featureFlag: "qr_payments" },
       // Personal-only financial tools
-      { id: "savings", label: "Savings Goals", icon: PiggyBank, accountTypes: ["personal"], featureFlag: "savings_goals" },
-      { id: "budgets", label: "Budgets", icon: Wallet2, accountTypes: ["personal"], featureFlag: "budgets" },
-      { id: "scheduled", label: "Scheduled", icon: CalendarClock, featureFlag: "scheduled_transfers" },
-      { id: "calendar", label: "Calendar", icon: Calendar },
-      { id: "exchange", label: "Exchange", icon: Repeat },
+      { id: "savings", label: "Savings Goals", labelKey: "nav.savingsGoals", icon: PiggyBank, accountTypes: ["personal"], featureFlag: "savings_goals" },
+      { id: "budgets", label: "Budgets", labelKey: "nav.budgets", icon: Wallet2, accountTypes: ["personal"], featureFlag: "budgets" },
+      { id: "scheduled", label: "Scheduled", labelKey: "nav.scheduled", icon: CalendarClock, featureFlag: "scheduled_transfers" },
+      { id: "calendar", label: "Calendar", labelKey: "nav.calendar", icon: Calendar },
+      { id: "exchange", label: "Exchange", labelKey: "nav.exchange", icon: Repeat },
       {
-        id: "crypto", label: "Crypto Wallets", icon: Bitcoin,
+        id: "crypto", label: "Crypto Wallets", labelKey: "nav.cryptoWallets", icon: Bitcoin,
         featureFlag: "crypto_trading",
       },
       {
-        id: "crypto-swap", label: "Crypto Swap", icon: Repeat,
+        id: "crypto-swap", label: "Crypto Swap", labelKey: "nav.cryptoSwap", icon: Repeat,
         featureFlag: "crypto_trading",
       },
       {
-        id: "crypto-trade", label: "Buy / Sell Crypto", icon: DollarSign,
+        id: "crypto-trade", label: "Buy / Sell Crypto", labelKey: "nav.buySellCrypto", icon: DollarSign,
         featureFlag: "crypto_trading",
       },
       {
-        id: "crypto-cashout", label: "Crypto → Fiat", icon: Banknote,
+        id: "crypto-cashout", label: "Crypto → Fiat", labelKey: "nav.cryptoToFiat", icon: Banknote,
         featureFlag: "crypto_trading",
       },
-      { id: "analytics", label: "Analytics", icon: BarChart3, featureFlag: "analytics" },
-      { id: "spending-map", label: "Spending Map", icon: MapPin, featureFlag: "spending_map" },
-      { id: "statement", label: "Statements", icon: FileText },
+      { id: "analytics", label: "Analytics", labelKey: "nav.analytics", icon: BarChart3, featureFlag: "analytics" },
+      { id: "spending-map", label: "Spending Map", labelKey: "nav.spendingMap", icon: MapPin, featureFlag: "spending_map" },
+      { id: "statement", label: "Statements", labelKey: "nav.statements", icon: FileText },
     ],
   },
   {
     section: "Business",
+    sectionKey: "nav.business",
     items: [
-      { id: "team", label: "Team", icon: Users, accountTypes: ["business"] },
-      { id: "invoices", label: "Invoices", icon: FileText, accountTypes: ["business"] },
-      { id: "payroll", label: "Payroll", icon: Banknote, accountTypes: ["business"] },
-      { id: "merchant", label: "Merchant Dashboard", icon: Store, badge: "Pro", featureFlag: "merchant_dashboard" },
-      { id: "business-pro", label: "Business Pro", icon: Briefcase, badge: "Pro", featureFlag: "business_pro" },
-      { id: "treasury", label: "Treasury", icon: Landmark, badge: "L4", featureFlag: "treasury" },
+      { id: "team", label: "Team", labelKey: "nav.team", icon: Users, accountTypes: ["business"] },
+      { id: "invoices", label: "Invoices", labelKey: "nav.invoices", icon: FileText, accountTypes: ["business"] },
+      { id: "payroll", label: "Payroll", labelKey: "nav.payroll", icon: Banknote, accountTypes: ["business"] },
+      { id: "merchant", label: "Merchant Dashboard", labelKey: "nav.merchantDashboard", icon: Store, badge: "Pro", featureFlag: "merchant_dashboard" },
+      { id: "business-pro", label: "Business Pro", labelKey: "nav.businessPro", icon: Briefcase, badge: "Pro", featureFlag: "business_pro" },
+      { id: "treasury", label: "Treasury", labelKey: "nav.treasury", icon: Landmark, badge: "L4", featureFlag: "treasury" },
     ],
   },
   {
     section: "Account",
+    sectionKey: "nav.account",
     items: [
       // Identity — KYC for personal, KYB for business
-      { id: "kyc", label: "Identity (KYC)", icon: ShieldCheck, accountTypes: ["personal"] },
-      { id: "kyb", label: "Identity (KYB)", icon: ShieldCheck, accountTypes: ["business"] },
-      { id: "security", label: "Security Center", icon: Shield },
-      { id: "achievements", label: "Achievements", icon: Trophy, accountTypes: ["personal"] },
-      { id: "referral", label: "Referral & Rewards", icon: Gift },
-      { id: "settings", label: "Settings", icon: Settings },
-      { id: "support", label: "Support", icon: LifeBuoy },
+      { id: "kyc", label: "Identity (KYC)", labelKey: "nav.identity", icon: ShieldCheck, accountTypes: ["personal"] },
+      { id: "kyb", label: "Identity (KYB)", labelKey: "misc.kycBusiness", icon: ShieldCheck, accountTypes: ["business"] },
+      { id: "security", label: "Security Center", labelKey: "nav.securityCenter", icon: Shield },
+      { id: "achievements", label: "Achievements", labelKey: "nav.achievements", icon: Trophy, accountTypes: ["personal"] },
+      { id: "referral", label: "Referral & Rewards", labelKey: "nav.referral", icon: Gift },
+      { id: "settings", label: "Settings", labelKey: "nav.settings", icon: Settings },
+      { id: "support", label: "Support", labelKey: "nav.support", icon: LifeBuoy },
     ],
   },
   {
     section: "Platform",
+    sectionKey: "nav.platform",
     items: [
       // Admin-only — gated by role
       {
-        id: "admin-panel", label: "Admin Panel", icon: Crown, badge: "Admin",
+        id: "admin-panel", label: "Admin Panel", labelKey: "nav.adminPanel", icon: Crown, badge: "Admin",
         roles: ["super_admin", "admin"],
       },
       {
-        id: "api-management", label: "API Management", icon: Network, badge: "Dev",
+        id: "api-management", label: "API Management", labelKey: "nav.apiManagement", icon: Network, badge: "Dev",
         roles: ["super_admin", "admin"],
         permission: "api.view",
       },
       {
-        id: "enterprise-admin", label: "Enterprise Admin", icon: Building2, badge: "L4",
+        id: "enterprise-admin", label: "Enterprise Admin", labelKey: "nav.enterpriseAdmin", icon: Building2, badge: "L4",
         roles: ["super_admin", "admin"],
         featureFlag: "enterprise_admin",
       },
       {
-        id: "compliance", label: "AML & Compliance", icon: ShieldCheck, badge: "L4",
+        id: "compliance", label: "AML & Compliance", labelKey: "nav.amlCompliance", icon: ShieldCheck, badge: "L4",
         roles: ["super_admin", "admin", "kyc_manager"],
         featureFlag: "aml_compliance",
       },
       {
-        id: "developer", label: "Developer Portal", icon: Code2,
+        id: "developer", label: "Developer Portal", labelKey: "nav.developerPortal", icon: Code2,
         featureFlag: "developer_portal",
       },
     ],
@@ -177,6 +209,7 @@ const NAV: NavGroup[] = [
 
 export function Sidebar() {
   const { view, setView } = useApp();
+  const { t } = useTranslation();
   const { data: meData, loading: meLoading } = useFetch<AuthMeResponse>("/api/auth/me");
   const { data: featureData } = useFetch<FeatureFlagsResponse>("/api/features");
 
@@ -241,15 +274,15 @@ export function Sidebar() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[11px] font-semibold leading-tight truncate">
-                {accountType === "business" ? "Business Account" : "Personal Account"}
+                {accountType === "business" ? t("topbar.businessAccount") : t("topbar.personalAccount")}
               </p>
               <p className="text-[9px] text-muted-foreground capitalize leading-tight">
-                {role === "user" ? "Standard user" : role.replace(/_/g, " ")}
+                {role === "user" ? t("topbar.standardUser") : role.replace(/_/g, " ")}
               </p>
             </div>
             {isAdminRole(role) && (
               <Badge className="bg-rose-500/15 text-rose-600 border-0 text-[9px] px-1.5">
-                Admin
+                {t("topbar.admin")}
               </Badge>
             )}
           </div>
@@ -268,7 +301,7 @@ export function Sidebar() {
           filteredNav.map((group) => (
             <div key={group.section} className="mb-4">
               <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground/60">
-                {group.section}
+                {t(group.sectionKey)}
               </p>
               <div className="space-y-0.5">
                 {group.items.map((item) => {
@@ -292,7 +325,7 @@ export function Sidebar() {
                         "h-[17px] w-[17px] shrink-0 transition-transform duration-200",
                         active ? "" : "group-hover:scale-110",
                       )} />
-                      <span className="flex-1 text-left truncate">{item.label}</span>
+                      <span className="flex-1 text-left truncate">{t(item.labelKey)}</span>
                       {item.badge && (
                         <Badge
                           variant={active ? "secondary" : "outline"}
@@ -317,16 +350,16 @@ export function Sidebar() {
           <div className="relative">
             <div className="flex items-center gap-2 mb-1">
               <Sparkles className="h-3.5 w-3.5 text-primary" />
-              <span className="text-[13px] font-semibold">GaexPay Pro</span>
+              <span className="text-[13px] font-semibold">{t("topbar.gaxpayPro")}</span>
             </div>
             <p className="text-[11px] text-muted-foreground mb-2.5 leading-relaxed">
-              Unlock higher limits, zero fees & priority support.
+              {t("topbar.upgradeDesc")}
             </p>
             <button
               onClick={() => setView("referral")}
               className="w-full rounded-lg bg-primary text-primary-foreground text-[11px] font-semibold py-1.5 hover:opacity-90 transition"
             >
-              Upgrade now
+              {t("topbar.upgradeNow")}
             </button>
           </div>
         </div>

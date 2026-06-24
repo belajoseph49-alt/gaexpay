@@ -23,19 +23,21 @@ import {
 import { AnimatedNumber } from "@/components/gaexpay/animated-number";
 import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
+import { useTranslation } from "@/hooks/use-translation";
 
 const QUICK_ACTIONS = [
-  { id: "send", label: "Send", icon: SendHorizontal, color: "from-emerald-500 to-teal-600" },
-  { id: "pay", label: "Pay QR", icon: QrCode, color: "from-fuchsia-500 to-pink-600" },
-  { id: "pay", label: "Top Up", icon: ArrowDownToLine, color: "from-amber-500 to-orange-600", prefill: "topup" },
-  { id: "pay", label: "Bills", icon: Receipt, color: "from-sky-500 to-blue-600" },
-  { id: "pay", label: "Airtime", icon: Smartphone, color: "from-violet-500 to-purple-600" },
-  { id: "referral", label: "Rewards", icon: Gift, color: "from-rose-500 to-red-600" },
+  { id: "send", labelKey: "common.send", icon: SendHorizontal, color: "from-emerald-500 to-teal-600" },
+  { id: "pay", labelKey: "common.scan", icon: QrCode, color: "from-fuchsia-500 to-pink-600" },
+  { id: "pay", labelKey: "common.topUp", icon: ArrowDownToLine, color: "from-amber-500 to-orange-600", prefill: "topup" },
+  { id: "pay", labelKey: "common.bills", icon: Receipt, color: "from-sky-500 to-blue-600" },
+  { id: "pay", labelKey: "common.airtime", icon: Smartphone, color: "from-violet-500 to-purple-600" },
+  { id: "referral", labelKey: "common.rewards", icon: Gift, color: "from-rose-500 to-red-600" },
 ];
 
 export function DashboardView() {
   const { setView, setSendPrefill, userCurrency } = useApp();
   const { fmt, symbol, currency: userCur } = useFormatMoney();
+  const { t } = useTranslation();
   const { data: walletData } = useFetch<{ wallets: any[]; totalNGN: number }>("/api/wallets");
   const { data: txData } = useFetch<{ transactions: any[] }>("/api/transactions?limit=8");
   const { data: userData } = useFetch<{ user: any }>("/api/me");
@@ -60,9 +62,9 @@ export function DashboardView() {
 
   // monthly income/expense
   const now = new Date();
-  const monthTx = transactions.filter((t) => new Date(t.createdAt).getMonth() === now.getMonth());
-  const income = monthTx.filter((t) => t.direction === "credit" && t.status === "completed").reduce((s, t) => s + t.amount, 0);
-  const expense = monthTx.filter((t) => t.direction === "debit" && t.status === "completed").reduce((s, t) => s + t.amount, 0);
+  const monthTx = transactions.filter((tx) => new Date(tx.createdAt).getMonth() === now.getMonth());
+  const income = monthTx.filter((tx) => tx.direction === "credit" && tx.status === "completed").reduce((s, tx) => s + tx.amount, 0);
+  const expense = monthTx.filter((tx) => tx.direction === "debit" && tx.status === "completed").reduce((s, tx) => s + tx.amount, 0);
 
   return (
     <div className="space-y-6">
@@ -70,7 +72,7 @@ export function DashboardView() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-sm text-muted-foreground">
-            {greeting()}, welcome back
+            {greeting(t)}, {t("dashboard.welcomeBack")}
           </p>
           <h1 className="text-2xl font-bold tracking-tight">
             {user?.firstName ? `${user.firstName} ${user.lastName}` : "Adaeze Okonkwo"} 👋
@@ -79,11 +81,11 @@ export function DashboardView() {
         <div className="flex items-center gap-2">
           {user?.kycStatus === "verified" ? (
             <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border-0">
-              <ShieldCheck className="h-3.5 w-3.5 mr-1" /> Tier {user.kycTier} Verified
+              <ShieldCheck className="h-3.5 w-3.5 mr-1" /> {t("dashboard.tierVerified", { tier: user.kycTier ?? 1 })}
             </Badge>
           ) : (
             <Button size="sm" variant="outline" onClick={() => setView("kyc")}>
-              <ShieldCheck className="h-4 w-4 mr-1.5" /> Verify Identity
+              <ShieldCheck className="h-4 w-4 mr-1.5" /> {t("dashboard.verifyIdentity")}
             </Button>
           )}
         </div>
@@ -104,7 +106,7 @@ export function DashboardView() {
             <div className="relative">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm text-white/80">Total Balance ({userCurrency})</p>
+                  <p className="text-xs sm:text-sm text-white/80">{t("dashboard.totalBalance")} ({userCurrency})</p>
                   <div className="mt-1 flex items-center gap-2">
                     <h2 className="text-2xl sm:text-3xl font-bold tracking-tight tabular-nums truncate">
                       {hidden ? `${CURRENCY_SYMBOL[userCurrency] || ""} • • • •` : <AnimatedNumber value={userTotal} prefix={CURRENCY_SYMBOL[userCurrency] || ""} decimals={2} />}
@@ -114,12 +116,12 @@ export function DashboardView() {
                     </button>
                   </div>
                   <p className="mt-1 text-[10px] sm:text-xs text-white/60 truncate">
-                    Across {wallets.length} wallets
+                    {t("dashboard.acrossWallets", { count: wallets.length })}
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-1.5 shrink-0">
                   <Badge className="bg-white/20 text-white border-0 backdrop-blur text-[10px]">
-                    <Zap className="h-2.5 w-2.5 mr-0.5" /> Instant
+                    <Zap className="h-2.5 w-2.5 mr-0.5" /> {t("dashboard.instant")}
                   </Badge>
                   <div className="flex items-center gap-0.5 text-[10px] sm:text-xs text-white/80">
                     <TrendingUp className="h-3 w-3" /> +12.4%
@@ -134,7 +136,7 @@ export function DashboardView() {
                   className="bg-white/20 text-white border-0 backdrop-blur hover:bg-white/30 text-xs h-8"
                   onClick={() => setView("send")}
                 >
-                  <SendHorizontal className="h-3.5 w-3.5 mr-1" /> Send
+                  <SendHorizontal className="h-3.5 w-3.5 mr-1" /> {t("common.send")}
                 </Button>
                 <Button
                   size="sm"
@@ -142,7 +144,7 @@ export function DashboardView() {
                   className="bg-white/20 text-white border-0 backdrop-blur hover:bg-white/30 text-xs h-8"
                   onClick={() => setView("send")}
                 >
-                  <ArrowDownToLine className="h-3.5 w-3.5 mr-1" /> Request
+                  <ArrowDownToLine className="h-3.5 w-3.5 mr-1" /> {t("common.request")}
                 </Button>
                 <Button
                   size="sm"
@@ -150,7 +152,7 @@ export function DashboardView() {
                   className="bg-white/20 text-white border-0 backdrop-blur hover:bg-white/30 text-xs h-8"
                   onClick={() => setView("pay")}
                 >
-                  <QrCode className="h-3.5 w-3.5 mr-1" /> Scan
+                  <QrCode className="h-3.5 w-3.5 mr-1" /> {t("common.scan")}
                 </Button>
                 <Button
                   size="sm"
@@ -158,7 +160,7 @@ export function DashboardView() {
                   className="bg-white/20 text-white border-0 backdrop-blur hover:bg-white/30 text-xs h-8"
                   onClick={() => setView("wallets")}
                 >
-                  <Plus className="h-3.5 w-3.5 mr-1" /> Add
+                  <Plus className="h-3.5 w-3.5 mr-1" /> {t("common.add")}
                 </Button>
               </div>
             </div>
@@ -174,7 +176,7 @@ export function DashboardView() {
                   <ArrowDownRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Income (MTD)</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{t("dashboard.income")} (MTD)</p>
                   <p className="text-sm sm:text-lg font-bold tabular-nums truncate">{fmt(income)}</p>
                 </div>
               </div>
@@ -188,7 +190,7 @@ export function DashboardView() {
                   <ArrowUpRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Spending (MTD)</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{t("dashboard.spending")} (MTD)</p>
                   <p className="text-sm sm:text-lg font-bold tabular-nums truncate">{fmt(expense)}</p>
                 </div>
               </div>
@@ -204,7 +206,7 @@ export function DashboardView() {
           const Icon = a.icon;
           return (
             <button
-              key={a.label}
+              key={a.labelKey}
               onClick={() => {
                 setSendPrefill(a.prefill ? { recipient: a.prefill } : null);
                 setView(a.id as any);
@@ -214,7 +216,7 @@ export function DashboardView() {
               <div className={cn("grid h-11 w-11 sm:h-14 sm:w-14 place-items-center rounded-2xl bg-gradient-to-br text-white shadow-lg transition group-hover:scale-105", a.color)}>
                 <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
-              <span className="text-[11px] sm:text-xs font-medium">{a.label}</span>
+              <span className="text-[11px] sm:text-xs font-medium">{t(a.labelKey)}</span>
             </button>
           );
         })}
@@ -225,9 +227,9 @@ export function DashboardView() {
         {/* Wallets */}
         <Card className="p-5 lg:col-span-1">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="font-semibold">My Wallets</h3>
+            <h3 className="font-semibold">{t("dashboard.myWallets")}</h3>
             <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setView("wallets")}>
-              View all <ChevronRight className="h-3.5 w-3.5" />
+              {t("dashboard.viewAll")} <ChevronRight className="h-3.5 w-3.5" />
             </Button>
           </div>
           <div className="space-y-2.5">
@@ -244,7 +246,7 @@ export function DashboardView() {
                   </div>
                   <div>
                     <p className="text-sm font-medium">{w.label}</p>
-                    <p className="text-xs text-muted-foreground">{w.type === "primary" ? "Main" : w.type}</p>
+                    <p className="text-xs text-muted-foreground">{w.type === "primary" ? t("dashboard.main") : w.type}</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -259,8 +261,8 @@ export function DashboardView() {
         <Card className="p-5 lg:col-span-2">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <h3 className="font-semibold">Cash Flow</h3>
-              <p className="text-xs text-muted-foreground">Last 30 days</p>
+              <h3 className="font-semibold">{t("dashboard.cashFlow")}</h3>
+              <p className="text-xs text-muted-foreground">{t("dashboard.last30Days")}</p>
             </div>
             <div className="flex items-center gap-3 text-xs">
               <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Inflow</span>
@@ -297,22 +299,22 @@ export function DashboardView() {
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="p-5 lg:col-span-2">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="font-semibold">Recent Activity</h3>
+            <h3 className="font-semibold">{t("dashboard.recentActivity")}</h3>
             <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setView("transactions")}>
-              View all <ChevronRight className="h-3.5 w-3.5" />
+              {t("dashboard.viewAll")} <ChevronRight className="h-3.5 w-3.5" />
             </Button>
           </div>
           <div className="space-y-1">
             {transactions.length === 0 && [1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
-            {transactions.slice(0, 6).map((t) => (
-              <TxRow key={t.id} tx={t} onClick={() => setView("transactions")} />
+            {transactions.slice(0, 6).map((tx) => (
+              <TxRow key={tx.id} tx={tx} onClick={() => setView("transactions")} />
             ))}
           </div>
         </Card>
 
         <Card className="p-5">
-          <h3 className="font-semibold mb-1">Spending by Category</h3>
-          <p className="text-xs text-muted-foreground mb-3">This month</p>
+          <h3 className="font-semibold mb-1">{t("dashboard.spendingByCategory")}</h3>
+          <p className="text-xs text-muted-foreground mb-3">{t("dashboard.thisMonth")}</p>
           <ResponsiveContainer width="100%" height={180}>
             <PieChart>
               <Pie data={spendingByCat} dataKey="value" nameKey="name" innerRadius={50} outerRadius={75} paddingAngle={3}>
@@ -343,11 +345,11 @@ export function DashboardView() {
         <Card className="p-5">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <h3 className="font-semibold">Savings Goals</h3>
-              <p className="text-xs text-muted-foreground">Your progress</p>
+              <h3 className="font-semibold">{t("dashboard.savingsGoals")}</h3>
+              <p className="text-xs text-muted-foreground">{t("dashboard.yourProgress")}</p>
             </div>
             <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setView("savings")}>
-              View all <ChevronRight className="h-3.5 w-3.5" />
+              {t("dashboard.viewAll")} <ChevronRight className="h-3.5 w-3.5" />
             </Button>
           </div>
           <DashboardSavingsPreview onClick={() => setView("savings")} />
@@ -357,11 +359,11 @@ export function DashboardView() {
         <Card className="p-5">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <h3 className="font-semibold">Monthly Budgets</h3>
-              <p className="text-xs text-muted-foreground">Spending vs limit</p>
+              <h3 className="font-semibold">{t("dashboard.monthlyBudgets")}</h3>
+              <p className="text-xs text-muted-foreground">{t("dashboard.spendingVsLimit")}</p>
             </div>
             <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setView("budgets")}>
-              Manage <ChevronRight className="h-3.5 w-3.5" />
+              {t("common.manage")} <ChevronRight className="h-3.5 w-3.5" />
             </Button>
           </div>
           <DashboardBudgetsPreview onClick={() => setView("budgets")} />
@@ -379,12 +381,12 @@ export function DashboardView() {
               <Wallet className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="font-semibold">Get a GaexPay Virtual Card</h3>
-              <p className="text-sm text-white/70">Spend online globally. Instant issuance, zero monthly fees.</p>
+              <h3 className="font-semibold">{t("dashboard.getVirtualCard")}</h3>
+              <p className="text-sm text-white/70">{t("dashboard.virtualCardDesc")}</p>
             </div>
           </div>
           <Button variant="secondary" className="bg-white text-slate-900 hover:bg-white/90" onClick={() => setView("cards")}>
-            Order Card <ArrowRight className="h-4 w-4 ml-1" />
+            {t("dashboard.orderCard")} <ArrowRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
       </Card>
@@ -423,11 +425,11 @@ function TxRow({ tx, onClick }: { tx: any; onClick?: () => void }) {
   );
 }
 
-function greeting() {
+function greeting(t: (key: string) => string) {
   const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
+  if (h < 12) return t("dashboard.goodMorning");
+  if (h < 17) return t("dashboard.goodAfternoon");
+  return t("dashboard.goodEvening");
 }
 
 function build30DaySeries(transactions: any[]) {

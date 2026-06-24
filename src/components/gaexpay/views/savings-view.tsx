@@ -24,6 +24,7 @@ import { Confetti } from "@/components/gaexpay/confetti";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
+import { useTranslation } from "@/hooks/use-translation";
 
 const GOAL_ICONS = ["🎯", "✈️", "💻", "🏠", "🚗", "💍", "🎓", "🛡️", "📱", "🎁", "🏖️", "💼"];
 const GOAL_COLORS = [
@@ -36,6 +37,7 @@ const GOAL_COLORS = [
 ];
 
 export function SavingsView() {
+  const { t } = useTranslation();
   const { data, reload } = useFetch<{ goals: any[]; totalSaved: number; totalTarget: number }>("/api/savings-goals");
   const [open, setOpen] = useState(false);
   const { fmt, symbol, currency: userCur } = useFormatMoney();
@@ -53,7 +55,7 @@ export function SavingsView() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
-    toast.success(`Goal "${form.name}" created`);
+    toast.success(t("savings.goalCreated", { name: form.name }));
     setOpen(false);
     reload();
   };
@@ -69,9 +71,9 @@ export function SavingsView() {
     if (type === "deposit" && goal && data2.goal?.status === "completed" && goal.status !== "completed") {
       setCelebration(goal.name);
       setTimeout(() => setCelebration(null), 4000);
-      toast.success(`🎉 Goal "${goal.name}" completed! Congratulations!`);
+      toast.success(t("savings.goalCompletedToast", { name: goal.name }));
     } else {
-      toast.success(type === "deposit" ? `Added ${fmt(amount)}` : `Withdrew ${fmt(amount)}`);
+      toast.success(type === "deposit" ? t("savings.addedAmount", { amount: fmt(amount) }) : t("savings.withdrawnAmount", { amount: fmt(amount) }));
     }
     setContributeGoal(null);
     reload();
@@ -84,7 +86,7 @@ export function SavingsView() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: g.id, status: newStatus }),
     });
-    toast.success(newStatus === "paused" ? "Goal paused" : "Goal resumed");
+    toast.success(newStatus === "paused" ? t("savings.goalPaused") : t("savings.goalResumed"));
     reload();
   };
 
@@ -99,22 +101,22 @@ export function SavingsView() {
           className="fixed top-1/2 left-1/2 z-[101] -translate-x-1/2 -translate-y-1/2 rounded-2xl border-0 bg-gradient-to-br from-emerald-600 to-teal-700 p-8 text-center text-white shadow-2xl"
         >
           <div className="text-5xl mb-3">🎉</div>
-          <h2 className="text-2xl font-bold">Goal Completed!</h2>
-          <p className="mt-1 text-white/80">You've reached your "{celebration}" target!</p>
+          <h2 className="text-2xl font-bold">{t("savings.goalCompleted")}</h2>
+          <p className="mt-1 text-white/80">{t("savings.goalCompletedDesc", { name: celebration })}</p>
           <div className="mt-3 flex items-center justify-center gap-1 text-amber-300">
             <Award className="h-5 w-5" />
-            <span className="text-sm font-medium">Achievement Unlocked</span>
+            <span className="text-sm font-medium">{t("savings.achievementUnlocked")}</span>
           </div>
         </motion.div>
       )}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Savings Goals</h1>
-          <p className="text-sm text-muted-foreground">Save towards your dreams, automatically</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("savings.title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("savings.subtitle")}</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button size="sm"><Plus className="h-4 w-4 mr-1.5" /> New Goal</Button>
+            <Button size="sm"><Plus className="h-4 w-4 mr-1.5" /> {t("savings.newGoal")}</Button>
           </DialogTrigger>
           <NewGoalDialog onSubmit={addGoal} />
         </Dialog>
@@ -128,19 +130,19 @@ export function SavingsView() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <PiggyBank className="h-5 w-5" />
-              <span className="text-sm font-medium text-white/90">Total Saved</span>
+              <span className="text-sm font-medium text-white/90">{t("savings.totalSaved")}</span>
             </div>
             <h2 className="text-3xl font-bold tabular-nums">
               <AnimatedNumber value={totalSaved} prefix={symbol} decimals={2} />
             </h2>
             <p className="mt-1 text-sm text-white/80">
-              of <span className="font-semibold">{fmt(totalTarget)}</span> target · {overallProgress.toFixed(1)}% complete
+              {t("savings.ofTarget", { target: fmt(totalTarget), pct: overallProgress.toFixed(1) })}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-white/70">Active Goals</p>
+            <p className="text-xs text-white/70">{t("savings.activeGoals")}</p>
             <p className="text-3xl font-bold">{goals.filter((g) => g.status === "active").length}</p>
-            <p className="text-xs text-white/70 mt-1">Completed: {goals.filter((g) => g.status === "completed").length}</p>
+            <p className="text-xs text-white/70 mt-1">{t("savings.completedLabel")} {goals.filter((g) => g.status === "completed").length}</p>
           </div>
         </div>
         <Progress value={overallProgress} className="mt-4 h-2 bg-white/20" />
@@ -152,13 +154,12 @@ export function SavingsView() {
           <Sparkles className="h-6 w-6" />
         </div>
         <div className="flex-1">
-          <h3 className="font-semibold">Auto-Save is ON</h3>
+          <h3 className="font-semibold">{t("savings.autoSaveOn")}</h3>
           <p className="text-sm text-muted-foreground">
-            We automatically move money to your goals every month. You've saved{" "}
-            <span className="font-semibold text-emerald-600">{fmt(245000)}</span> via auto-save this year.
+            {t("savings.autoSaveDesc", { amount: fmt(245000) })}
           </p>
         </div>
-        <Button variant="outline" size="sm">Manage Auto-Save</Button>
+        <Button variant="outline" size="sm">{t("savings.manageAutoSave")}</Button>
       </Card>
 
       {/* Goals grid */}
@@ -179,13 +180,13 @@ export function SavingsView() {
               <Card className="group relative overflow-hidden p-5 card-lift">
                 {g.status === "paused" && (
                   <div className="absolute right-3 top-3 z-10">
-                    <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">Paused</Badge>
+                    <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">{t("savings.paused")}</Badge>
                   </div>
                 )}
                 {g.status === "completed" && (
                   <div className="absolute right-3 top-3 z-10">
                     <Badge className="bg-emerald-500/15 text-emerald-600 border-0">
-                      <Award className="h-3 w-3 mr-1" /> Completed
+                      <Award className="h-3 w-3 mr-1" /> {t("savings.completedBadge")}
                     </Badge>
                   </div>
                 )}
@@ -196,7 +197,7 @@ export function SavingsView() {
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold truncate">{g.name}</h3>
                     <p className="text-xs text-muted-foreground">
-                      {daysLeft !== null ? `${daysLeft} days left` : "No deadline"}
+                      {daysLeft !== null ? t("savings.daysLeft", { days: daysLeft }) : t("savings.noDeadline")}
                     </p>
                   </div>
                 </div>
@@ -210,15 +211,15 @@ export function SavingsView() {
                   </div>
                   <Progress value={progress} className="h-2" />
                   <div className="mt-1.5 flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">{progress.toFixed(1)}% complete</span>
-                    {remaining > 0 && <span className="font-medium">{fmt(remaining)} to go</span>}
+                    <span className="text-muted-foreground">{t("savings.percentComplete", { pct: progress.toFixed(1) })}</span>
+                    {remaining > 0 && <span className="font-medium">{t("savings.toGo", { amount: fmt(remaining) })}</span>}
                   </div>
                 </div>
 
                 {g.autoSaveAmount && g.status === "active" && (
                   <div className="mt-3 flex items-center gap-1.5 rounded-lg bg-muted/50 px-2.5 py-1.5 text-xs">
                     <Calendar className="h-3 w-3 text-muted-foreground" />
-                    <span>Auto-save {fmt(g.autoSaveAmount)} on day {g.autoSaveDay}</span>
+                    <span>{t("savings.autoSaveMonthly", { amount: fmt(g.autoSaveAmount), day: g.autoSaveDay })}</span>
                   </div>
                 )}
 
@@ -230,7 +231,7 @@ export function SavingsView() {
                     disabled={g.status === "completed"}
                     onClick={() => setContributeGoal(g)}
                   >
-                    <ArrowDownToLine className="h-3.5 w-3.5 mr-1" /> Add
+                    <ArrowDownToLine className="h-3.5 w-3.5 mr-1" /> {t("savings.add")}
                   </Button>
                   <Button
                     size="sm"
@@ -260,7 +261,7 @@ export function SavingsView() {
       {/* Recent contributions */}
       {goals.some((g) => g.contributions?.length > 0) && (
         <Card className="p-5">
-          <h3 className="font-semibold mb-3">Recent Contributions</h3>
+          <h3 className="font-semibold mb-3">{t("savings.recentContributions")}</h3>
           <div className="space-y-1 max-h-80 overflow-y-auto">
             {goals.flatMap((g) =>
               (g.contributions || []).map((c: any) => (

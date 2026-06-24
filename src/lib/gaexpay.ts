@@ -263,16 +263,16 @@ export const KYC_TIERS = [
   { tier: 3, name: "Tier 3", limit: 5000000, daily: 5000000, features: ["Up to ₦5M/day", "International transfers", "Physical card", "Multi-currency"] },
 ];
 
-export const LANGUAGES = [
-  { code: "en", name: "English", flag: "🇬🇧" },
-  { code: "fr", name: "Français", flag: "🇫🇷" },
-  { code: "sw", name: "Kiswahili", flag: "🇰🇪" },
-  { code: "ha", name: "Hausa", flag: "🇳🇬" },
-  { code: "yo", name: "Yorùbá", flag: "🇳🇬" },
-  { code: "ig", name: "Igbo", flag: "🇳🇬" },
-  { code: "pt", name: "Português", flag: "🇵🇹" },
-  { code: "ar", name: "العربية", flag: "🇸🇦" },
-];
+/**
+ * Re-export of the canonical language list from the i18n module.
+ * 12 supported languages: en, fr, ru, zh, ar, es, de, ew, ff, sw, ln, ha.
+ * Arabic (`ar`) is the only RTL language and is flagged accordingly.
+ *
+ * Each entry now includes `nativeName` (endonym) and `rtl` flag for the
+ * language picker UI.
+ */
+export { LANGUAGES } from "@/lib/i18n/translations";
+export type { LanguageCode, LanguageMeta } from "@/lib/i18n/translations";
 
 // Demo user id is stable for this app
 export const DEMO_USER_ID = "cmqk4on7w0000l54pde5vpp0q";

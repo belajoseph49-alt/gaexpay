@@ -52,18 +52,20 @@ import { AchievementMonitor } from "./achievement-monitor";
 import { OnboardingTour } from "./onboarding-tour";
 import { InstallPrompt } from "./install-prompt";
 import { CurrencyPicker } from "./currency-picker";
+import { LanguagePicker } from "./language-picker";
 import { motion, AnimatePresence } from "framer-motion";
+import { hydratePreferencesFromStorage } from "@/lib/store";
 
 export function AppShell() {
   const { view, userCurrency, setUserCurrency, currencyPickerOpen, setCurrencyPickerOpen } = useApp();
 
-  // On first mount, check if user has chosen a currency
+  // On first mount, hydrate currency + language from localStorage so the
+  // already-applied preference is restored without a flash of the default.
   useEffect(() => {
     if (typeof window !== "undefined") {
+      hydratePreferencesFromStorage();
       const stored = localStorage.getItem("gxp_default_currency");
-      if (stored) {
-        useApp.setState({ userCurrency: stored });
-      } else {
+      if (!stored) {
         setCurrencyPickerOpen(true);
       }
     }
@@ -140,6 +142,7 @@ export function AppShell() {
       <OnboardingTour />
       <InstallPrompt />
       <CurrencyPicker open={currencyPickerOpen} onSelect={setUserCurrency} current={userCurrency} />
+      <LanguagePicker />
     </div>
   );
 }

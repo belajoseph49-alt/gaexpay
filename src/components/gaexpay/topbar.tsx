@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, Search, Menu, Plus, Sparkles, Globe, LogOut, Settings, ShieldCheck, ChevronDown } from "lucide-react";
+import { Bell, Search, Menu, Plus, Sparkles, Globe, LogOut, Settings, ShieldCheck, ChevronDown, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeToggle } from "./theme-toggle";
@@ -18,6 +18,8 @@ import { useFetch } from "@/hooks/use-fetch";
 import { clearAuthed } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/use-translation";
+import { LANGUAGE_BY_CODE } from "@/lib/i18n/translations";
 
 interface CurrentUser {
   id: string;
@@ -29,7 +31,8 @@ interface CurrentUser {
 }
 
 export function Topbar() {
-  const { setAiOpen, setView, userCurrency, setCurrencyPickerOpen } = useApp();
+  const { setAiOpen, setView, userCurrency, setCurrencyPickerOpen, language, setLanguagePickerOpen } = useApp();
+  const { t } = useTranslation();
   const { data } = useFetch<{ unread: number; notifications: any[] }>("/api/notifications");
   const { data: meData } = useFetch<{ user: CurrentUser }>("/api/me");
 
@@ -85,7 +88,7 @@ export function Topbar() {
         className="relative hidden md:flex flex-1 max-w-md items-center h-9 rounded-lg border border-border/50 bg-muted/40 px-3 text-[13px] text-muted-foreground transition hover:bg-muted/70 hover:border-border cursor-pointer"
       >
         <Search className="h-4 w-4 mr-2 shrink-0" />
-        <span className="flex-1 text-left">Search transactions, people, merchants...</span>
+        <span className="flex-1 text-left">{t("topbar.search")}</span>
         <kbd className="hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] text-muted-foreground/70">
           ⌘K
         </kbd>
@@ -101,7 +104,7 @@ export function Topbar() {
           className="hidden sm:inline-flex h-9 rounded-lg text-[13px]"
           onClick={() => setView("send")}
         >
-          <Plus className="h-3.5 w-3.5 mr-1" /> Send
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("topbar.send")}
         </Button>
 
         <Button
@@ -112,6 +115,17 @@ export function Topbar() {
         >
           <Sparkles className="h-[18px] w-[18px] text-primary" />
         </Button>
+
+        {/* Language switcher */}
+        <button
+          onClick={() => setLanguagePickerOpen(true)}
+          aria-label={t("settings.language")}
+          className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] font-bold uppercase transition hover:bg-muted"
+          title={LANGUAGE_BY_CODE[language]?.nativeName ?? language}
+        >
+          <Languages className="h-4 w-4 text-muted-foreground" />
+          {language}
+        </button>
 
         {/* Currency switcher */}
         <button
@@ -145,7 +159,7 @@ export function Topbar() {
           <DropdownMenuTrigger asChild>
             <button
               className="ml-1 flex items-center gap-1 rounded-full p-0.5 transition hover:ring-2 hover:ring-primary/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-              aria-label="Account menu"
+              aria-label={t("topbar.accountMenu")}
             >
               <Avatar className="h-8 w-8 ring-1 ring-border/50">
                 <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-[11px] font-bold">
@@ -166,14 +180,14 @@ export function Topbar() {
               onSelect={() => setView("settings")}
             >
               <Settings className="h-4 w-4 mr-2" />
-              <span>Settings</span>
+              <span>{t("topbar.settings")}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="cursor-pointer"
               onSelect={() => setView("kyc")}
             >
               <ShieldCheck className="h-4 w-4 mr-2" />
-              <span>Identity (KYC / KYB)</span>
+              <span>{t("topbar.identity")}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -181,7 +195,7 @@ export function Topbar() {
               onSelect={handleSignOut}
             >
               <LogOut className="h-4 w-4 mr-2" />
-              <span>Sign out</span>
+              <span>{t("topbar.signOut")}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

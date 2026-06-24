@@ -1,0 +1,695 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→import { useEffect, useMemo, useState } from "react";
+     4→     4→import { motion, AnimatePresence } from "framer-motion";
+     5→     5→import {
+     6→     6→  ArrowDown, ArrowUpDown, CheckCircle2, ChevronDown, Info, Loader2,
+     7→     7→  RefreshCw, Shield, TrendingDown, TrendingUp, Zap, Repeat,
+     8→     8→} from "lucide-react";
+     9→     9→import {
+    10→    10→  Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
+    11→    11→} from "recharts";
+    12→    12→import { Card } from "@/components/ui/card";
+    13→    13→import { Button } from "@/components/ui/button";
+    14→    14→import { Badge } from "@/components/ui/badge";
+    15→    15→import {
+    16→    16→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+    17→    17→} from "@/components/ui/dialog";
+    18→    18→import { Skeleton } from "@/components/ui/skeleton";
+    19→    19→import { useFetch } from "@/hooks/use-fetch";
+    20→    20→import { CRYPTOCURRENCIES } from "@/lib/gaexpay";
+    21→    21→import { toast } from "sonner";
+    22→    22→import { cn } from "@/lib/utils";
+    23→    23→
+    24→    24→// Local convenience map derived from the shared CRYPTOCURRENCIES constant
+    25→    25→const CRYPTO_MAP: Record<string, (typeof CRYPTOCURRENCIES)[number]> = Object.fromEntries(
+    26→    26→  CRYPTOCURRENCIES.map((c) => [c.code, c]),
+    27→    27→);
+    28→    28→
+    29→    29→// Tailwind gradient classes per crypto (visual flourish on the icon tile)
+    30→    30→const CRYPTO_GRADIENT: Record<string, string> = {
+    31→    31→  USDT: "from-emerald-500 to-teal-600",
+    32→    32→  USDC: "from-sky-500 to-blue-600",
+    33→    33→  BUSD: "from-yellow-500 to-amber-600",
+    34→    34→  DAI: "from-amber-400 to-yellow-600",
+    35→    35→  BTC: "from-amber-500 to-orange-600",
+    36→    36→  ETH: "from-blue-500 to-indigo-600",
+    37→    37→  BNB: "from-yellow-500 to-amber-600",
+    38→    38→  SOL: "from-violet-500 to-purple-600",
+    39→    39→  XRP: "from-slate-600 to-slate-800",
+    40→    40→  ADA: "from-blue-600 to-indigo-700",
+    41→    41→  DOT: "from-pink-500 to-rose-600",
+    42→    42→  MATIC: "from-purple-500 to-violet-600",
+    43→    43→  LTC: "from-slate-500 to-blue-600",
+    44→    44→  TRX: "from-red-500 to-rose-600",
+    45→    45→  PI: "from-violet-500 to-purple-700",
+    46→    46→};
+    47→    47→
+    48→    48→// Number of decimals to display per crypto
+    49→    49→function decimalsFor(code: string): number {
+    50→    50→  const stable = ["USDT", "USDC", "BUSD", "DAI"];
+    51→    51→  if (stable.includes(code)) return 2;
+    52→    52→  const low = ["XRP", "ADA", "TRX", "DOT", "MATIC"];
+    53→    53→  if (low.includes(code)) return 4;
+    54→    54→  return 6;
+    55→    55→}
+    56→    56→
+    57→    57→function formatCrypto(amount: number, code: string): string {
+    58→    58→  if (!isFinite(amount)) return "0";
+    59→    59→  const d = decimalsFor(code);
+    60→    60→  return amount.toLocaleString("en-US", { maximumFractionDigits: d, minimumFractionDigits: 0 });
+    61→    61→}
+    62→    62→
+    63→    63→// Deterministic pseudo-random based on a seed (so charts are stable per render)
+    64→    64→function seededRandom(seed: number) {
+    65→    65→  const x = Math.sin(seed) * 10000;
+    66→    66→  return x - Math.floor(x);
+    67→    67→}
+    68→    68→
+    69→    69→// Build a deterministic-ish 7-day price series (168 hourly points → sample to 7 daily candles + intraday detail)
+    70→    70→function buildPriceSeries(code: string, basePrice: number): { t: string; p: number }[] {
+    71→    71→  const points: { t: string; p: number }[] = [];
+    72→    72→  const now = Date.now();
+    73→    73→  const dayMs = 24 * 60 * 60 * 1000;
+    74→    74→  // 7 days, 4 samples per day (every 6h) → 28 points
+    75→    75→  const samples = 28;
+    76→    76→  let price = basePrice * 0.92; // start a bit lower to imply an uptrend baseline
+    77→    77→  for (let i = samples; i >= 0; i--) {
+    78→    78→    const time = new Date(now - i * 6 * 60 * 60 * 1000);
+    79→    79→    const noise = (seededRandom(i * 7 + code.charCodeAt(0) * 13) - 0.5) * 0.04; // ±2%
+    80→    80→    const drift = 0.004; // gentle upward drift
+    81→    81→    price = price * (1 + drift + noise);
+    82→    82→    // Stable-coins should stay pegged
+    83→    83→    if (["USDT", "USDC", "BUSD", "DAI"].includes(code)) {
+    84→    84→      price = basePrice + (seededRandom(i + code.length) - 0.5) * 0.002;
+    85→    85→    }
+    86→    86→    const label = time.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit" });
+    87→    87→    points.push({ t: label, p: price });
+    88→    88→  }
+    89→    89→  // Force the last point to ~current price
+    90→    90→  if (points.length > 0) points[points.length - 1].p = basePrice;
+    91→    91→  return points;
+    92→    92→}
+    93→    93→
+    94→    94→const CRYPTO_PRICES_USD: Record<string, number> = {
+    95→    95→  BTC: 67500, ETH: 3450, BNB: 585, SOL: 145, XRP: 0.52, ADA: 0.45,
+    96→    96→  DOT: 7.2, MATIC: 0.72, LTC: 84, TRX: 0.12,
+    97→    97→  USDT: 1.0, USDC: 1.0, BUSD: 1.0, DAI: 1.0,
+    98→    98→  PI: 47.35,
+    99→    99→};
+   100→   100→
+   101→   101→export function CryptoSwapView() {
+   102→   102→  const { data: ratesData, loading: ratesLoading } = useFetch<{ rates: any[] }>("/api/crypto/rates");
+   103→   103→  const { data: walletData, loading: walletsLoading } = useFetch<{ wallets: any[] }>("/api/crypto/wallets");
+   104→   104→
+   105→   105→  const [from, setFrom] = useState("BTC");
+   106→   106→  const [to, setTo] = useState("ETH");
+   107→   107→  const [amount, setAmount] = useState("0.05");
+   108→   108→  const [pickerOpen, setPickerOpen] = useState<null | "from" | "to">(null);
+   109→   109→  const [quote, setQuote] = useState<any>(null);
+   110→   110→  const [quoteLoading, setQuoteLoading] = useState(false);
+   111→   111→  const [swapping, setSwapping] = useState(false);
+   112→   112→  const [success, setSuccess] = useState<any>(null);
+   113→   113→
+   114→   114→  const rates = ratesData?.rates ?? [];
+   115→   115→  const wallets = walletData?.wallets ?? [];
+   116→   116→
+   117→   117→  const fromMeta = CRYPTO_MAP[from];
+   118→   118→  const toMeta = CRYPTO_MAP[to];
+   119→   119→  const fromPriceUSD = CRYPTO_PRICES_USD[from] ?? 0;
+   120→   120→  const toPriceUSD = CRYPTO_PRICES_USD[to] ?? 0;
+   121→   121→
+   122→   122→  // Live rate from /api/crypto/swap GET (quote-only endpoint) — refresh every 15s
+   123→   123→  useEffect(() => {
+   124→   124→    let cancelled = false;
+   125→   125→    const fetchQuote = async () => {
+   126→   126→      setQuoteLoading(true);
+   127→   127→      try {
+   128→   128→        const res = await fetch(`/api/crypto/swap?from=${from}&to=${to}`, { cache: "no-store" });
+   129→   129→        if (!res.ok) throw new Error("quote failed");
+   130→   130→        const data = await res.json();
+   131→   131→        if (!cancelled) setQuote(data);
+   132→   132→      } catch {
+   133→   133→        /* ignore — fall back to local calc below */
+   134→   134→      } finally {
+   135→   135→        if (!cancelled) setQuoteLoading(false);
+   136→   136→      }
+   137→   137→    };
+   138→   138→    fetchQuote();
+   139→   139→    const id = setInterval(fetchQuote, 15000);
+   140→   140→    return () => {
+   141→   141→      cancelled = true;
+   142→   142→      clearInterval(id);
+   143→   143→    };
+   144→   144→  }, [from, to]);
+   145→   145→
+   146→   146→  // Local fallback rate (in case quote fetch fails or hasn't resolved yet)
+   147→   147→  const liveRate = quote?.rate ?? (toPriceUSD > 0 ? fromPriceUSD / toPriceUSD : 0);
+   148→   148→
+   149→   149→  const numericAmount = Number(amount) || 0;
+   150→   150→  const swapFeePct = 0.3; // %
+   151→   151→  const swapFeeInFrom = numericAmount * (swapFeePct / 100);
+   152→   152→  const convertedAmount = Math.max(0, (numericAmount - swapFeeInFrom) * liveRate);
+   153→   153→  const slippagePct = 0.5;
+   154→   154→  const minReceived = Math.max(0, convertedAmount * (1 - slippagePct / 100));
+   155→   155→
+   156→   156→  // Price impact heuristic
+   157→   157→  const usdValue = numericAmount * fromPriceUSD;
+   158→   158→  const priceImpactPct =
+   159→   159→    usdValue < 1000 ? 0.05 : usdValue < 10000 ? 0.18 : usdValue < 100000 ? 0.42 : 0.85;
+   160→   160→
+   161→   161→  const networkFeeUSD = useMemo(() => {
+   162→   162→    const FEES: Record<string, number> = {
+   163→   163→      BTC: 1.85, ETH: 2.45, BNB: 0.15, SOL: 0.005, XRP: 0.001, ADA: 0.0017,
+   164→   164→      DOT: 0.02, MATIC: 0.01, LTC: 0.03, TRX: 0.001,
+   165→   165→      USDT: 1.0, USDC: 1.0, BUSD: 0.8, DAI: 1.2, PI: 0.0001,
+   166→   166→    };
+   167→   167→    return FEES[to] ?? 0.5;
+   168→   168→  }, [to]);
+   169→   169→  const networkFeeCrypto = toPriceUSD > 0 ? networkFeeUSD / toPriceUSD : 0;
+   170→   170→
+   171→   171→  // Wallet balance for the "from" coin (for the MAX button + balance hint)
+   172→   172→  const fromWallet = wallets.find((w: any) => w.code === from);
+   173→   173→  const fromBalance = fromWallet?.balance ?? 0;
+   174→   174→
+   175→   175→  // Build chart series for the "from" crypto (7-day simulation)
+   176→   176→  const chartData = useMemo(() => buildPriceSeries(from, fromPriceUSD), [from, fromPriceUSD]);
+   177→   177→  const firstPrice = chartData[0]?.p ?? fromPriceUSD;
+   178→   178→  const lastPrice = chartData[chartData.length - 1]?.p ?? fromPriceUSD;
+   179→   179→  const chartChangePct = firstPrice > 0 ? ((lastPrice - firstPrice) / firstPrice) * 100 : 0;
+   180→   180→  const chartUp = chartChangePct >= 0;
+   181→   181→
+   182→   182→  const swapSides = () => {
+   183→   183→    setFrom(to);
+   184→   184→    setTo(from);
+   185→   185→    setAmount(formatCrypto(convertedAmount, to).replace(/,/g, ""));
+   186→   186→  };
+   187→   187→
+   188→   188→  const executeSwap = async () => {
+   189→   189→    if (numericAmount <= 0) {
+   190→   190→      toast.error("Enter an amount to swap");
+   191→   191→      return;
+   192→   192→    }
+   193→   193→    if (fromBalance > 0 && numericAmount > fromBalance) {
+   194→   194→      toast.error(`Insufficient ${from} balance`);
+   195→   195→      return;
+   196→   196→    }
+   197→   197→    setSwapping(true);
+   198→   198→    try {
+   199→   199→      const res = await fetch("/api/crypto/swap", {
+   200→   200→        method: "POST",
+   201→   201→        headers: { "Content-Type": "application/json" },
+   202→   202→        body: JSON.stringify({ fromCrypto: from, toCrypto: to, amount: numericAmount }),
+   203→   203→      });
+   204→   204→      const data = await res.json();
+   205→   205→      if (!res.ok || !data.success) {
+   206→   206→        throw new Error(data.error || "Swap failed");
+   207→   207→      }
+   208→   208→      setSuccess(data);
+   209→   209→      toast.success(`Swapped ${from} → ${to} successfully`);
+   210→   210→    } catch (e: any) {
+   211→   211→      toast.error(e?.message || "Swap failed");
+   212→   212→    } finally {
+   213→   213→      setSwapping(false);
+   214→   214→    }
+   215→   215→  };
+   216→   216→
+   217→   217→  const highImpact = priceImpactPct > 0.3;
+   218→   218→
+   219→   219→  return (
+   220→   220→    <div className="space-y-6">
+   221→   221→      {/* Header */}
+   222→   222→      <div className="flex flex-wrap items-end justify-between gap-3">
+   223→   223→        <div>
+   224→   224→          <h1 className="text-2xl font-bold tracking-tight">Crypto Swap</h1>
+   225→   225→          <p className="text-sm text-muted-foreground">
+   226→   226→            Instantly trade between {CRYPTOCURRENCIES.length} assets at live market rates
+   227→   227→          </p>
+   228→   228→        </div>
+   229→   229→        <Badge variant="outline" className="border-emerald-500/30 text-emerald-600">
+   230→   230→          <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+   231→   231→          Live · 0.3% fee
+   232→   232→        </Badge>
+   233→   233→      </div>
+   234→   234→
+   235→   235→      <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+   236→   236→        {/* ===== Swap Card (hero) ===== */}
+   237→   237→        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950 p-5 text-white shadow-2xl sm:p-6">
+   238→   238→          {/* glow blobs */}
+   239→   239→          <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-emerald-500/20 blur-3xl" />
+   240→   240→          <div className="pointer-events-none absolute -left-12 bottom-0 h-40 w-40 rounded-full bg-teal-400/15 blur-3xl" />
+   241→   241→
+   242→   242→          <div className="relative space-y-3">
+   243→   243→            {/* FROM */}
+   244→   244→            <SwapInputCard
+   245→   245→              label="From"
+   246→   246→              meta={fromMeta}
+   247→   247→              amount={amount}
+   248→   248→              onAmountChange={setAmount}
+   249→   249→              onPick={() => setPickerOpen("from")}
+   250→   250→              balance={fromBalance}
+   251→   251→              onMax={() => setAmount(String(fromBalance))}
+   252→   252→              editable
+   253→   253→              usdValue={numericAmount * fromPriceUSD}
+   254→   254→            />
+   255→   255→
+   256→   256→            {/* SWAP button */}
+   257→   257→            <div className="relative flex justify-center">
+   258→   258→              <motion.button
+   259→   259→                type="button"
+   260→   260→                onClick={swapSides}
+   261→   261→                whileTap={{ scale: 0.92 }}
+   262→   262→                whileHover={{ scale: 1.05 }}
+   263→   263→                animate={{ rotate: quoteLoading ? 360 : 0 }}
+   264→   264→                transition={{ rotate: { duration: 0.8, ease: "linear" }, scale: { duration: 0.15 } }}
+   265→   265→                className="z-10 grid h-10 w-10 place-items-center rounded-xl border border-emerald-400/30 bg-slate-950 text-emerald-300 shadow-lg shadow-emerald-900/40 hover:border-emerald-400/60 hover:bg-emerald-500/10"
+   266→   266→                aria-label="Swap sides"
+   267→   267→              >
+   268→   268→                <ArrowDown className="h-5 w-5" />
+   269→   269→              </motion.button>
+   270→   270→              {/* faint connector line */}
+   271→   271→              <div className="absolute left-0 right-0 top-1/2 -z-0 h-px -translate-y-1/2 bg-white/5" />
+   272→   272→            </div>
+   273→   273→
+   274→   274→            {/* TO */}
+   275→   275→            <SwapInputCard
+   276→   276→              label="To (estimated)"
+   277→   277→              meta={toMeta}
+   278→   278→              amount={formatCrypto(convertedAmount, to)}
+   279→   279→              onAmountChange={() => {}}
+   280→   280→              onPick={() => setPickerOpen("to")}
+   281→   281→              editable={false}
+   282→   282→              usdValue={convertedAmount * toPriceUSD}
+   283→   283→            />
+   284→   284→
+   285→   285→            {/* Live rate row */}
+   286→   286→            <div className="flex flex-wrap items-center justify-between gap-2 px-1 pt-1 text-xs text-white/70">
+   287→   287→              <span className="inline-flex items-center gap-1.5">
+   288→   288→                <RefreshCw className={cn("h-3 w-3", quoteLoading && "animate-spin")} />
+   289→   289→                {quoteLoading ? "Fetching rate…" : (
+   290→   290→                  <>
+   291→   291→                    1 {from} ≈ <span className="font-semibold text-white">{formatCrypto(liveRate, to)}</span> {to}
+   292→   292→                  </>
+   293→   293→                )}
+   294→   294→              </span>
+   295→   295→              <button
+   296→   296→                onClick={() => { setFrom(to); setTo(from); }}
+   297→   297→                className="inline-flex items-center gap-1 text-white/60 transition hover:text-white"
+   298→   298→              >
+   299→   299→                <ArrowUpDown className="h-3 w-3" /> Flip
+   300→   300→              </button>
+   301→   301→            </div>
+   302→   302→
+   303→   303→            {/* Price impact warning */}
+   304→   304→            {highImpact && numericAmount > 0 && (
+   305→   305→              <motion.div
+   306→   306→                initial={{ opacity: 0, y: -4 }}
+   307→   307→                animate={{ opacity: 1, y: 0 }}
+   308→   308→                className="flex items-start gap-2 rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200"
+   309→   309→              >
+   310→   310→                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+   311→   311→                <span>
+   312→   312→                  Price impact <span className="font-semibold">{priceImpactPct.toFixed(2)}%</span> — high relative to liquidity. You may receive less than estimated.
+   313→   313→                </span>
+   314→   314→              </motion.div>
+   315→   315→            )}
+   316→   316→
+   317→   317→            {/* Swap CTA */}
+   318→   318→            <Button
+   319→   319→              onClick={executeSwap}
+   320→   320→              disabled={swapping || numericAmount <= 0}
+   321→   321→              className="group relative w-full overflow-hidden bg-gradient-to-r from-emerald-500 to-teal-500 text-base font-semibold text-white shadow-lg shadow-emerald-900/40 hover:from-emerald-400 hover:to-teal-400 disabled:opacity-50"
+   322→   322→              size="lg"
+   323→   323→            >
+   324→   324→              <AnimatePresence mode="wait" initial={false}>
+   325→   325→                {swapping ? (
+   326→   326→                  <motion.span
+   327→   327→                    key="loading"
+   328→   328→                    initial={{ opacity: 0 }}
+   329→   329→                    animate={{ opacity: 1 }}
+   330→   330→                    exit={{ opacity: 0 }}
+   331→   331→                    className="flex items-center justify-center gap-2"
+   332→   332→                  >
+   333→   333→                    <Loader2 className="h-4 w-4 animate-spin" /> Swapping…
+   334→   334→                  </motion.span>
+   335→   335→                ) : (
+   336→   336→                  <motion.span
+   337→   337→                    key="idle"
+   338→   338→                    initial={{ opacity: 0 }}
+   339→   339→                    animate={{ opacity: 1 }}
+   340→   340→                    exit={{ opacity: 0 }}
+   341→   341→                    className="flex items-center justify-center gap-2"
+   342→   342→                  >
+   343→   343→                    <Zap className="h-4 w-4 transition-transform group-hover:scale-110" />
+   344→   344→                    {numericAmount <= 0 ? "Enter an amount" : `Swap ${from} → ${to}`}
+   345→   345→                  </motion.span>
+   346→   346→                )}
+   347→   347→              </AnimatePresence>
+   348→   348→            </Button>
+   349→   349→
+   350→   350→            {/* Detail grid */}
+   351→   351→            <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
+   352→   352→              <DetailTile label="Minimum received" value={`${formatCrypto(minReceived, to)} ${to}`} hint={`incl. ${slippagePct}% slippage`} />
+   353→   353→              <DetailTile label="Price impact" value={`-${priceImpactPct.toFixed(2)}%`} tone={highImpact ? "warn" : "ok"} />
+   354→   354→              <DetailTile label="Swap fee" value={`${swapFeeInFrom.toFixed(decimalsFor(from))} ${from}`} hint={`${swapFeePct}%`} />
+   355→   355→              <DetailTile label="Network fee" value={`$${networkFeeUSD.toFixed(4)}`} hint={`${formatCrypto(networkFeeCrypto, to)} ${to}`} />
+   356→   356→            </div>
+   357→   357→          </div>
+   358→   358→        </Card>
+   359→   359→
+   360→   360→        {/* ===== Price Chart + asset picker context ===== */}
+   361→   361→        <div className="space-y-4">
+   362→   362→          <Card className="p-5">
+   363→   363→            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+   364→   364→              <div className="flex items-center gap-2.5">
+   365→   365→                <div className={cn("grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br text-lg", CRYPTO_GRADIENT[from] || "from-slate-600 to-slate-800")}>
+   366→   366→                  {fromMeta?.icon}
+   367→   367→                </div>
+   368→   368→                <div>
+   369→   369→                  <p className="text-sm font-semibold">{from} / USD</p>
+   370→   370→                  <p className="text-xs text-muted-foreground">{fromMeta?.name} · 7d</p>
+   371→   371→                </div>
+   372→   372→              </div>
+   373→   373→              <div className="text-right">
+   374→   374→                <p className="text-base font-bold tabular-nums">
+   375→   375→                  ${fromPriceUSD < 1 ? fromPriceUSD.toFixed(4) : fromPriceUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+   376→   376→                </p>
+   377→   377→                <Badge variant="outline" className={cn("text-[10px]", chartUp ? "text-emerald-600" : "text-rose-600")}>
+   378→   378→                  {chartUp ? <TrendingUp className="mr-1 h-3 w-3" /> : <TrendingDown className="mr-1 h-3 w-3" />}
+   379→   379→                  {chartUp ? "+" : ""}{chartChangePct.toFixed(2)}%
+   380→   380→                </Badge>
+   381→   381→              </div>
+   382→   382→            </div>
+   383→   383→
+   384→   384→            <div className="h-48 w-full">
+   385→   385→              {ratesLoading ? (
+   386→   386→                <Skeleton className="h-full w-full" />
+   387→   387→              ) : (
+   388→   388→                <ResponsiveContainer width="100%" height="100%">
+   389→   389→                  <AreaChart data={chartData} margin={{ top: 6, right: 4, left: 4, bottom: 0 }}>
+   390→   390→                    <defs>
+   391→   391→                      <linearGradient id="cryptoSwapArea" x1="0" y1="0" x2="0" y2="1">
+   392→   392→                        <stop offset="5%" stopColor={chartUp ? "#10b981" : "#f43f5e"} stopOpacity={0.55} />
+   393→   393→                        <stop offset="95%" stopColor={chartUp ? "#10b981" : "#f43f5e"} stopOpacity={0.02} />
+   394→   394→                      </linearGradient>
+   395→   395→                    </defs>
+   396→   396→                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" vertical={false} />
+   397→   397→                    <XAxis
+   398→   398→                      dataKey="t"
+   399→   399→                      tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+   400→   400→                      axisLine={false}
+   401→   401→                      tickLine={false}
+   402→   402→                      interval={Math.floor(chartData.length / 5)}
+   403→   403→                      minTickGap={20}
+   404→   404→                    />
+   405→   405→                    <YAxis
+   406→   406→                      tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+   407→   407→                      axisLine={false}
+   408→   408→                      tickLine={false}
+   409→   409→                      width={56}
+   410→   410→                      domain={["auto", "auto"]}
+   411→   411→                      tickFormatter={(v: number) =>
+   412→   412→                        v < 1 ? `$${v.toFixed(3)}` : v < 100 ? `$${v.toFixed(2)}` : `$${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`
+   413→   413→                      }
+   414→   414→                    />
+   415→   415→                    <Tooltip
+   416→   416→                      contentStyle={{
+   417→   417→                        background: "hsl(var(--popover))",
+   418→   418→                        border: "1px solid hsl(var(--border))",
+   419→   419→                        borderRadius: 12,
+   420→   420→                        fontSize: 12,
+   421→   421→                      }}
+   422→   422→                      labelStyle={{ color: "hsl(var(--muted-foreground))" }}
+   423→   423→                      formatter={(v: any) => [`$${Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`, from]}
+   424→   424→                    />
+   425→   425→                    <Area
+   426→   426→                      type="monotone"
+   427→   427→                      dataKey="p"
+   428→   428→                      stroke={chartUp ? "#10b981" : "#f43f5e"}
+   429→   429→                      strokeWidth={2}
+   430→   430→                      fill="url(#cryptoSwapArea)"
+   431→   431→                      isAnimationActive
+   432→   432→                      animationDuration={650}
+   433→   433→                    />
+   434→   434→                  </AreaChart>
+   435→   435→                </ResponsiveContainer>
+   436→   436→              )}
+   437→   437→            </div>
+   438→   438→          </Card>
+   439→   439→
+   440→   440→          {/* Your wallet balances relevant to swap */}
+   441→   441→          <Card className="p-5">
+   442→   442→            <div className="mb-3 flex items-center justify-between">
+   443→   443→              <h3 className="text-sm font-semibold">Your crypto balances</h3>
+   444→   444→              <button
+   445→   445→                onClick={() => setAmount(String(fromBalance))}
+   446→   446→                className="text-xs text-muted-foreground hover:text-primary"
+   447→   447→              >
+   448→   448→                Use max
+   449→   449→              </button>
+   450→   450→            </div>
+   451→   451→            <div className="max-h-72 space-y-1 overflow-y-auto pr-1 no-scrollbar">
+   452→   452→              {walletsLoading && [1, 2, 3].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+   453→   453→              {!walletsLoading && wallets.length === 0 && (
+   454→   454→                <p className="py-6 text-center text-xs text-muted-foreground">No wallet balances found.</p>
+   455→   455→              )}
+   456→   456→              {wallets.map((w: any) => {
+   457→   457→                const meta = CRYPTO_MAP[w.code];
+   458→   458→                const rate = rates.find((r: any) => r.code === w.code);
+   459→   459→                const change24h = rate?.change24h ?? 0;
+   460→   460→                return (
+   461→   461→                  <button
+   462→   462→                    key={w.code}
+   463→   463→                    onClick={() => {
+   464→   464→                      if (from !== w.code && to !== w.code) setFrom(w.code);
+   465→   465→                    }}
+   466→   466→                    className={cn(
+   467→   467→                      "flex w-full items-center justify-between rounded-lg px-2 py-2 text-left transition hover:bg-muted/50",
+   468→   468→                      from === w.code && "bg-emerald-500/10 ring-1 ring-emerald-500/30",
+   469→   469→                    )}
+   470→   470→                  >
+   471→   471→                    <div className="flex items-center gap-2.5">
+   472→   472→                      <div className={cn("grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br text-base", CRYPTO_GRADIENT[w.code] || "from-slate-600 to-slate-800")}>
+   473→   473→                        {meta?.icon ?? "🪙"}
+   474→   474→                      </div>
+   475→   475→                      <div>
+   476→   476→                        <p className="text-sm font-semibold">{w.code}</p>
+   477→   477→                        <p className="text-xs text-muted-foreground">{meta?.name}</p>
+   478→   478→                      </div>
+   479→   479→                    </div>
+   480→   480→                    <div className="text-right">
+   481→   481→                      <p className="text-sm font-semibold tabular-nums">
+   482→   482→                        {w.balance.toLocaleString("en-US", { maximumFractionDigits: decimalsFor(w.code) })} {w.code}
+   483→   483→                      </p>
+   484→   484→                      <p className={cn("text-xs tabular-nums", change24h >= 0 ? "text-emerald-600" : "text-rose-600")}>
+   485→   485→                        ≈ ${w.valueUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+   486→   486→                      </p>
+   487→   487→                    </div>
+   488→   488→                  </button>
+   489→   489→                );
+   490→   490→              })}
+   491→   491→            </div>
+   492→   492→          </Card>
+   493→   493→
+   494→   494→          {/* Security note */}
+   495→   495→          <Card className="flex items-center gap-3 border-emerald-500/30 bg-emerald-500/5 p-4">
+   496→   496→            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-emerald-500/15 text-emerald-500">
+   497→   497→              <Shield className="h-4 w-4" />
+   498→   498→            </div>
+   499→   499→            <div className="text-xs">
+   500→   500→              <p className="font-semibold text-emerald-700 dark:text-emerald-400">Non-custodial swap</p>
+   501→   501→              <p className="text-muted-foreground">Swaps settle instantly at locked rates. No slippage beyond your tolerance.</p>
+   502→   502→            </div>
+   503→   503→          </Card>
+   504→   504→        </div>
+   505→   505→      </div>
+   506→   506→
+   507→   507→      {/* ===== Asset Picker Dialog ===== */}
+   508→   508→      <Dialog open={!!pickerOpen} onOpenChange={(o) => !o && setPickerOpen(null)}>
+   509→   509→        <DialogContent className="max-w-md">
+   510→   510→          <DialogHeader>
+   511→   511→            <DialogTitle>
+   512→   512→              Select {pickerOpen === "from" ? "from" : "to"} asset
+   513→   513→            </DialogTitle>
+   514→   514→            <DialogDescription>Choose from {CRYPTOCURRENCIES.length} supported cryptocurrencies</DialogDescription>
+   515→   515→          </DialogHeader>
+   516→   516→          <div className="max-h-[60vh] space-y-1 overflow-y-auto pr-1">
+   517→   517→            {CRYPTOCURRENCIES.map((c) => {
+   518→   518→              const disabled =
+   519→   519→                pickerOpen === "from" ? c.code === to : c.code === from;
+   520→   520→              return (
+   521→   521→                <button
+   522→   522→                  key={c.code}
+   523→   523→                  disabled={disabled}
+   524→   524→                  onClick={() => {
+   525→   525→                    if (pickerOpen === "from") setFrom(c.code);
+   526→   526→                    else setTo(c.code);
+   527→   527→                    setPickerOpen(null);
+   528→   528→                  }}
+   529→   529→                  className={cn(
+   530→   530→                    "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition hover:bg-muted/60 disabled:opacity-40",
+   531→   531→                    (pickerOpen === "from" ? from === c.code : to === c.code) && "bg-emerald-500/10 ring-1 ring-emerald-500/30",
+   532→   532→                  )}
+   533→   533→                >
+   534→   534→                  <div className="flex items-center gap-2.5">
+   535→   535→                    <div className={cn("grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br text-base", CRYPTO_GRADIENT[c.code] || "from-slate-600 to-slate-800")}>
+   536→   536→                      {c.icon}
+   537→   537→                    </div>
+   538→   538→                    <div>
+   539→   539→                      <p className="text-sm font-semibold">{c.code}</p>
+   540→   540→                      <p className="text-xs text-muted-foreground">{c.name}</p>
+   541→   541→                    </div>
+   542→   542→                  </div>
+   543→   543→                  <div className="text-right">
+   544→   544→                    <p className="text-xs tabular-nums text-muted-foreground">
+   545→   545→                      ${(CRYPTO_PRICES_USD[c.code] ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: CRYPTO_PRICES_USD[c.code] < 1 ? 4 : 2 })}
+   546→   546→                    </p>
+   547→   547→                    <p className="text-[10px] text-muted-foreground">{c.network}</p>
+   548→   548→                  </div>
+   549→   549→                </button>
+   550→   550→              );
+   551→   551→            })}
+   552→   552→          </div>
+   553→   553→        </DialogContent>
+   554→   554→      </Dialog>
+   555→   555→
+   556→   556→      {/* ===== Success Dialog ===== */}
+   557→   557→      <Dialog open={!!success} onOpenChange={(o) => !o && setSuccess(null)}>
+   558→   558→        <DialogContent className="max-w-md">
+   559→   559→          <DialogHeader>
+   560→   560→            <div className="mx-auto mb-2 grid h-14 w-14 place-items-center rounded-full bg-emerald-500/15 text-emerald-500">
+   561→   561→              <CheckCircle2 className="h-8 w-8" />
+   562→   562→            </div>
+   563→   563→            <DialogTitle className="text-center">Swap Complete</DialogTitle>
+   564→   564→            <DialogDescription className="text-center">
+   565→   565→              Your crypto swap was executed successfully.
+   566→   566→            </DialogDescription>
+   567→   567→          </DialogHeader>
+   568→   568→
+   569→   569→          {success && (
+   570→   570→            <div className="space-y-3">
+   571→   571→              <div className="rounded-xl bg-muted/40 p-4">
+   572→   572→                <div className="mb-2 flex items-center justify-center gap-2 text-sm">
+   573→   573→                  <span className="font-semibold">{formatCrypto(success.amount, success.from)} {success.from}</span>
+   574→   574→                  <Repeat className="h-4 w-4 text-muted-foreground" />
+   575→   575→                  <span className="font-semibold text-emerald-600">{formatCrypto(success.convertedAmount, success.to)} {success.to}</span>
+   576→   576→                </div>
+   577→   577→                <p className="text-center text-xs text-muted-foreground">
+   578→   578→                  1 {success.from} = {formatCrypto(success.rate, success.to)} {success.to}
+   579→   579→                </p>
+   580→   580→              </div>
+   581→   581→
+   582→   582→              <div className="space-y-2 text-xs">
+   583→   583→                <SuccessRow label="Reference" value={success.reference} mono />
+   584→   584→                <SuccessRow label="Minimum received" value={`${formatCrypto(success.minReceived, success.to)} ${success.to}`} />
+   585→   585→                <SuccessRow label="Swap fee" value={`${success.swapFeeInFrom?.toFixed(decimalsFor(success.from))} ${success.from} (${success.swapFeePct}%)`} />
+   586→   586→                <SuccessRow label="Network fee" value={`$${success.networkFeeUSD?.toFixed(4)} (${formatCrypto(success.networkFeeCrypto, success.to)} ${success.to})`} />
+   587→   587→                <SuccessRow label="Price impact" value={`-${success.priceImpactPct?.toFixed(2)}%`} />
+   588→   588→                <SuccessRow label="Completed" value={success.completedAt ? new Date(success.completedAt).toLocaleString() : "—"} />
+   589→   589→              </div>
+   590→   590→
+   591→   591→              <div className="flex gap-2 pt-1">
+   592→   592→                <Button variant="outline" className="flex-1" onClick={() => setSuccess(null)}>
+   593→   593→                  New swap
+   594→   594→                </Button>
+   595→   595→                <Button className="flex-1" onClick={() => { setSuccess(null); setAmount(""); }}>
+   596→   596→                  Done
+   597→   597→                </Button>
+   598→   598→              </div>
+   599→   599→            </div>
+   600→   600→          )}
+   601→   601→        </DialogContent>
+   602→   602→      </Dialog>
+   603→   603→    </div>
+   604→   604→  );
+   605→   605→}
+   606→   606→
+   607→   607→/* ---------- Sub-components ---------- */
+   608→   608→
+   609→   609→function SwapInputCard({
+   610→   610→  label, meta, amount, onAmountChange, onPick, balance, onMax, editable, usdValue,
+   611→   611→}: {
+   612→   612→  label: string;
+   613→   613→  meta: (typeof CRYPTOCURRENCIES)[number] | undefined;
+   614→   614→  amount: string;
+   615→   615→  onAmountChange: (v: string) => void;
+   616→   616→  onPick: () => void;
+   617→   617→  balance?: number;
+   618→   618→  onMax?: () => void;
+   619→   619→  editable: boolean;
+   620→   620→  usdValue: number;
+   621→   621→}) {
+   622→   622→  return (
+   623→   623→    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur">
+   624→   624→      <div className="mb-2 flex items-center justify-between">
+   625→   625→        <span className="text-xs font-medium text-white/60">{label}</span>
+   626→   626→        {balance !== undefined && (
+   627→   627→          <button
+   628→   628→            onClick={onMax}
+   629→   629→            className="text-[11px] text-white/50 transition hover:text-emerald-300"
+   630→   630→          >
+   631→   631→            Balance: {balance.toLocaleString("en-US", { maximumFractionDigits: 6 })} {meta?.code} · MAX
+   632→   632→          </button>
+   633→   633→        )}
+   634→   634→      </div>
+   635→   635→      <div className="flex items-center gap-3">
+   636→   636→        <button
+   637→   637→          onClick={onPick}
+   638→   638→          className="flex items-center gap-2 rounded-xl bg-white/10 px-2.5 py-2 text-left transition hover:bg-white/15"
+   639→   639→        >
+   640→   640→          <div className={cn("grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br text-sm", CRYPTO_GRADIENT[meta?.code ?? ""] || "from-slate-600 to-slate-800")}>
+   641→   641→            {meta?.icon}
+   642→   642→          </div>
+   643→   643→          <span className="text-sm font-semibold">{meta?.code}</span>
+   644→   644→          <ChevronDown className="h-3.5 w-3.5 text-white/60" />
+   645→   645→        </button>
+   646→   646→        <input
+   647→   647→          inputMode="decimal"
+   648→   648→          value={amount}
+   649→   649→          onChange={(e) => onAmountChange(e.target.value.replace(/[^0-9.]/g, ""))}
+   650→   650→          placeholder="0.00"
+   651→   651→          readOnly={!editable}
+   652→   652→          className={cn(
+   653→   653→            "w-full bg-transparent text-right text-xl font-bold tabular-nums outline-none placeholder:text-white/30",
+   654→   654→            !editable && "cursor-default text-emerald-300",
+   655→   655→          )}
+   656→   656→        />
+   657→   657→      </div>
+   658→   658→      <div className="mt-1 text-right text-[11px] text-white/50">
+   659→   659→        ≈ ${usdValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+   660→   660→      </div>
+   661→   661→    </div>
+   662→   662→  );
+   663→   663→}
+   664→   664→
+   665→   665→function DetailTile({
+   666→   666→  label, value, hint, tone = "default",
+   667→   667→}: {
+   668→   668→  label: string;
+   669→   669→  value: string;
+   670→   670→  hint?: string;
+   671→   671→  tone?: "default" | "ok" | "warn";
+   672→   672→}) {
+   673→   673→  return (
+   674→   674→    <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+   675→   675→      <p className="text-[10px] uppercase tracking-wide text-white/50">{label}</p>
+   676→   676→      <p className={cn(
+   677→   677→        "text-sm font-semibold tabular-nums",
+   678→   678→        tone === "warn" ? "text-amber-300" : tone === "ok" ? "text-emerald-300" : "text-white",
+   679→   679→      )}>
+   680→   680→        {value}
+   681→   681→      </p>
+   682→   682→      {hint && <p className="text-[10px] text-white/40">{hint}</p>}
+   683→   683→    </div>
+   684→   684→  );
+   685→   685→}
+   686→   686→
+   687→   687→function SuccessRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+   688→   688→  return (
+   689→   689→    <div className="flex items-start justify-between gap-3">
+   690→   690→      <span className="text-muted-foreground">{label}</span>
+   691→   691→      <span className={cn("text-right font-medium", mono && "font-mono text-[11px]")}>{value}</span>
+   692→   692→    </div>
+   693→   693→  );
+   694→   694→}
+   695→   695→

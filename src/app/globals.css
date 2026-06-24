@@ -385,13 +385,36 @@
   animation: gxp-rotate 8s linear infinite;
 }
 
+/* ─────────────────────────────────────────────
+   QR SCANNER — animated scan line
+   ───────────────────────────────────────────── */
+@keyframes scan-line {
+  0% { top: 0%; }
+  50% { top: calc(100% - 2px); }
+  100% { top: 0%; }
+}
+.animate-scan {
+  animation: scan-line 2s ease-in-out infinite;
+}
+
+/* Scanning frame corner pulse */
+@keyframes scan-corner {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+.scan-corner {
+  animation: scan-corner 1.5s ease-in-out infinite;
+}
+
 /* Respect reduced-motion preferences: disable all GaexPay logo animations */
 @media (prefers-reduced-motion: reduce) {
   .gxp-glow,
   .gxp-shimmer-overlay::after,
   .gxp-gradient-animate,
   .gxp-float,
-  .gxp-rotate {
+  .gxp-rotate,
+  .animate-scan,
+  .scan-corner {
     animation: none !important;
   }
 }

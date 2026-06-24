@@ -1,0 +1,771 @@
+     1→"use client";
+     2→
+     3→/**
+     4→ * src/components/gaexpay/auth-modal.tsx
+     5→ *
+     6→ * Combined Sign In / Create Account modal with:
+     7→ *   - Account type selector (personal | business) — two large selectable cards
+     8→ *   - Password strength meter (4-segment weak/fair/good/strong)
+     9→ *   - Show/hide password toggle
+    10→ *   - Forgot password flow (email → token → reset)
+    11→ *   - "Try Demo Account" button (calls /api/auth/demo)
+    12→ *
+    13→ * Mobile-first: full-screen on mobile, centered dialog on desktop.
+    14→ * Framer Motion animates the gradient header + tab transitions.
+    15→ */
+    16→
+    17→import { useEffect, useMemo, useState } from "react";
+    18→import { AnimatePresence, motion } from "framer-motion";
+    19→import { toast } from "sonner";
+    20→import {
+    21→  User, Building2, Mail, Lock, Phone, Eye, EyeOff, Shield,
+    22→  ArrowRight, Sparkles, Loader2, BadgeCheck, Globe2,
+    23→} from "lucide-react";
+    24→
+    25→import {
+    26→  Dialog, DialogContent, DialogTitle, DialogDescription,
+    27→} from "@/components/ui/dialog";
+    28→import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+    29→import { Input } from "@/components/ui/input";
+    30→import { Button } from "@/components/ui/button";
+    31→import { Label } from "@/components/ui/label";
+    32→import { Logo } from "./logo";
+    33→import { setAuthed } from "@/lib/auth-client";
+    34→import { cn } from "@/lib/utils";
+    35→
+    36→type Mode = "login" | "signup";
+    37→type AccountType = "personal" | "business";
+    38→type Flow = "auth" | "forgot" | "reset";
+    39→type Strength = { score: 0 | 1 | 2 | 3 | 4; label: string };
+    40→
+    41→interface AuthModalProps {
+    42→  open: boolean;
+    43→  mode: Mode;
+    44→  onClose: () => void;
+    45→  onSuccess: () => void;
+    46→}
+    47→
+    48→const EMAIL_RE = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
+    49→
+    50→// ---------------------------------------------------------------------------
+    51→// Password strength
+    52→// ---------------------------------------------------------------------------
+    53→function evalStrength(pw: string): Strength {
+    54→  if (!pw) return { score: 0, label: "—" };
+    55→  let score = 0;
+    56→  if (pw.length >= 8) score++;
+    57→  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+    58→  if (/[0-9]/.test(pw)) score++;
+    59→  if (/[^A-Za-z0-9]/.test(pw) || pw.length >= 12) score++;
+    60→  const clamped = Math.min(score, 4) as 0 | 1 | 2 | 3 | 4;
+    61→  const labels = ["Too short", "Weak", "Fair", "Good", "Strong"];
+    62→  return { score: clamped, label: labels[clamped] };
+    63→}
+    64→
+    65→const STRENGTH_COLORS = [
+    66→  "bg-muted",
+    67→  "bg-red-500",
+    68→  "bg-amber-500",
+    69→  "bg-yellow-400",
+    70→  "bg-emerald-500",
+    71→];
+    72→const STRENGTH_TEXT = [
+    73→  "text-muted-foreground",
+    74→  "text-red-500",
+    75→  "text-amber-500",
+    76→  "text-yellow-500",
+    77→  "text-emerald-500",
+    78→];
+    79→
+    80→// ---------------------------------------------------------------------------
+    81→// Account type selector card
+    82→// ---------------------------------------------------------------------------
+    83→function AccountTypeCard({
+    84→  selected, onClick, icon: Icon, title, subtitle,
+    85→}: {
+    86→  selected: boolean;
+    87→  onClick: () => void;
+    88→  icon: typeof User;
+    89→  title: string;
+    90→  subtitle: string;
+    91→}) {
+    92→  return (
+    93→    <button
+    94→      type="button"
+    95→      onClick={onClick}
+    96→      aria-pressed={selected}
+    97→      className={cn(
+    98→        "relative flex flex-1 flex-col items-start gap-2 rounded-xl border-2 p-4 text-left transition-all duration-200",
+    99→        selected
+   100→          ? "border-primary bg-primary/5 ring-2 ring-primary/30"
+   101→          : "border-border bg-background hover:border-primary/40 hover:bg-muted/40",
+   102→      )}
+   103→    >
+   104→      <div
+   105→        className={cn(
+   106→          "grid h-9 w-9 place-items-center rounded-lg transition-colors",
+   107→          selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+   108→        )}
+   109→      >
+   110→        <Icon className="h-5 w-5" />
+   111→      </div>
+   112→      <div>
+   113→        <div className="text-sm font-semibold">{title}</div>
+   114→        <div className="text-[11px] text-muted-foreground leading-tight mt-0.5">{subtitle}</div>
+   115→      </div>
+   116→      {selected && (
+   117→        <motion.div
+   118→          layoutId="account-type-check"
+   119→          className="absolute top-2 right-2 grid h-5 w-5 place-items-center rounded-full bg-primary text-primary-foreground"
+   120→          initial={{ scale: 0 }}
+   121→          animate={{ scale: 1 }}
+   122→        >
+   123→          <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none">
+   124→            <path d="M2 6l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+   125→          </svg>
+   126→        </motion.div>
+   127→      )}
+   128→    </button>
+   129→  );
+   130→}
+   131→
+   132→// ---------------------------------------------------------------------------
+   133→// Field component
+   134→// ---------------------------------------------------------------------------
+   135→function Field({
+   136→  label, icon: Icon, ...props
+   137→}: { label: string; icon: typeof User } & React.InputHTMLAttributes<HTMLInputElement>) {
+   138→  return (
+   139→    <div className="space-y-1.5">
+   140→      <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
+   141→      <div className="relative">
+   142→        <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+   143→        <Input
+   144→          {...props}
+   145→          className="h-11 rounded-lg pl-9 text-sm"
+   146→        />
+   147→      </div>
+   148→    </div>
+   149→  );
+   150→}
+   151→
+   152→// ---------------------------------------------------------------------------
+   153→// Main modal
+   154→// ---------------------------------------------------------------------------
+   155→export function AuthModal({ open, mode, onClose, onSuccess }: AuthModalProps) {
+   156→  const [tab, setTab] = useState<Mode>(mode);
+   157→  const [flow, setFlow] = useState<Flow>("auth");
+   158→
+   159→  // Signup state
+   160→  const [accountType, setAccountType] = useState<AccountType>("personal");
+   161→  const [companyName, setCompanyName] = useState("");
+   162→  const [firstName, setFirstName] = useState("");
+   163→  const [lastName, setLastName] = useState("");
+   164→  const [email, setEmail] = useState("");
+   165→  const [phone, setPhone] = useState("");
+   166→  const [country, setCountry] = useState("");
+   167→  const [password, setPassword] = useState("");
+   168→  const [confirmPassword, setConfirmPassword] = useState("");
+   169→  const [showPassword, setShowPassword] = useState(false);
+   170→
+   171→  // Login state
+   172→  const [loginEmail, setLoginEmail] = useState("");
+   173→  const [loginPassword, setLoginPassword] = useState("");
+   174→
+   175→  // Forgot/reset state
+   176→  const [forgotEmail, setForgotEmail] = useState("");
+   177→  const [resetToken, setResetToken] = useState("");
+   178→  const [newPassword, setNewPassword] = useState("");
+   179→
+   180→  const [loading, setLoading] = useState(false);
+   181→  const [forgotSent, setForgotSent] = useState(false);
+   182→  const [resetDone, setResetDone] = useState(false);
+   183→
+   184→  // Sync tab when `mode` prop changes (e.g. user clicked "Sign in" vs "Get Started")
+   185→  useEffect(() => {
+   186→    if (open) {
+   187→      setTab(mode);
+   188→      setFlow("auth");
+   189→      setForgotSent(false);
+   190→      setResetDone(false);
+   191→    }
+   192→  }, [open, mode]);
+   193→
+   194→  const strength = useMemo(() => evalStrength(password), [password]);
+   195→
+   196→  // -------------------------------------------------------------------------
+   197→  // Submit handlers
+   198→  // -------------------------------------------------------------------------
+   199→  async function handleSignup(e: React.FormEvent) {
+   200→    e.preventDefault();
+   201→    if (loading) return;
+   202→
+   203→    if (!firstName.trim() || !lastName.trim()) return toast.error("Please enter your name");
+   204→    if (!EMAIL_RE.test(email)) return toast.error("Please enter a valid email");
+   205→    if (phone.replace(/\D/g, "").length < 7) return toast.error("Please enter a valid phone number");
+   206→    if (password.length < 8) return toast.error("Password must be at least 8 characters");
+   207→    if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+   208→      return toast.error("Password must contain a letter and a number");
+   209→    }
+   210→    if (password !== confirmPassword) return toast.error("Passwords do not match");
+   211→    if (accountType === "business" && companyName.trim().length < 2) {
+   212→      return toast.error("Please enter your company name");
+   213→    }
+   214→
+   215→    setLoading(true);
+   216→    try {
+   217→      const res = await fetch("/api/auth/signup", {
+   218→        method: "POST",
+   219→        headers: { "Content-Type": "application/json" },
+   220→        credentials: "include",
+   221→        body: JSON.stringify({
+   222→          firstName, lastName, email, phone, password,
+   223→          country: country || undefined,
+   224→          accountType,
+   225→          companyName: accountType === "business" ? companyName : undefined,
+   226→        }),
+   227→      });
+   228→      const data = await res.json();
+   229→      if (!res.ok) throw new Error(data?.error || "Signup failed");
+   230→      setAuthed();
+   231→      toast.success(`Welcome to GaexPay, ${firstName}! 🎉`);
+   232→      onSuccess();
+   233→    } catch (err) {
+   234→      toast.error(err instanceof Error ? err.message : "Signup failed");
+   235→    } finally {
+   236→      setLoading(false);
+   237→    }
+   238→  }
+   239→
+   240→  async function handleLogin(e: React.FormEvent) {
+   241→    e.preventDefault();
+   242→    if (loading) return;
+   243→
+   244→    if (!EMAIL_RE.test(loginEmail)) return toast.error("Please enter a valid email");
+   245→    if (!loginPassword) return toast.error("Please enter your password");
+   246→
+   247→    setLoading(true);
+   248→    try {
+   249→      const res = await fetch("/api/auth/login", {
+   250→        method: "POST",
+   251→        headers: { "Content-Type": "application/json" },
+   252→        credentials: "include",
+   253→        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+   254→      });
+   255→      const data = await res.json();
+   256→      if (!res.ok) throw new Error(data?.error || "Login failed");
+   257→      setAuthed();
+   258→      toast.success(`Welcome back, ${data?.user?.firstName ?? "friend"}!`);
+   259→      onSuccess();
+   260→    } catch (err) {
+   261→      toast.error(err instanceof Error ? err.message : "Login failed");
+   262→    } finally {
+   263→      setLoading(false);
+   264→    }
+   265→  }
+   266→
+   267→  async function handleDemo() {
+   268→    if (loading) return;
+   269→    setLoading(true);
+   270→    try {
+   271→      const res = await fetch("/api/auth/demo", {
+   272→        method: "POST",
+   273→        credentials: "include",
+   274→      });
+   275→      const data = await res.json();
+   276→      if (!res.ok) throw new Error(data?.error || "Demo login failed");
+   277→      setAuthed();
+   278→      toast.success("Signed in as demo user");
+   279→      onSuccess();
+   280→    } catch (err) {
+   281→      toast.error(err instanceof Error ? err.message : "Demo login failed");
+   282→    } finally {
+   283→      setLoading(false);
+   284→    }
+   285→  }
+   286→
+   287→  async function handleForgot(e: React.FormEvent) {
+   288→    e.preventDefault();
+   289→    if (loading) return;
+   290→    if (!EMAIL_RE.test(forgotEmail)) return toast.error("Please enter a valid email");
+   291→
+   292→    setLoading(true);
+   293→    try {
+   294→      const res = await fetch("/api/auth/forgot-password", {
+   295→        method: "POST",
+   296→        headers: { "Content-Type": "application/json" },
+   297→        body: JSON.stringify({ email: forgotEmail }),
+   298→      });
+   299→      const data = await res.json();
+   300→      if (!res.ok) throw new Error(data?.error || "Request failed");
+   301→      setForgotSent(true);
+   302→      // Dev convenience: pre-fill the reset-token field so the tester can move
+   303→      // straight to the reset step without manually copying.
+   304→      if (data?.devResetToken) {
+   305→        setResetToken(data.devResetToken);
+   306→        toast.info("Dev mode: reset token auto-filled");
+   307→      } else {
+   308→        toast.success("If the email exists, a reset link has been sent.");
+   309→      }
+   310→    } catch (err) {
+   311→      toast.error(err instanceof Error ? err.message : "Request failed");
+   312→    } finally {
+   313→      setLoading(false);
+   314→    }
+   315→  }
+   316→
+   317→  async function handleReset(e: React.FormEvent) {
+   318→    e.preventDefault();
+   319→    if (loading) return;
+   320→    if (!resetToken) return toast.error("Reset token is required");
+   321→    if (newPassword.length < 8) return toast.error("Password must be at least 8 characters");
+   322→    if (!/[A-Za-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+   323→      return toast.error("Password must contain a letter and a number");
+   324→    }
+   325→
+   326→    setLoading(true);
+   327→    try {
+   328→      const res = await fetch("/api/auth/reset-password", {
+   329→        method: "POST",
+   330→        headers: { "Content-Type": "application/json" },
+   331→        body: JSON.stringify({ token: resetToken, newPassword }),
+   332→      });
+   333→      const data = await res.json();
+   334→      if (!res.ok) throw new Error(data?.error || "Reset failed");
+   335→      setResetDone(true);
+   336→      toast.success("Password reset. Please log in.");
+   337→    } catch (err) {
+   338→      toast.error(err instanceof Error ? err.message : "Reset failed");
+   339→    } finally {
+   340→      setLoading(false);
+   341→    }
+   342→  }
+   343→
+   344→  // -------------------------------------------------------------------------
+   345→  // Render
+   346→  // -------------------------------------------------------------------------
+   347→  return (
+   348→    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+   349→      <DialogContent
+   350→        showCloseButton
+   351→        className="max-w-md gap-0 overflow-hidden p-0 sm:rounded-2xl [&>button]:top-3 [&>button]:right-3 [&>button]:z-30"
+   352→      >
+   353→        <DialogTitle className="sr-only">
+   354→          {flow === "forgot" ? "Reset password" : flow === "reset" ? "Set new password" : tab === "login" ? "Sign in to GaexPay" : "Create your GaexPay account"}
+   355→        </DialogTitle>
+   356→        <DialogDescription className="sr-only">
+   357→          GaexPay authentication — sign in or create a personal / business account.
+   358→        </DialogDescription>
+   359→
+   360→        {/* Gradient header */}
+   361→        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 px-6 pb-5 pt-6 text-white">
+   362→          <div className="absolute inset-0 opacity-30">
+   363→            <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/20 blur-2xl" />
+   364→            <div className="absolute -left-10 bottom-0 h-24 w-24 rounded-full bg-teal-300/30 blur-2xl" />
+   365→          </div>
+   366→          <div className="relative flex items-center justify-between">
+   367→            <Logo size={28} className="text-white [&_span]:text-white" />
+   368→            <div className="hidden items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-medium backdrop-blur sm:flex">
+   369→              <Shield className="h-3 w-3" /> Bank-grade security
+   370→            </div>
+   371→          </div>
+   372→          <AnimatePresence mode="wait">
+   373→            <motion.div
+   374→              key={flow + tab}
+   375→              initial={{ opacity: 0, y: 8 }}
+   376→              animate={{ opacity: 1, y: 0 }}
+   377→              exit={{ opacity: 0, y: -8 }}
+   378→              transition={{ duration: 0.2 }}
+   379→              className="relative mt-4"
+   380→            >
+   381→              <h2 className="text-xl font-bold leading-tight">
+   382→                {flow === "forgot"
+   383→                  ? "Forgot password?"
+   384→                  : flow === "reset"
+   385→                    ? "Set a new password"
+   386→                    : tab === "login"
+   387→                      ? "Welcome back"
+   388→                      : "Create your account"}
+   389→              </h2>
+   390→              <p className="mt-1 text-xs text-white/80">
+   391→                {flow === "forgot"
+   392→                  ? "Enter your email and we'll send you a reset link."
+   393→                  : flow === "reset"
+   394→                    ? "Enter your reset token and a new password."
+   395→                    : tab === "login"
+   396→                      ? "Sign in to access your wallets, cards and transfers."
+   397→                      : "Join 50K+ users banking borderless on Africa."}
+   398→              </p>
+   399→            </motion.div>
+   400→          </AnimatePresence>
+   401→        </div>
+   402→
+   403→        {/* Body */}
+   404→        <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
+   405→          {/* ---------- FORGOT / RESET flows ---------- */}
+   406→          {flow === "forgot" && (
+   407→            <form onSubmit={handleForgot} className="space-y-4">
+   408→              {!forgotSent ? (
+   409→                <>
+   410→                  <Field
+   411→                    label="Email address"
+   412→                    icon={Mail}
+   413→                    type="email"
+   414→                    autoComplete="email"
+   415→                    placeholder="you@example.com"
+   416→                    value={forgotEmail}
+   417→                    onChange={(e) => setForgotEmail(e.target.value)}
+   418→                    required
+   419→                  />
+   420→                  <Button type="submit" disabled={loading} className="h-11 w-full rounded-lg">
+   421→                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+   422→                    Send reset link
+   423→                  </Button>
+   424→                </>
+   425→              ) : (
+   426→                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm">
+   427→                  <div className="flex items-start gap-2">
+   428→                    <Mail className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+   429→                    <div>
+   430→                      <p className="font-medium text-foreground">Check your inbox</p>
+   431→                      <p className="mt-0.5 text-xs text-muted-foreground">
+   432→                        If an account exists for <span className="font-medium">{forgotEmail}</span>, a reset link has been sent.
+   433→                        The link expires in 1 hour.
+   434→                      </p>
+   435→                    </div>
+   436→                  </div>
+   437→                </div>
+   438→              )}
+   439→              <button
+   440→                type="button"
+   441→                onClick={() => { setFlow("auth"); setForgotSent(false); }}
+   442→                className="w-full text-center text-xs text-muted-foreground transition hover:text-foreground"
+   443→              >
+   444→                ← Back to sign in
+   445→              </button>
+   446→            </form>
+   447→          )}
+   448→
+   449→          {flow === "reset" && (
+   450→            <form onSubmit={handleReset} className="space-y-4">
+   451→              {!resetDone ? (
+   452→                <>
+   453→                  <Field
+   454→                    label="Reset token"
+   455→                    icon={Lock}
+   456→                    placeholder="Paste your reset token"
+   457→                    value={resetToken}
+   458→                    onChange={(e) => setResetToken(e.target.value)}
+   459→                    required
+   460→                  />
+   461→                  <div className="space-y-1.5">
+   462→                    <Label className="text-xs font-medium text-muted-foreground">New password</Label>
+   463→                    <div className="relative">
+   464→                      <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+   465→                      <Input
+   466→                        type={showPassword ? "text" : "password"}
+   467→                        value={newPassword}
+   468→                        onChange={(e) => setNewPassword(e.target.value)}
+   469→                        className="h-11 rounded-lg pl-9 pr-9 text-sm"
+   470→                        required
+   471→                      />
+   472→                      <button
+   473→                        type="button"
+   474→                        onClick={() => setShowPassword((s) => !s)}
+   475→                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition hover:bg-muted"
+   476→                        aria-label={showPassword ? "Hide password" : "Show password"}
+   477→                      >
+   478→                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+   479→                      </button>
+   480→                    </div>
+   481→                  </div>
+   482→                  <Button type="submit" disabled={loading} className="h-11 w-full rounded-lg">
+   483→                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+   484→                    Reset password
+   485→                  </Button>
+   486→                </>
+   487→              ) : (
+   488→                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm">
+   489→                  <div className="flex items-start gap-2">
+   490→                    <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+   491→                    <div>
+   492→                      <p className="font-medium text-foreground">Password reset</p>
+   493→                      <p className="mt-0.5 text-xs text-muted-foreground">
+   494→                        Your password has been updated. Please log in with your new password.
+   495→                      </p>
+   496→                    </div>
+   497→                  </div>
+   498→                </div>
+   499→              )}
+   500→              <button
+   501→                type="button"
+   502→                onClick={() => { setFlow("auth"); setResetDone(false); setTab("login"); }}
+   503→                className="w-full text-center text-xs text-muted-foreground transition hover:text-foreground"
+   504→              >
+   505→                ← Back to sign in
+   506→              </button>
+   507→            </form>
+   508→          )}
+   509→
+   510→          {/* ---------- AUTH (login + signup tabs) ---------- */}
+   511→          {flow === "auth" && (
+   512→            <Tabs value={tab} onValueChange={(v) => setTab(v as Mode)} className="w-full">
+   513→              <TabsList className="grid h-10 w-full grid-cols-2 rounded-lg">
+   514→                <TabsTrigger value="login" className="rounded-md text-sm">Sign In</TabsTrigger>
+   515→                <TabsTrigger value="signup" className="rounded-md text-sm">Create Account</TabsTrigger>
+   516→              </TabsList>
+   517→
+   518→              {/* ---------------- SIGN IN ---------------- */}
+   519→              <TabsContent value="login" className="mt-5">
+   520→                <form onSubmit={handleLogin} className="space-y-4">
+   521→                  <Field
+   522→                    label="Email"
+   523→                    icon={Mail}
+   524→                    type="email"
+   525→                    autoComplete="email"
+   526→                    placeholder="you@example.com"
+   527→                    value={loginEmail}
+   528→                    onChange={(e) => setLoginEmail(e.target.value)}
+   529→                    required
+   530→                  />
+   531→                  <div className="space-y-1.5">
+   532→                    <div className="flex items-center justify-between">
+   533→                      <Label className="text-xs font-medium text-muted-foreground">Password</Label>
+   534→                      <button
+   535→                        type="button"
+   536→                        onClick={() => { setFlow("forgot"); setForgotEmail(loginEmail); }}
+   537→                        className="text-[11px] font-medium text-primary transition hover:underline"
+   538→                      >
+   539→                        Forgot password?
+   540→                      </button>
+   541→                    </div>
+   542→                    <div className="relative">
+   543→                      <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+   544→                      <Input
+   545→                        type={showPassword ? "text" : "password"}
+   546→                        autoComplete="current-password"
+   547→                        value={loginPassword}
+   548→                        onChange={(e) => setLoginPassword(e.target.value)}
+   549→                        className="h-11 rounded-lg pl-9 pr-9 text-sm"
+   550→                        placeholder="••••••••"
+   551→                        required
+   552→                      />
+   553→                      <button
+   554→                        type="button"
+   555→                        onClick={() => setShowPassword((s) => !s)}
+   556→                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition hover:bg-muted"
+   557→                        aria-label={showPassword ? "Hide password" : "Show password"}
+   558→                      >
+   559→                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+   560→                      </button>
+   561→                    </div>
+   562→                  </div>
+   563→                  <Button type="submit" disabled={loading} className="h-11 w-full rounded-lg">
+   564→                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+   565→                    Sign In <ArrowRight className="ml-1 h-4 w-4" />
+   566→                  </Button>
+   567→
+   568→                  <div className="relative my-1">
+   569→                    <div className="absolute inset-0 flex items-center">
+   570→                      <div className="w-full border-t border-border" />
+   571→                    </div>
+   572→                    <div className="relative flex justify-center">
+   573→                      <span className="bg-background px-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+   574→                        or
+   575→                      </span>
+   576→                    </div>
+   577→                  </div>
+   578→
+   579→                  <Button
+   580→                    type="button"
+   581→                    variant="outline"
+   582→                    onClick={handleDemo}
+   583→                    disabled={loading}
+   584→                    className="h-11 w-full rounded-lg"
+   585→                  >
+   586→                    <Sparkles className="mr-2 h-4 w-4 text-primary" />
+   587→                    Try Demo Account
+   588→                  </Button>
+   589→                </form>
+   590→              </TabsContent>
+   591→
+   592→              {/* ---------------- SIGN UP ---------------- */}
+   593→              <TabsContent value="signup" className="mt-5">
+   594→                <form onSubmit={handleSignup} className="space-y-4">
+   595→                  {/* Account type selector */}
+   596→                  <div className="space-y-2">
+   597→                    <Label className="text-xs font-medium text-muted-foreground">Account type</Label>
+   598→                    <div className="flex gap-2.5">
+   599→                      <AccountTypeCard
+   600→                        selected={accountType === "personal"}
+   601→                        onClick={() => setAccountType("personal")}
+   602→                        icon={User}
+   603→                        title="Compte Personnel"
+   604→                        subtitle="For individuals — send, save, spend."
+   605→                      />
+   606→                      <AccountTypeCard
+   607→                        selected={accountType === "business"}
+   608→                        onClick={() => setAccountType("business")}
+   609→                        icon={Building2}
+   610→                        title="Compte Entreprise"
+   611→                        subtitle="For businesses — payouts, KYB, team."
+   612→                      />
+   613→                    </div>
+   614→                  </div>
+   615→
+   616→                  {/* Business-only field */}
+   617→                  <AnimatePresence initial={false}>
+   618→                    {accountType === "business" && (
+   619→                      <motion.div
+   620→                        initial={{ opacity: 0, height: 0 }}
+   621→                        animate={{ opacity: 1, height: "auto" }}
+   622→                        exit={{ opacity: 0, height: 0 }}
+   623→                        transition={{ duration: 0.2 }}
+   624→                        className="overflow-hidden"
+   625→                      >
+   626→                        <Field
+   627→                          label="Company name"
+   628→                          icon={Building2}
+   629→                          placeholder="Acme Inc."
+   630→                          value={companyName}
+   631→                          onChange={(e) => setCompanyName(e.target.value)}
+   632→                          required
+   633→                        />
+   634→                      </motion.div>
+   635→                    )}
+   636→                  </AnimatePresence>
+   637→
+   638→                  {/* Names */}
+   639→                  <div className="grid grid-cols-2 gap-3">
+   640→                    <Field
+   641→                      label="First name"
+   642→                      icon={User}
+   643→                      placeholder="Adaeze"
+   644→                      value={firstName}
+   645→                      onChange={(e) => setFirstName(e.target.value)}
+   646→                      required
+   647→                    />
+   648→                    <Field
+   649→                      label="Last name"
+   650→                      icon={User}
+   651→                      placeholder="Okonkwo"
+   652→                      value={lastName}
+   653→                      onChange={(e) => setLastName(e.target.value)}
+   654→                      required
+   655→                    />
+   656→                  </div>
+   657→
+   658→                  {/* Contact */}
+   659→                  <Field
+   660→                    label="Email"
+   661→                    icon={Mail}
+   662→                    type="email"
+   663→                    autoComplete="email"
+   664→                    placeholder="you@example.com"
+   665→                    value={email}
+   666→                    onChange={(e) => setEmail(e.target.value)}
+   667→                    required
+   668→                  />
+   669→                  <div className="grid grid-cols-2 gap-3">
+   670→                    <Field
+   671→                      label="Phone"
+   672→                      icon={Phone}
+   673→                      type="tel"
+   674→                      autoComplete="tel"
+   675→                      placeholder="+234 800 000 0000"
+   676→                      value={phone}
+   677→                      onChange={(e) => setPhone(e.target.value)}
+   678→                      required
+   679→                    />
+   680→                    <Field
+   681→                      label="Country (optional)"
+   682→                      icon={Globe2}
+   683→                      placeholder="Nigeria"
+   684→                      value={country}
+   685→                      onChange={(e) => setCountry(e.target.value)}
+   686→                    />
+   687→                  </div>
+   688→
+   689→                  {/* Password + strength meter */}
+   690→                  <div className="space-y-1.5">
+   691→                    <Label className="text-xs font-medium text-muted-foreground">Password</Label>
+   692→                    <div className="relative">
+   693→                      <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+   694→                      <Input
+   695→                        type={showPassword ? "text" : "password"}
+   696→                        autoComplete="new-password"
+   697→                        value={password}
+   698→                        onChange={(e) => setPassword(e.target.value)}
+   699→                        className="h-11 rounded-lg pl-9 pr-9 text-sm"
+   700→                        placeholder="Min. 8 chars, letter + number"
+   701→                        required
+   702→                      />
+   703→                      <button
+   704→                        type="button"
+   705→                        onClick={() => setShowPassword((s) => !s)}
+   706→                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition hover:bg-muted"
+   707→                        aria-label={showPassword ? "Hide password" : "Show password"}
+   708→                      >
+   709→                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+   710→                      </button>
+   711→                    </div>
+   712→                    {password && (
+   713→                      <div className="flex items-center gap-2 pt-1">
+   714→                        <div className="flex flex-1 gap-1">
+   715→                          {[1, 2, 3, 4].map((i) => (
+   716→                            <div
+   717→                              key={i}
+   718→                              className={cn(
+   719→                                "h-1 flex-1 rounded-full transition-colors",
+   720→                                i <= strength.score ? STRENGTH_COLORS[strength.score] : "bg-muted",
+   721→                              )}
+   722→                            />
+   723→                          ))}
+   724→                        </div>
+   725→                        <span className={cn("text-[10px] font-medium", STRENGTH_TEXT[strength.score])}>
+   726→                          {strength.label}
+   727→                        </span>
+   728→                      </div>
+   729→                    )}
+   730→                  </div>
+   731→
+   732→                  <div className="space-y-1.5">
+   733→                    <Label className="text-xs font-medium text-muted-foreground">Confirm password</Label>
+   734→                    <div className="relative">
+   735→                      <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+   736→                      <Input
+   737→                        type={showPassword ? "text" : "password"}
+   738→                        autoComplete="new-password"
+   739→                        value={confirmPassword}
+   740→                        onChange={(e) => setConfirmPassword(e.target.value)}
+   741→                        className="h-11 rounded-lg pl-9 pr-9 text-sm"
+   742→                        placeholder="Re-enter your password"
+   743→                        required
+   744→                      />
+   745→                    </div>
+   746→                    {confirmPassword && password !== confirmPassword && (
+   747→                      <p className="text-[10px] text-red-500">Passwords do not match</p>
+   748→                    )}
+   749→                  </div>
+   750→
+   751→                  <Button type="submit" disabled={loading} className="h-11 w-full rounded-lg">
+   752→                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+   753→                    Create Account <ArrowRight className="ml-1 h-4 w-4" />
+   754→                  </Button>
+   755→
+   756→                  {/* Trust badges */}
+   757→                  <div className="flex items-center justify-center gap-4 pt-1 text-[10px] text-muted-foreground">
+   758→                    <span className="flex items-center gap-1"><Shield className="h-3 w-3" /> Bank-grade security</span>
+   759→                    <span className="flex items-center gap-1"><BadgeCheck className="h-3 w-3" /> 50K+ users</span>
+   760→                    <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" /> Regulated</span>
+   761→                  </div>
+   762→                </form>
+   763→              </TabsContent>
+   764→            </Tabs>
+   765→          )}
+   766→        </div>
+   767→      </DialogContent>
+   768→    </Dialog>
+   769→  );
+   770→}
+   771→
