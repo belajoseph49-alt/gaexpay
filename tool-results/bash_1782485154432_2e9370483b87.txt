@@ -1,0 +1,700 @@
+   670→                  </div>
+   671→                </div>
+   672→
+   673→                {/* Purpose */}
+   674→                <div>
+   675→                  <Label className="text-xs text-muted-foreground">Purpose of transfer</Label>
+   676→                  <div className="mt-1.5 grid grid-cols-2 sm:grid-cols-4 gap-2">
+   677→                    {PURPOSES.map((p) => (
+   678→                      <button
+   679→                        key={p.id}
+   680→                        onClick={() => setPurpose(p.id)}
+   681→                        className={cn(
+   682→                          "flex items-center gap-2 rounded-lg border p-2 text-left text-xs transition",
+   683→                          purpose === p.id ? "border-emerald-500 bg-emerald-500/10" : "hover:bg-muted/40",
+   684→                        )}
+   685→                      >
+   686→                        <span className="text-base">{p.icon}</span>
+   687→                        <span className="font-medium leading-tight">{p.label}</span>
+   688→                      </button>
+   689→                    ))}
+   690→                  </div>
+   691→                </div>
+   692→
+   693→                {/* Note */}
+   694→                <div>
+   695→                  <Label htmlFor="note" className="text-xs text-muted-foreground">Note (optional)</Label>
+   696→                  <Input
+   697→                    id="note"
+   698→                    value={note}
+   699→                    onChange={(e) => setNote(e.target.value)}
+   700→                    placeholder="What's this for? (visible to recipient)"
+   701→                    className="mt-1.5"
+   702→                  />
+   703→                </div>
+   704→
+   705→                <div className="flex gap-2 pt-2">
+   706→                  <Button variant="outline" onClick={() => setStep(0)} className="flex-1">
+   707→                    <ChevronLeft className="h-4 w-4 mr-1" /> Back
+   708→                  </Button>
+   709→                  <Button onClick={() => setStep(2)} disabled={!step1Valid} className="flex-1">
+   710→                    Review <ChevronRight className="h-4 w-4 ml-1" />
+   711→                  </Button>
+   712→                </div>
+   713→              </motion.div>
+   714→            )}
+   715→
+   716→            {/* Step 2 — Review */}
+   717→            {step === 2 && (
+   718→              <motion.div
+   719→                key="step2"
+   720→                initial={{ opacity: 0, x: 24 }}
+   721→                animate={{ opacity: 1, x: 0 }}
+   722→                exit={{ opacity: 0, x: -24 }}
+   723→                transition={{ duration: 0.22 }}
+   724→                className="space-y-5"
+   725→              >
+   726→                <div>
+   727→                  <h3 className="font-semibold">Review & confirm</h3>
+   728→                  <p className="text-sm text-muted-foreground mt-0.5">
+   729→                    Please verify all details before sending.
+   730→                  </p>
+   731→                </div>
+   732→
+   733→                {/* Recipient block */}
+   734→                <div className="rounded-xl border bg-muted/30 p-4">
+   735→                  <div className="flex items-center gap-3 mb-3">
+   736→                    <Avatar className="h-10 w-10">
+   737→                      <AvatarFallback className="bg-emerald-500/15 text-emerald-500 text-xs font-semibold">
+   738→                        {recipientName.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+   739→                      </AvatarFallback>
+   740→                    </Avatar>
+   741→                    <div className="flex-1 min-w-0">
+   742→                      <p className="text-sm font-semibold truncate">{recipientName}</p>
+   743→                      <p className="text-xs text-muted-foreground truncate">
+   744→                        {getCountry(recipientCountry)?.flag} {getCountry(recipientCountry)?.name}
+   745→                      </p>
+   746→                    </div>
+   747→                    <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/20 capitalize text-[10px]">
+   748→                      {METHOD_METAethod].label}
+   749→                    </Badge>
+   750→                  </div>
+   751→                  <ReviewRow label={method === "bank" ? "Account / IBAN" : method === "momo" ? "Phone" : "Wallet ID"} value={recipientAccount} />
+   752→                  {method === "bank" && <ReviewRow label="Bank" value={recipientBank} />}
+   753→                  {method === "momo" && (
+   754→                    <ReviewRow
+   755→                      label="Provider"
+   756→                      value={MOBILE_MONEY_PROVIDERS.find((p) => p.id === provider)?.name ?? provider}
+   757→                    />
+   758→                  )}
+   759→                </div>
+   760→
+   761→                {/* Cost breakdown */}
+   762→                <div className="rounded-xl border p-4 space-y-2.5">
+   763→                  <ReviewRow
+   764→                    label="You send"
+   765→                    value={formatMoney(amt, fromCurrency)}
+   766→                    bold
+   767→                  />
+   768→                  <ReviewRow
+   769→                    label={`Exchange rate (1 ${fromCurrency} = ${(quote?.exchangeRate ?? 0).toFixed(4)} ${toCurrency})`}
+   770→                    value={`-${FX_MARGIN_LABEL}`}
+   771→                    muted
+   772→                  />
+   773→                  <ReviewRow
+   774→                    label={`Transfer fee (${quote?.fee.pct ?? 0}% + $${quote?.fee.flatUsd ?? 0})`}
+   775→                    value={quote ? `-${formatMoney(quote.fee.amount, fromCurrency)}` : "—"}
+   776→                  />
+   777→                  <ReviewRow
+   778→                    label="FX margin"
+   779→                    value={quote ? `${quote.marginPct.toFixed(2)}%` : "—"}
+   780→                    muted
+   781→                  />
+   782→                  <div className="border-t pt-2.5">
+   783→                    <ReviewRow
+   784→                      label="Total cost"
+   785→                      value={quote ? formatMoney(quote.total, fromCurrency) : "—"}
+   786→                      bold
+   787→                    />
+   788→                    <ReviewRow
+   789→                      label="≈ in USD"
+   790→                      value={quote ? `$${quote.totalUsd.toFixed(2)}` : "—"}
+   791→                      muted
+   792→                    />
+   793→                  </div>
+   794→                  <div className="border-t pt-2.5">
+   795→                    <ReviewRow
+   796→                      label="Recipient receives"
+   797→                      value={quote ? formatMoney(quote.convertedAmount, toCurrency) : "—"}
+   798→                      bold
+   799→                      accent
+   800→                    />
+   801→                  </div>
+   802→                </div>
+   803→
+   804→                {/* Delivery + purpose */}
+   805→                <div className="grid grid-cols-2 gap-3">
+   806→                  <div className="rounded-xl border p-3">
+   807→                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+   808→                      <Clock className="h-3.5 w-3.5" /> Estimated delivery
+   809→                    </div>
+   810→                    <p className="text-sm font-semibold">{METHOD_METAethod].delivery}</p>
+   811→                  </div>
+   812→                  <div className="rounded-xl border p-3">
+   813→                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+   814→                      <MapPin className="h-3.5 w-3.5" /> Purpose
+   815→                    </div>
+   816→                    <p className="text-sm font-semibold capitalize">
+   817→                      {PURPOSES.find((p) => p.id === purpose)?.label ?? purpose}
+   818→                    </p>
+   819→                  </div>
+   820→                </div>
+   821→
+   822→                {/* Security note */}
+   823→                <div className="flex items-start gap-2.5 rounded-xl bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-400">
+   824→                  <Lock className="h-4 w-4 shrink-0 mt-0.5" />
+   825→                  <div>
+   826→                    <p className="font-semibold">Bank-grade encryption</p>
+   827→                    <p className="opacity-90">
+   828→                      Protected by AES-256-GCM end-to-end encryption, TLS 1.3 transport, and real-time
+   829→                      AI fraud detection. Funds are held in segregated accounts.
+   830→                    </p>
+   831→                  </div>
+   832→                </div>
+   833→
+   834→                <div className="flex gap-2 pt-1">
+   835→                  <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
+   836→                    <ChevronLeft className="h-4 w-4 mr-1" /> Back
+   837→                  </Button>
+   838→                  <Button onClick={submit} disabled={submitLoading} className="flex-1">
+   839→                    {submitLoading ? (
+   840→                      <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Sending...</>
+   841→                    ) : (
+   842→                      <><Zap className="h-4 w-4 mr-1.5" /> Confirm & Send</>
+   843→                    )}
+   844→                  </Button>
+   845→                </div>
+   846→              </motion.div>
+   847→            )}
+   848→
+   849→            {/* Step 3 — Confirmation */}
+   850→            {step === 3 && result && (
+   851→              <motion.div
+   852→                key="step3"
+   853→                initial={{ opacity: 0, scale: 0.96 }}
+   854→                animate={{ opacity: 1, scale: 1 }}
+   855→                exit={{ opacity: 0, scale: 0.96 }}
+   856→                transition={{ duration: 0.25 }}
+   857→                className="space-y-5"
+   858→              >
+   859→                <Confetti trigger={true} />
+   860→                <div className="text-center">
+   861→                  <motion.div
+   862→                    initial={{ scale: 0 }}
+   863→                    animate={{ scale: 1 }}
+   864→                    transition={{ type: "spring", delay: 0.1 }}
+   865→                    className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white pulse-glow"
+   866→                  >
+   867→                    <Check className="h-8 w-8" strokeWidth={3} />
+   868→                  </motion.div>
+   869→                  <h3 className="text-xl font-bold">
+   870→                    {result.delivery.instant ? "Transfer delivered!" : "Transfer initiated!"}
+   871→                  </h3>
+   872→                  <p className="mt-1 text-sm text-muted-foreground">
+   873→                    {formatMoney(result.amount, result.fromCurrency)} →{" "}
+   874→                    <span className="font-semibold text-foreground">
+   875→                      {formatMoney(result.convertedAmount, result.toCurrency)}
+   876→                    </span>
+   877→                  </p>
+   878→                  <p className="mt-0.5 text-xs text-muted-foreground">
+   879→                    to {result.recipientName} ({result.recipientCountry.flag} {result.recipientCountry.name})
+   880→                  </p>
+   881→                </div>
+   882→
+   883→                {/* Reference */}
+   884→                <div className="rounded-xl border bg-muted/30 p-4 text-center">
+   885→                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+   886→                    Reference number
+   887→                  </p>
+   888→                  <p className="font-mono text-lg font-bold tracking-wider">{result.reference}</p>
+   889→                  <div className="mt-2 flex items-center justify-center gap-2">
+   890→                    <Badge
+   891→                      className={cn(
+   892→                        "text-[10px]",
+   893→                        result.status === "completed"
+   894→                          ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/30"
+   895→                          : "bg-amber-500/15 text-amber-500 border-amber-500/30",
+   896→                      )}
+   897→                    >
+   898→                      {result.status === "completed" ? "Completed" : "Pending"}
+   899→                    </Badge>
+   900→                    <Badge variant="outline" className="text-[10px]">
+   901→                      <Clock className="h-3 w-3 mr-1" />
+   902→                      {result.delivery.label}
+   903→                    </Badge>
+   904→                  </div>
+   905→                </div>
+   906→
+   907→                {/* Receipt */}
+   908→                <div className="rounded-xl border p-4 space-y-2 text-sm">
+   909→                  <ReviewRow label="Recipient" value={result.recipientName} />
+   910→                  <ReviewRow
+   911→                    label={result.method === "bank" ? "Account / IBAN" : result.method === "momo" ? "Phone" : "Wallet ID"}
+   912→                    value={result.recipientAccount}
+   913→                  />
+   914→                  {result.method === "bank" && <ReviewRow label="Bank" value={result.recipientBank} />}
+   915→                  <ReviewRow label="Method" value={METHOD_META[result.method as Method].label} />
+   916→                  <ReviewRow label="You sent" value={formatMoney(result.amount, result.fromCurrency)} />
+   917→                  <ReviewRow label="Exchange rate" value={`1 ${result.fromCurrency} = ${result.exchangeRate.toFixed(4)} ${result.toCurrency}`} />
+   918→                  <ReviewRow label="Fee" value={formatMoney(result.fee.amount, result.fromCurrency)} />
+   919→                  <ReviewRow label="Total cost" value={formatMoney(result.total, result.fromCurrency)} bold />
+   920→                  <div className="border-t pt-2">
+   921→                    <ReviewRow label="Recipient receives" value={formatMoney(result.convertedAmount, result.toCurrency)} bold accent />
+   922→                  </div>
+   923→                  <ReviewRow label="Date" value={new Date(result.createdAt).toLocaleString()} />
+   924→                </div>
+   925→
+   926→                {/* Actions */}
+   927→                <div className="grid grid-cols-3 gap-2">
+   928→                  <Button
+   929→                    variant="outline"
+   930→                    onClick={() => {
+   931→                      navigator.clipboard?.writeText(result.reference);
+   932→                      toast.success("Reference copied");
+   933→                    }}
+   934→                  >
+   935→                    <Copy className="h-4 w-4 mr-1.5" /> Copy
+   936→                  </Button>
+   937→                  <Button
+   938→                    variant="outline"
+   939→                    onClick={() => {
+   940→                      const text = `I just sent ${formatMoney(result.amount, result.fromCurrency)} to ${result.recipientName} via GaexPay. Reference: ${result.reference}`;
+   941→                      if (navigator.share) {
+   942→                        void navigator.share({ title: "GaexPay transfer", text });
+   943→                      } else {
+   944→                        navigator.clipboard?.writeText(text);
+   945→                        toast.success("Details copied to clipboard");
+   946→                      }
+   947→                    }}
+   948→                  >
+   949→                    <Share2 className="h-4 w-4 mr-1.5" /> Share
+   950→                  </Button>
+   951→                  <Button onClick={reset}>
+   952→                    <Repeat className="h-4 w-4 mr-1.5" /> New
+   953→                  </Button>
+   954→                </div>
+   955→              </motion.div>
+   956→            )}
+   957→          </AnimatePresence>
+   958→        </div>
+   959→      </Card>
+   960→
+   961→      {/* Right column — live preview / summary */}
+   962→      <div className="space-y-4">
+   963→        <LiveRateCard
+   964→          fromCurrency={fromCurrency}
+   965→          toCurrency={toCurrency}
+   966→          amount={amt}
+   967→          method={method}
+   968→          quote={quote}
+   969→          loading={quoteLoading}
+   970→          onRefresh={() => void fetchQuote()}
+   971→        />
+   972→        <CostBreakdownCard quote={quote} fromCurrency={fromCurrency} toCurrency={toCurrency} amount={amt} method={method} />
+   973→        <WhyGaexPayCard />
+   974→      </div>
+   975→
+   976→      {/* Country picker dialog */}
+   977→      <CountryPickerDialog
+   978→        open={countryPickerOpen}
+   979→        onOpenChange={setCountryPickerOpen}
+   980→        onSelect={(code) => {
+   981→          setRecipientCountry(code);
+   982→          setCountryPickerOpen(false);
+   983→        }}
+   984→      />
+   985→    </div>
+   986→  );
+   987→}
+   988→
+   989→const FX_MARGIN_LABEL = "0.80% margin";
+   990→
+   991→// ---- Review row helper --------------------------------------------------
+   992→
+   993→function ReviewRow({
+   994→  label, value, bold, muted, accent,
+   995→}: { label: string; value?: string; bold?: boolean; muted?: boolean; accent?: boolean }) {
+   996→  return (
+   997→    <div className="flex items-center justify-between gap-3">
+   998→      <span className={cn("text-xs", muted ? "text-muted-foreground/80" : "text-muted-foreground")}>{label}</span>
+   999→      <span
+  1000→        className={cn(
+  1001→          "text-sm text-right truncate",
+  1002→          bold ? "font-bold" : "font-medium",
+  1003→          accent ? "text-emerald-500" : "",
+  1004→        )}
+  1005→      >
+  1006→        {value || "—"}
+  1007→      </span>
+  1008→    </div>
+  1009→  );
+  1010→}
+  1011→
+  1012→// ---- Live rate card ----------------------------------------------------
+  1013→
+  1014→function LiveRateCard({
+  1015→  fromCurrency, toCurrency, amount, method, quote, loading, onRefresh,
+  1016→}: {
+  1017→  fromCurrency: string;
+  1018→  toCurrency: string;
+  1019→  amount: number;
+  1020→  method: Method;
+  1021→  quote: Quote | null;
+  1022→  loading: boolean;
+  1023→  onRefresh: () => void;
+  1024→}) {
+  1025→  const fromMeta = getCurrencyMeta(fromCurrency);
+  1026→  const toMeta = getCurrencyMeta(toCurrency);
+  1027→  return (
+  1028→    <Card className="relative overflow-hidden p-5">
+  1029→      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent pointer-events-none" />
+  1030→      <div className="relative">
+  1031→        <div className="flex items-center justify-between mb-4">
+  1032→          <div className="flex items-center gap-2">
+  1033→            <Globe2 className="h-4 w-4 text-emerald-500" />
+  1034→            <h3 className="text-sm font-semibold">Live exchange rate</h3>
+  1035→          </div>
+  1036→          <button
+  1037→            onClick={onRefresh}
+  1038→            className="grid h-7 w-7 place-items-center rounded-md hover:bg-muted transition"
+  1039→            aria-label="Refresh rate"
+  1040→          >
+  1041→            <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
+  1042→          </button>
+  1043→        </div>
+  1044→
+  1045→        <div className="flex items-center gap-3 mb-3">
+  1046→          <div className="flex flex-col items-center">
+  1047→            <span className="text-2xl">{fromMeta?.flag ?? "🏳️"}</span>
+  1048→            <span className="text-[10px] font-semibold text-muted-foreground mt-0.5">{fromCurrency}</span>
+  1049→          </div>
+  1050→          <div className="flex-1 flex flex-col items-center">
+  1051→            <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1">
+  1052→              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+  1053→              <span className="text-[10px] font-semibold text-emerald-500">LIVE</span>
+  1054→            </div>
+  1055→            <ArrowRight className="h-4 w-4 text-muted-foreground mt-1" />
+  1056→          </div>
+  1057→          <div className="flex flex-col items-center">
+  1058→            <span className="text-2xl">{toMeta?.flag ?? "🏳️"}</span>
+  1059→            <span className="text-[10px] font-semibold text-muted-foreground mt-0.5">{toCurrency}</span>
+  1060→          </div>
+  1061→        </div>
+  1062→
+  1063→        <div className="rounded-xl bg-background/60 p-3 ring-1 ring-border/60">
+  1064→          <div className="flex items-baseline justify-between">
+  1065→            <span className="text-xs text-muted-foreground">1 {fromCurrency} =</span>
+  1066→            <span className="text-xl font-bold tabular-nums">
+  1067→              {loading && !quote ? (
+  1068→                <Skeleton className="h-6 w-20" />
+  1069→              ) : (
+  1070→                `${(quote?.exchangeRate ?? 0).toFixed(4)} ${toCurrency}`
+  1071→              )}
+  1072→            </span>
+  1073→          </div>
+  1074→          <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+  1075→            <span>Mid-market: {(quote?.midRate ?? 0).toFixed(4)}</span>
+  1076→            <span>Margin: {(quote?.marginPct ?? 0).toFixed(2)}%</span>
+  1077→          </div>
+  1078→        </div>
+  1079→
+  1080→        {amount > 0 && quote && (
+  1081→          <div className="mt-3 grid grid-cols-2 gap-2 text-center">
+  1082→            <div className="rounded-lg bg-background/60 p-2 ring-1 ring-border/60">
+  1083→              <p className="text-[10px] text-muted-foreground">You send</p>
+  1084→              <p className="text-sm font-semibold tabular-nums">{formatMoney(amount, fromCurrency)}</p>
+  1085→            </div>
+  1086→            <div className="rounded-lg bg-emerald-500/10 p-2 ring-1 ring-emerald-500/30">
+  1087→              <p className="text-[10px] text-emerald-600 dark:text-emerald-400">They get</p>
+  1088→              <p className="text-sm font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+  1089→                {formatMoney(quote.convertedAmount, toCurrency)}
+  1090→              </p>
+  1091→            </div>
+  1092→          </div>
+  1093→        )}
+  1094→
+  1095→        <div className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+  1096→          <Clock className="h-3 w-3" />
+  1097→          <span>Delivery: {METHOD_METAethod].delivery}</span>
+  1098→        </div>
+  1099→      </div>
+  1100→    </Card>
+  1101→  );
+  1102→}
+  1103→
+  1104→// ---- Cost breakdown card ----------------------------------------------
+  1105→
+  1106→function CostBreakdownCard({
+  1107→  quote, fromCurrency, toCurrency, amount, method,
+  1108→}: {
+  1109→  quote: Quote | null;
+  1110→  fromCurrency: string;
+  1111→  toCurrency: string;
+  1112→  amount: number;
+  1113→  method: Method;
+  1114→}) {
+  1115→  return (
+  1116→    <Card className="p-5">
+  1117→      <div className="flex items-center justify-between mb-3">
+  1118→        <h3 className="text-sm font-semibold">Cost breakdown</h3>
+  1119→        <Badge variant="outline" className="text-[10px]">{METHOD_METAethod].label}</Badge>
+  1120→      </div>
+  1121→
+  1122→      {!quote || amount <= 0 ? (
+  1123→        <div className="space-y-2">
+  1124→          <Skeleton className="h-8 w-full" />
+  1125→          <Skeleton className="h-8 w-full" />
+  1126→          <Skeleton className="h-8 w-full" />
+  1127→        </div>
+  1128→      ) : (
+  1129→        <div className="space-y-2.5 text-sm">
+  1130→          <div className="flex items-center justify-between">
+  1131→            <span className="text-muted-foreground">Amount sent</span>
+  1132→            <span className="font-medium tabular-nums">{formatMoney(amount, fromCurrency)}</span>
+  1133→          </div>
+  1134→          <div className="flex items-center justify-between">
+  1135→            <span className="text-muted-foreground">Transfer fee</span>
+  1136→            <span className="font-medium tabular-nums text-amber-500">
+  1137→              +{formatMoney(quote.fee.amount, fromCurrency)}
+  1138→            </span>
+  1139→          </div>
+  1140→          <div className="flex items-center justify-between">
+  1141→            <span className="text-muted-foreground">FX margin ({quote.marginPct.toFixed(2)}%)</span>
+  1142→            <span className="font-medium tabular-nums text-orange-500">
+  1143→              +{formatMoney((amount * quote.marginPct) / 100, fromCurrency)}
+  1144→            </span>
+  1145→          </div>
+  1146→          <div className="border-t pt-2.5">
+  1147→            <div className="flex items-center justify-between">
+  1148→              <span className="font-semibold">Total cost</span>
+  1149→              <span className="font-bold tabular-nums text-base">{formatMoney(quote.total, fromCurrency)}</span>
+  1150→            </div>
+  1151→            <div className="flex items-center justify-between mt-0.5">
+  1152→              <span className="text-xs text-muted-foreground">≈ in USD</span>
+  1153→              <span className="text-xs text-muted-foreground tabular-nums">${quote.totalUsd.toFixed(2)}</span>
+  1154→            </div>
+  1155→          </div>
+  1156→          <div className="border-t pt-2.5">
+  1157→            <div className="flex items-center justify-between">
+  1158→              <span className="text-xs text-muted-foreground">Recipient gets</span>
+  1159→              <span className="font-bold tabular-nums text-emerald-500">{formatMoney(quote.convertedAmount, toCurrency)}</span>
+  1160→            </div>
+  1161→          </div>
+  1162→        </div>
+  1163→      )}
+  1164→
+  1165→      <div className="mt-3 flex items-start gap-2 rounded-lg bg-muted/40 p-2.5 text-[11px] text-muted-foreground">
+  1166→        <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+  1167→        <span>
+  1168→          Final rate locked at confirmation. GaexPay charges no hidden fees — what you see is what you pay.
+  1169→        </span>
+  1170→      </div>
+  1171→    </Card>
+  1172→  );
+  1173→}
+  1174→
+  1175→// ---- Why GaexPay card -------------------------------------------------
+  1176→
+  1177→function WhyGaexPayCard() {
+  1178→  const items = [
+  1179→    { icon: Globe, title: "200+ countries", desc: "Send anywhere in the world" },
+  1180→    { icon: Zap, title: "Instant delivery", desc: "MoMo & wallet transfers in minutes" },
+  1181→    { icon: Lock, title: "Bank-grade security", desc: "AES-256 encryption + AI fraud detection" },
+  1182→    { icon: TrendingUp, title: "Best rates", desc: "0.8% margin — far below banks' 3-5%" },
+  1183→  ];
+  1184→  return (
+  1185→    <Card className="p-5">
+  1186→      <div className="flex items-center gap-2 mb-3">
+  1187→        <Sparkles className="h-4 w-4 text-emerald-500" />
+  1188→        <h3 className="text-sm font-semibold">Why send with GaexPay?</h3>
+  1189→      </div>
+  1190→      <div className="space-y-2.5">
+  1191→        {items.map((it) => {
+  1192→          const Icon = it.icon;
+  1193→          return (
+  1194→            <div key={it.title} className="flex items-start gap-3 group">
+  1195→              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-emerald-500/10 text-emerald-500 transition group-hover:scale-110">
+  1196→                <Icon className="h-4 w-4" />
+  1197→              </div>
+  1198→              <div>
+  1199→                <p className="text-xs font-semibold">{it.title}</p>
+  1200→                <p className="text-[11px] text-muted-foreground">{it.desc}</p>
+  1201→              </div>
+  1202→            </div>
+  1203→          );
+  1204→        })}
+  1205→      </div>
+  1206→    </Card>
+  1207→  );
+  1208→}
+  1209→
+  1210→// ---- Country picker dialog --------------------------------------------
+  1211→
+  1212→function CountryPickerDialog({
+  1213→  open, onOpenChange, onSelect,
+  1214→}: {
+  1215→  open: boolean;
+  1216→  onOpenChange: (o: boolean) => void;
+  1217→  onSelect: (code: string) => void;
+  1218→}) {
+  1219→  const [query, setQuery] = useState("");
+  1220→  const filtered = useMemo(() => {
+  1221→    const q = query.trim().toLowerCase();
+  1222→    if (!q) return COUNTRIES;
+  1223→    return COUNTRIES.filter(
+  1224→      (c) =>
+  1225→        c.name.toLowerCase().includes(q) ||
+  1226→        c.code.toLowerCase().includes(q) ||
+  1227→        c.currency.toLowerCase().includes(q),
+  1228→    );
+  1229→  }, [query]);
+  1230→
+  1231→  return (
+  1232→    <Dialog open={open} onOpenChange={onOpenChange}>
+  1233→      <DialogContent className="max-w-2xl">
+  1234→        <DialogHeader>
+  1235→          <DialogTitle>Select destination country</DialogTitle>
+  1236→          <DialogDescription>
+  1237→            Choose where you want to send money. We support all 40+ countries and 32 currencies.
+  1238→          </DialogDescription>
+  1239→        </DialogHeader>
+  1240→
+  1241→        <div className="relative">
+  1242→          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+  1243→          <Input
+  1244→            placeholder="Search country, code, or currency..."
+  1245→            value={query}
+  1246→            onChange={(e) => setQuery(e.target.value)}
+  1247→            className="pl-9"
+  1248→            autoFocus
+  1249→          />
+  1250→        </div>
+  1251→
+  1252→        <div className="max-h-[55vh] overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-2 pr-1 no-scrollbar">
+  1253→          {filtered.length === 0 && (
+  1254→            <p className="col-span-full text-center text-sm text-muted-foreground py-6">
+  1255→              No countries match &ldquo;{query}&rdquo;
+  1256→            </p>
+  1257→          )}
+  1258→          {filtered.map((c) => (
+  1259→            <button
+  1260→              key={c.code}
+  1261→              onClick={() => onSelect(c.code)}
+  1262→              className="flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition hover:border-emerald-500/50 hover:bg-emerald-500/5"
+  1263→            >
+  1264→              <span className="text-2xl leading-none">{c.flag}</span>
+  1265→              <div className="min-w-0">
+  1266→                <p className="text-xs font-semibold truncate">{c.name}</p>
+  1267→                <p className="text-[10px] text-muted-foreground">{c.currency} · {c.code}</p>
+  1268→              </div>
+  1269→            </button>
+  1270→          ))}
+  1271→        </div>
+  1272→      </DialogContent>
+  1273→    </Dialog>
+  1274→  );
+  1275→}
+  1276→
+  1277→// ---- Recent international transfers -----------------------------------
+  1278→
+  1279→function RecentInternationalTransfers() {
+  1280→  const { data, loading } = useFetch<{ transactions: any[] }>("/api/transactions?type=transfer&limit=15");
+  1281→  const all = data?.transactions ?? [];
+  1282→  // Filter to international transfers (those whose metadata includes international: true)
+  1283→  const intl = useMemo(() => {
+  1284→    return all.filter((t) => {
+  1285→      try {
+  1286→        const meta = t.metadata ? JSON.parse(t.metadata) : {};
+  1287→        return meta?.international === true;
+  1288→      } catch {
+  1289→        return false;
+  1290→      }
+  1291→    }).slice(0, 6);
+  1292→  }, [all]);
+  1293→
+  1294→  return (
+  1295→    <Card className="p-5">
+  1296→      <div className="flex items-center justify-between mb-4">
+  1297→        <div className="flex items-center gap-2">
+  1298→          <Globe className="h-4 w-4 text-emerald-500" />
+  1299→          <h3 className="text-sm font-semibold">Recent international transfers</h3>
+  1300→        </div>
+  1301→        <Button variant="ghost" size="sm" className="text-xs" onClick={() => (window.location.hash = "#transactions")}>
+  1302→          View all <ExternalLink className="h-3 w-3 ml-1" />
+  1303→        </Button>
+  1304→      </div>
+  1305→
+  1306→      {loading ? (
+  1307→        <div className="space-y-2">
+  1308→          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
+  1309→        </div>
+  1310→      ) : intl.length === 0 ? (
+  1311→        <div className="rounded-xl border border-dashed p-8 text-center">
+  1312→          <Globe2 className="h-8 w-8 mx-auto text-muted-foreground/60" />
+  1313→          <p className="mt-2 text-sm font-medium">No international transfers yet</p>
+  1314→          <p className="text-xs text-muted-foreground">
+  1315→            Start your first cross-border transfer above — it takes less than a minute.
+  1316→          </p>
+  1317→        </div>
+  1318→      ) : (
+  1319→        <div className="space-y-2 max-h-96 overflow-y-auto no-scrollbar">
+  1320→          <AnimatePresence initial={false}>
+  1321→            {intl.map((t) => {
+  1322→              const meta = (() => { try { return t.metadata ? JSON.parse(t.metadata) : {}; } catch { return {}; } })();
+  1323→              return (
+  1324→                <motion.div
+  1325→                  key={t.id}
+  1326→                  layout
+  1327→                  initial={{ opacity: 0, y: 8 }}
+  1328→                  animate={{ opacity: 1, y: 0 }}
+  1329→                  exit={{ opacity: 0, y: -8 }}
+  1330→                  className="flex items-center gap-3 rounded-xl border p-3 hover:bg-muted/30 transition"
+  1331→                >
+  1332→                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-emerald-500/10 text-emerald-500 text-lg">
+  1333→                    {meta?.recipientFlag ?? "🌍"}
+  1334→                  </div>
+  1335→                  <div className="flex-1 min-w-0">
+  1336→                    <p className="text-sm font-medium truncate">{t.counterpartyName ?? "Recipient"}</p>
+  1337→                    <p className="text-[11px] text-muted-foreground truncate">
+  1338→                      {meta?.recipientCountryName ?? "International"} · {t.method === "momo" ? "Mobile Money" : t.method === "wallet" ? "Wallet" : "Bank"}
+  1339→                    </p>
+  1340→                  </div>
+  1341→                  <div className="text-right">
+  1342→                    <p className="text-sm font-semibold tabular-nums text-rose-500">
+  1343→                      -{formatMoney(t.amount, t.currency)}
+  1344→                    </p>
+  1345→                    <p className="text-[10px] text-muted-foreground">{timeAgo(t.createdAt)}</p>
+  1346→                  </div>
+  1347→                  <Badge
+  1348→                    variant="outline"
+  1349→                    className={cn(
+  1350→                      "text-[10px] ml-1",
+  1351→                      t.status === "completed"
+  1352→                        ? "border-emerald-500/40 text-emerald-500"
+  1353→                        : t.status === "pending"
+  1354→                          ? "border-amber-500/40 text-amber-500"
+  1355→                          : "border-muted-foreground/30 text-muted-foreground",
+  1356→                    )}
+  1357→                  >
+  1358→                    {t.status}
+  1359→                  </Badge>
+  1360→                </motion.div>
+  1361→              );
+  1362→            })}
+  1363→          </AnimatePresence>
+  1364→        </div>
+  1365→      )}
+  1366→    </Card>
+  1367→  );
+  1368→}
+  1369→

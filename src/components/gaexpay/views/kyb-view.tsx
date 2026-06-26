@@ -21,6 +21,7 @@ import { CURRENCIES, formatDate } from "@/lib/gaexpay";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ImageUpload, detectGpsAddress } from "./kyc-shared";
+import { useTranslation } from "@/hooks/use-translation";
 
 // ---- Static config ---------------------------------------------------------
 
@@ -114,6 +115,7 @@ interface KybStatusResponse {
 // ---- Main view -------------------------------------------------------------
 
 export function KybView() {
+  const { t } = useTranslation();
   const { data, reload, loading } = useFetch<KybStatusResponse>("/api/kyb/status");
   const [submitting, setSubmitting] = useState(false);
 
@@ -383,7 +385,7 @@ export function KybView() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Business Verification (KYB)</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("kyb.title")}</h1>
         <p className="text-sm text-muted-foreground">
           Verify your business to unlock team management, invoicing, payroll & higher limits
         </p>

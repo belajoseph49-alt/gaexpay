@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
+import { useTranslation } from "@/hooks/use-translation";
 
 const CARD_GRADIENTS: Record<string, string> = {
   emerald: "from-emerald-600 via-teal-600 to-emerald-800",
@@ -32,6 +33,7 @@ const CARD_GRADIENTS: Record<string, string> = {
 };
 
 export function CardsView() {
+  const { t } = useTranslation();
   const { data, reload } = useFetch<{ cards: any[] }>("/api/cards");
   const [active, setActive] = useState(0);
   const { fmt, symbol, currency: userCur } = useFormatMoney();
@@ -67,7 +69,7 @@ export function CardsView() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Cards</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("cards.title")}</h1>
           <p className="text-sm text-muted-foreground">Virtual & physical cards for every need</p>
         </div>
         <Button size="sm" onClick={() => setAddOpen(true)}><Plus className="h-4 w-4 mr-1.5" /> New Card</Button>

@@ -24,6 +24,7 @@ import { useApp } from "@/lib/store";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
+import { useTranslation } from "@/hooks/use-translation";
 
 const TYPE_ICONS: Record<string, any> = {
   transfer: ArrowLeftRight, deposit: ArrowDownRight, withdrawal: ArrowUpRight,
@@ -40,6 +41,7 @@ const STATUS_STYLES: Record<string, any> = {
 };
 
 export function TransactionsView() {
+  const { t } = useTranslation();
   const { data, reload } = useFetch<{ transactions: any[] }>("/api/transactions?limit=200");
   const { data: disputesData, reload: reloadDisputes } = useFetch<{ disputes: any[]; open: number }>("/api/disputes");
   const { data: tagsData } = useFetch<{ tags: any[] }>("/api/transactions/tag");
@@ -134,7 +136,7 @@ export function TransactionsView() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Transactions</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("transactions.title")}</h1>
           <p className="text-sm text-muted-foreground">{filtered.length} transactions found</p>
         </div>
         <div className="flex gap-2">

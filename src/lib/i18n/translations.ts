@@ -2046,6 +2046,177 @@ const en: Record<string, string> = {
   "settings.themeChangedToast": "Theme: {theme}",
   "settings.loggedOutAllToast": "Logged out of all other devices",
   "settings.deviceRevokedToast": "Device revoked",
+
+  // Transactions view
+  "transactions.title": "Transactions",
+  "transactions.searchPlaceholder": "Search by name, description, reference...",
+  "transactions.allTypes": "All Types",
+  "transactions.allStatus": "All Status",
+  "transactions.exportCsv": "Export CSV",
+  "transactions.disputes": "Disputes",
+  "transactions.totalIn": "Total In",
+  "transactions.totalOut": "Total Out",
+  "transactions.netFlow": "Net Flow",
+  "transactions.feesPaid": "Fees Paid",
+  "transactions.noTransactions": "No transactions found",
+  "transactions.transactionsFound": "{count} transactions found",
+
+  // Exchange view
+  "ex.title": "Currency Exchange",
+  "ex.subtitle": "Exchange between fiat and crypto at live rates",
+  "ex.from": "From",
+  "ex.to": "To",
+  "ex.amount": "Amount",
+  "ex.rate": "Exchange Rate",
+  "ex.fee": "Fee",
+  "ex.youReceive": "You Receive",
+  "ex.exchangeNow": "Exchange Now",
+  "ex.processing": "Processing exchange...",
+
+  // Send view extras
+  "send.subtitle": "Transfer money instantly to anyone, anywhere",
+  "send.gaexPay": "GaexPay",
+  "send.contacts": "Contacts",
+  "send.saved": "Saved",
+  "send.recent": "Recent",
+  "send.enterAmount": "Enter amount",
+  "send.addNote": "Add a note",
+  "send.reviewTransfer": "Review Transfer",
+  "send.confirmSend": "Confirm & Send",
+  "send.sending": "Sending...",
+  "send.transferComplete": "Transfer complete!",
+  "send.requestSent": "Request sent!",
+  "send.topUpWallet": "Top Up Wallet",
+  "send.withdrawFunds": "Withdraw Funds",
+  "send.selectMethod": "Select method",
+  "send.card": "Card",
+  "send.bank": "Bank",
+  "send.crypto": "Crypto",
+  "send.mobileMoney": "Mobile Money",
+
+  // Wallets view extras
+  "wallets.subtitle": "Manage all your fiat and crypto wallets",
+  "wallets.totalPortfolioValue": "Total Portfolio Value",
+  "wallets.thisMonthGrowth": "This Month",
+  "wallets.addWallet": "Add Wallet",
+  "wallets.exchange": "Exchange",
+  "wallets.transfer": "Transfer",
+  "wallets.viewDetails": "View Details",
+
+  // Cards view extras
+  "cards.subtitle": "Virtual and physical cards for your spending",
+  "cards.newCard": "New Card",
+  "cards.freeze": "Freeze",
+  "cards.unfreeze": "Unfreeze",
+  "cards.details": "Details",
+  "cards.settings": "Settings",
+  "cards.spendingOverview": "Spending Overview",
+  "cards.monthlyLimit": "Monthly Limit",
+  "cards.spentThisMonth": "Spent This Month",
+  "cards.available": "Available",
+
+  // Security view
+  "security.title": "Security Center",
+  "security.subtitle": "Protect your account and manage security settings",
+  "security.changePassword": "Change Password",
+  "security.twoFactor": "Two-Factor Authentication",
+  "security.biometric": "Biometric Login",
+  "security.devices": "Active Devices",
+  "security.loginHistory": "Login History",
+  "security.suspiciousActivity": "Suspicious Activity",
+
+  // Support view
+  "support.title": "Support",
+  "support.subtitle": "Get help and manage your support tickets",
+  "support.newTicket": "New Ticket",
+  "support.askGaxie": "Ask Gaxie AI",
+  "support.faq": "Frequently Asked Questions",
+  "support.contactUs": "Contact Us",
+
+  // Referral view
+  "referral.title": "Referral & Rewards",
+  "referral.subtitle": "Invite friends and earn rewards",
+  "referral.yourCode": "Your Referral Code",
+  "referral.share": "Share",
+  "referral.invited": "People You Invited",
+  "referral.earnings": "Total Earnings",
+  "referral.redeem": "Redeem Rewards",
+
+  // Achievements view
+  "achievements.title": "Achievements",
+  "achievements.subtitle": "Unlock badges and earn rewards",
+  "achievements.unlocked": "Unlocked",
+  "achievements.locked": "Locked",
+  "achievements.points": "Points",
+
+  // Savings view extras
+  "savings.title": "Savings Goals",
+  "savings.subtitle": "Save towards your dreams",
+  "savings.newGoal": "New Goal",
+  "savings.target": "Target",
+  "savings.current": "Current",
+  "savings.progress": "Progress",
+  "savings.addMoney": "Add Money",
+  "savings.withdraw": "Withdraw",
+
+  // Budgets view
+  "budgets.title": "Budgets",
+  "budgets.subtitle": "Track and manage your spending",
+  "budgets.newBudget": "New Budget",
+  "budgets.spent": "Spent",
+  "budgets.remaining": "Remaining",
+  "budgets.category": "Category",
+  "budgets.limit": "Limit",
+
+  // Analytics view
+  "analytics.title": "Analytics",
+  "analytics.subtitle": "Deep insights into your spending",
+  "analytics.overview": "Overview",
+  "analytics.income": "Income",
+  "analytics.spending": "Spending",
+  "analytics.savings": "Savings Rate",
+  "analytics.topCategories": "Top Categories",
+  "analytics.monthlyTrend": "Monthly Trend",
+
+  // Crypto view extras
+  "crypto.title": "Crypto Wallets",
+  "crypto.subtitle": "Bitcoin, Ethereum, Pi Network & more",
+  "crypto.buy": "Buy",
+  "crypto.sell": "Sell",
+  "crypto.swap": "Swap",
+  "crypto.cashout": "Cash Out",
+  "crypto.portfolio": "Portfolio",
+  "crypto.balance": "Balance",
+  "crypto.value": "Value",
+  "crypto.change24h": "24h Change",
+
+  // Business dashboard
+  "business.dashboard": "Business Dashboard",
+  "business.revenue": "Revenue",
+  "business.transactions": "Transactions",
+  "business.team": "Team Members",
+  "business.invoices": "Invoices",
+  "business.payroll": "Payroll",
+
+  // Calendar
+  "calendar.title": "Calendar",
+  "calendar.subtitle": "Schedule and track your payments",
+
+  // Scheduled
+  "scheduled.title": "Scheduled Transfers",
+  "scheduled.subtitle": "Manage your recurring transfers",
+
+  // Statement
+  "statement.title": "Statements",
+  "statement.subtitle": "Download your account statements",
+
+  // International transfer
+  "international.title": "International Transfer",
+  "international.subtitle": "Send money across borders",
+
+  // Unified address
+  "unifiedAddress.title": "My Payment Address",
+  "unifiedAddress.subtitle": "One address for all your payments",
 };
 
 // ---------------------------------------------------------------------------
@@ -3399,6 +3570,164 @@ const fr = build({
   "notifications.noNotifications": "Aucune notification",
   "notifications.youAreCaughtUp": "Vous êtes à jour !",
   "notifications.viewAllActivity": "Voir toute l'activité",
+
+  // Transactions
+  "transactions.title": "Transactions",
+  "transactions.searchPlaceholder": "Rechercher par nom, description, référence...",
+  "transactions.allTypes": "Tous les Types",
+  "transactions.allStatus": "Tous les Statuts",
+  "transactions.exportCsv": "Exporter CSV",
+  "transactions.disputes": "Litiges",
+  "transactions.totalIn": "Total Entrant",
+  "transactions.totalOut": "Total Sortant",
+  "transactions.netFlow": "Flux Net",
+  "transactions.feesPaid": "Frais Payés",
+  "transactions.noTransactions": "Aucune transaction trouvée",
+  "transactions.transactionsFound": "{count} transactions trouvées",
+
+  // Exchange
+  "ex.title": "Échange de Devises",
+  "ex.subtitle": "Échangez entre fiat et crypto aux taux en direct",
+  "ex.from": "De",
+  "ex.to": "Vers",
+  "ex.amount": "Montant",
+  "ex.rate": "Taux de Change",
+  "ex.fee": "Frais",
+  "ex.youReceive": "Vous Recevez",
+  "ex.exchangeNow": "Échanger Maintenant",
+  "ex.processing": "Traitement de l'échange...",
+
+  // Send
+  "send.subtitle": "Transférez de l'argent instantanément à n'importe qui, partout",
+  "send.gaexPay": "GaexPay",
+  "send.contacts": "Contacts",
+  "send.saved": "Enregistrés",
+  "send.recent": "Récents",
+  "send.enterAmount": "Entrer le montant",
+  "send.addNote": "Ajouter une note",
+  "send.reviewTransfer": "Vérifier le Transfert",
+  "send.confirmSend": "Confirmer & Envoyer",
+  "send.sending": "Envoi...",
+  "send.transferComplete": "Transfert terminé !",
+  "send.requestSent": "Demande envoyée !",
+
+  // Wallets
+  "wallets.title": "Portefeuilles",
+  "wallets.subtitle": "Gérez tous vos portefeuilles fiat et crypto",
+  "wallets.totalPortfolioValue": "Valeur Totale du Portefeuille",
+  "wallets.thisMonth": "Ce Mois",
+  "wallets.addWallet": "Ajouter un Portefeuille",
+  "wallets.exchange": "Échanger",
+  "wallets.transfer": "Transférer",
+  "wallets.viewDetails": "Voir les Détails",
+
+  // Cards
+  "cards.title": "Cartes",
+  "cards.subtitle": "Cartes virtuelles et physiques pour vos dépenses",
+  "cards.newCard": "Nouvelle Carte",
+  "cards.freeze": "Geler",
+  "cards.unfreeze": "Dégeler",
+  "cards.details": "Détails",
+  "cards.settings": "Paramètres",
+  "cards.spendingOverview": "Aperçu des Dépenses",
+  "cards.monthlyLimit": "Limite Mensuelle",
+  "cards.spentThisMonth": "Dépensé ce Mois",
+  "cards.available": "Disponible",
+
+  // Security
+  "security.title": "Centre de Sécurité",
+  "security.subtitle": "Protégez votre compte et gérez la sécurité",
+  "security.changePassword": "Changer le Mot de Passe",
+  "security.twoFactor": "Authentification à Deux Facteurs",
+  "security.biometric": "Connexion Biométrique",
+  "security.devices": "Appareils Actifs",
+  "security.loginHistory": "Historique de Connexion",
+  "security.suspiciousActivity": "Activité Suspecte",
+
+  // Support
+  "support.title": "Support",
+  "support.subtitle": "Obtenez de l'aide et gérez vos tickets",
+  "support.newTicket": "Nouveau Ticket",
+  "support.askGaxie": "Demander à Gaxie AI",
+  "support.faq": "Questions Fréquentes",
+  "support.contactUs": "Nous Contacter",
+
+  // Referral
+  "referral.title": "Parrainage & Récompenses",
+  "referral.subtitle": "Invitez des amis et gagnez des récompenses",
+  "referral.yourCode": "Votre Code de Parrainage",
+  "referral.share": "Partager",
+  "referral.invited": "Personnes Invitées",
+  "referral.earnings": "Gains Totaux",
+  "referral.redeem": "Échanger les Récompenses",
+
+  // Achievements
+  "achievements.title": "Succès",
+  "achievements.subtitle": "Débloquez des badges et gagnez des récompenses",
+  "achievements.unlocked": "Débloqué",
+  "achievements.locked": "Verrouillé",
+  "achievements.points": "Points",
+
+  // Savings
+  "savings.title": "Objectifs d'Épargne",
+  "savings.subtitle": "Épargnez pour vos rêves",
+  "savings.newGoal": "Nouvel Objectif",
+  "savings.target": "Objectif",
+  "savings.current": "Actuel",
+  "savings.progress": "Progrès",
+  "savings.addMoney": "Ajouter de l'Argent",
+  "savings.withdraw": "Retirer",
+
+  // Budgets
+  "budgets.title": "Budgets",
+  "budgets.subtitle": "Suivez et gérez vos dépenses",
+  "budgets.newBudget": "Nouveau Budget",
+  "budgets.spent": "Dépensé",
+  "budgets.remaining": "Restant",
+  "budgets.category": "Catégorie",
+  "budgets.limit": "Limite",
+
+  // Analytics
+  "analytics.title": "Analytiques",
+  "analytics.subtitle": "Analyses approfondies de vos dépenses",
+  "analytics.overview": "Aperçu",
+  "analytics.income": "Revenus",
+  "analytics.spending": "Dépenses",
+  "analytics.savings": "Taux d'Épargne",
+  "analytics.topCategories": "Top Catégories",
+  "analytics.monthlyTrend": "Tendance Mensuelle",
+
+  // Crypto
+  "crypto.title": "Portefeuilles Crypto",
+  "crypto.subtitle": "Bitcoin, Ethereum, Pi Network & plus",
+  "crypto.buy": "Acheter",
+  "crypto.sell": "Vendre",
+  "crypto.swap": "Échanger",
+  "crypto.cashout": "Retirer",
+  "crypto.portfolio": "Portefeuille",
+  "crypto.balance": "Solde",
+  "crypto.value": "Valeur",
+  "crypto.change24h": "Variation 24h",
+
+  // Business
+  "business.dashboard": "Tableau de Bord Entreprise",
+  "business.revenue": "Revenus",
+  "business.transactions": "Transactions",
+  "business.team": "Membres de l'Équipe",
+  "business.invoices": "Factures",
+  "business.payroll": "Paie",
+
+  // Misc views
+  "calendar.title": "Calendrier",
+  "calendar.subtitle": "Planifiez et suivez vos paiements",
+  "scheduled.title": "Transferts Programmés",
+  "scheduled.subtitle": "Gérez vos transferts récurrents",
+  "statement.title": "Relevés",
+  "statement.subtitle": "Téléchargez vos relevés de compte",
+  "international.title": "Transfert International",
+  "international.subtitle": "Envoyez de l'argent à travers les frontières",
+  "unifiedAddress.title": "Mon Adresse de Paiement",
+  "unifiedAddress.subtitle": "Une adresse pour tous vos paiements",
 });
 
 // ---------------------------------------------------------------------------

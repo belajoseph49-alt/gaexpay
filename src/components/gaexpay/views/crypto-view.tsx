@@ -16,6 +16,7 @@ import { AnimatedNumber } from "@/components/gaexpay/animated-number";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
+import { useTranslation } from "@/hooks/use-translation";
 
 const CRYPTO_META: Record<string, any> = {
   BTC: { name: "Bitcoin", icon: "🪙", color: "#F7931A", gradient: "from-amber-500 to-orange-600" },
@@ -36,6 +37,7 @@ const CRYPTO_META: Record<string, any> = {
 };
 
 export function CryptoView() {
+  const { t } = useTranslation();
   const { data: walletData, reload } = useFetch<any>("/api/crypto/wallets");
   const { data: ratesData } = useFetch<any>("/api/crypto/rates");
   const [showConverter, setShowConverter] = useState(false);
@@ -50,7 +52,7 @@ export function CryptoView() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Crypto Wallets</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("crypto.title")}</h1>
           <p className="text-sm text-muted-foreground">Bitcoin, Ethereum, Pi Network & more</p>
         </div>
         <div className="flex gap-2">

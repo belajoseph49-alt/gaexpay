@@ -22,6 +22,7 @@ import { KYC_TIERS, CURRENCIES, formatDate } from "@/lib/gaexpay";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
+import { useTranslation } from "@/hooks/use-translation";
 import {
   ImageUpload, WebcamCapture, detectGpsAddress,
 } from "./kyc-shared";
@@ -68,6 +69,7 @@ interface KycStatusResponse {
 }
 
 export function KycView() {
+  const { t } = useTranslation();
   const { data, reload, loading } = useFetch<KycStatusResponse>("/api/kyc/status");
   const { data: meData } = useFetch<{ user: any }>("/api/me");
   const [submitting, setSubmitting] = useState(false);
@@ -245,7 +247,7 @@ export function KycView() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Identity Verification (KYC)</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("kyc.title")}</h1>
         <p className="text-sm text-muted-foreground">
           Verify your identity to unlock higher limits and all features
         </p>

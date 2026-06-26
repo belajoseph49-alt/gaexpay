@@ -19,6 +19,7 @@ import { AnimatedNumber } from "@/components/gaexpay/animated-number";
 import { timeAgo, formatDateTime, formatMoney } from "@/lib/gaexpay";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/use-translation";
 
 type SecurityOverview = {
   user: { firstName: string; lastName: string; email: string };
@@ -189,6 +190,7 @@ const FEATURES = [
 ];
 
 export function SecurityView() {
+  const { t } = useTranslation();
   const { data, loading, reload } = useFetch<SecurityOverview>("/api/security/overview");
   const [revokingId, setRevokingId] = useState<string | null>(null);
 
@@ -220,7 +222,7 @@ export function SecurityView() {
               <Shield className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Security Center</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{t("security.title")}</h1>
               <p className="text-sm text-muted-foreground">
                 Monitor your account protection, devices & compliance
               </p>

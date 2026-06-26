@@ -15,14 +15,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AnimatedNumber } from "@/components/gaexpay/animated-number";
 import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
+import { useTranslation } from "@/hooks/use-translation";
 
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 export function CalendarView() {
   const now = new Date();
   const [month, setMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
   const { fmt, symbol, currency: userCur } = useFormatMoney();
+  const { t } = useTranslation();
   const { data } = useFetch<any>(`/api/calendar?month=${month}`);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
@@ -49,8 +51,8 @@ export function CalendarView() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Payment Calendar</h1>
-          <p className="text-sm text-muted-foreground">Scheduled transfers & transaction history</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("calendar.title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("calendar.subtitle")}</p>
         </div>
       </div>
 
@@ -60,31 +62,31 @@ export function CalendarView() {
           <div className="grid h-10 w-10 place-items-center rounded-lg bg-sky-500/15 text-sky-500 mb-3">
             <Repeat className="h-5 w-5" />
           </div>
-          <p className="text-xs text-muted-foreground">Scheduled This Month</p>
+          <p className="text-xs text-muted-foreground">{t("calendar.scheduledThisMonth")}</p>
           <p className="text-xl font-bold tabular-nums">
             <AnimatedNumber value={summary.totalScheduled} prefix={symbol} decimals={2} />
           </p>
-          <p className="text-xs text-muted-foreground mt-0.5">{summary.scheduledCount} upcoming transfers</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{t("calendar.upcomingTransfers", { count: summary.scheduledCount })}</p>
         </Card>
         <Card className="p-5 card-lift">
           <div className="grid h-10 w-10 place-items-center rounded-lg bg-rose-500/15 text-rose-500 mb-3">
             <ArrowUpRight className="h-5 w-5" />
           </div>
-          <p className="text-xs text-muted-foreground">Total Spent</p>
+          <p className="text-xs text-muted-foreground">{t("calendar.totalSpent")}</p>
           <p className="text-xl font-bold tabular-nums">
             <AnimatedNumber value={summary.totalSpent} prefix={symbol} decimals={2} />
           </p>
-          <p className="text-xs text-muted-foreground mt-0.5">{summary.txCount} transactions</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{t("calendar.transactionsCount", { count: summary.txCount })}</p>
         </Card>
         <Card className="p-5 card-lift">
           <div className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-500/15 text-emerald-500 mb-3">
             <ArrowDownRight className="h-5 w-5" />
           </div>
-          <p className="text-xs text-muted-foreground">Total Received</p>
+          <p className="text-xs text-muted-foreground">{t("calendar.totalReceived")}</p>
           <p className="text-xl font-bold tabular-nums">
             <AnimatedNumber value={summary.totalReceived} prefix={symbol} decimals={2} />
           </p>
-          <p className="text-xs text-muted-foreground mt-0.5">inflow this month</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{t("calendar.inflowThisMonth")}</p>
         </Card>
       </div>
 
@@ -108,7 +110,7 @@ export function CalendarView() {
           <div className="grid grid-cols-7 gap-1 mb-1">
             {WEEKDAYS.map((d) => (
               <div key={d} className="text-center text-xs font-medium text-muted-foreground py-1">
-                {d}
+                {t(`calendar.${d}`)}
               </div>
             ))}
           </div>
@@ -162,10 +164,10 @@ export function CalendarView() {
 
           {/* Legend */}
           <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-sky-500" /> Scheduled</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Inflow</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-500" /> Outflow</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full border border-primary" /> Today</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-sky-500" /> {t("calendar.scheduled")}</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" /> {t("calendar.inflow")}</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-500" /> {t("calendar.outflow")}</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full border border-primary" /> {t("calendar.today")}</span>
           </div>
         </Card>
 
@@ -177,13 +179,13 @@ export function CalendarView() {
                 {MONTHS[data.month]} {selectedDayData.date}
               </h3>
               <p className="text-xs text-muted-foreground mb-4">
-                {selectedDayData.schedules.length + selectedDayData.transactions.length} items
+                {t("calendar.items", { count: selectedDayData.schedules.length + selectedDayData.transactions.length })}
               </p>
 
               {selectedDayData.schedules.length === 0 && selectedDayData.transactions.length === 0 ? (
                 <div className="grid place-items-center py-12 text-center">
                   <CalendarIcon className="h-8 w-8 text-muted-foreground/40 mb-2" />
-                  <p className="text-sm text-muted-foreground">No activity</p>
+                  <p className="text-sm text-muted-foreground">{t("calendar.noActivity")}</p>
                 </div>
               ) : (
                 <div className="space-y-3 max-h-[400px] overflow-y-auto">
@@ -242,8 +244,8 @@ export function CalendarView() {
           ) : (
             <div className="grid place-items-center py-16 text-center">
               <CalendarIcon className="h-10 w-10 text-muted-foreground/40 mb-2" />
-              <p className="text-sm text-muted-foreground">Select a day to view details</p>
-              <p className="text-xs text-muted-foreground mt-1">Click any date on the calendar</p>
+              <p className="text-sm text-muted-foreground">{t("calendar.selectDay")}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("calendar.clickAnyDate")}</p>
             </div>
           )}
         </Card>

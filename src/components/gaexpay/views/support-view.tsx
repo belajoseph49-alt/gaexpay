@@ -19,6 +19,7 @@ import { useApp } from "@/lib/store";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
+import { useTranslation } from "@/hooks/use-translation";
 
 const FAQS = [
   { q: "How do I verify my identity (KYC)?", a: "Go to Identity (KYC) section, upload a valid government-issued ID and take a selfie. Verification usually completes within 1-2 hours." },
@@ -30,6 +31,7 @@ const FAQS = [
 ];
 
 export function SupportView() {
+  const { t } = useTranslation();
   const { data } = useFetch<{ tickets: any[] }>("/api/support");
   const [activeTicket, setActiveTicket] = useState<any>(null);
   const { setAiOpen } = useApp();
@@ -39,7 +41,7 @@ export function SupportView() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Support</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("support.title")}</h1>
         <p className="text-sm text-muted-foreground">We're here to help — chat with AI, browse FAQs or contact us</p>
       </div>
 

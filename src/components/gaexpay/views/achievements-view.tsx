@@ -12,8 +12,10 @@ import { useFetch } from "@/hooks/use-fetch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApp } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/use-translation";
 
 export function AchievementsView() {
+  const { t } = useTranslation();
   const { data } = useFetch<any>("/api/achievements");
   const { setView } = useApp();
 
@@ -32,7 +34,7 @@ export function AchievementsView() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Achievements</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("achievements.title")}</h1>
         <p className="text-sm text-muted-foreground">Unlock badges as you use GaexPay</p>
       </div>
 

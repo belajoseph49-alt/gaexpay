@@ -1,0 +1,702 @@
+    36→  health: HeartPulse, gym: Dumbbell,
+    37→  donations: Gift, rent: Key, other: Receipt,
+    38→};
+    39→
+    40→const NETWORKS = [
+    41→  { id: "mtn", name: "MTN", color: "#FFCC00" },
+    42→  { id: "airtel", name: "Airtel", color: "#E40000" },
+    43→  { id: "glo", name: "Glo", color: "#43B02A" },
+    44→  { id: "9mobile", name: "9mobile", color: "#0066B3" },
+    45→];
+    46→
+    47→const DATA_PLANS = [
+    48→  { id: "daily_100", label: "100 MB · 1 Day", amount: 100 },
+    49→  { id: "daily_200", label: "350 MB · 1 Day", amount: 200 },
+    50→  { id: "weekly_500", label: "1.5 GB · 7 Days", amount: 500 },
+    51→  { id: "weekly_1000", label: "3.5 GB · 7 Days", amount: 1000 },
+    52→  { id: "monthly_2000", label: "5 GB · 30 Days", amount: 2000 },
+    53→  { id: "monthly_3500", label: "10 GB · 30 Days", amount: 3500 },
+    54→  { id: "monthly_5000", label: "20 GB · 30 Days", amount: 5000 },
+    55→  { id: "monthly_10000", label: "50 GB · 30 Days", amount: 10000 },
+    56→];
+    57→
+    58→export function PayView() {
+    59→  return (
+    60→    <div className="space-y-6">
+    61→      <div>
+    62→        <h1 className="text-2xl font-bold tracking-tight">Pay & Bills</h1>
+    63→        <p className="text-sm text-muted-foreground">
+    64→          Pay EVERYTHING — scan-to-pay, utilities, taxes, customs, school fees, airtime & data
+    65→        </p>
+    66→      </div>
+    67→      <Tabs defaultValue="qr">
+    68→        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+    69→          <TabsTrigger value="qr"><QrCode className="h-4 w-4 mr-1.5" /> Scan & Pay</TabsTrigger>
+    70→          <TabsTrigger value="merchants"><Store className="h-4 w-4 mr-1.5" /> Merchants</TabsTrigger>
+    71→          <TabsTrigger value="bills"><Receipt className="h-4 w-4 mr-1.5" /> Bills</TabsTrigger>
+    72→          <TabsTrigger value="airtime"><Smartphone className="h-4 w-4 mr-1.5" /> Airtime</TabsTrigger>
+    73→        </TabsList>
+    74→        <TabsContent value="qr" className="mt-4"><QrPay /></TabsContent>
+    75→        <TabsContent value="merchants" className="mt-4"><MerchantsPay /></TabsContent>
+    76→        <TabsContent value="bills" className="mt-4"><BillsPay /></TabsContent>
+    77→        <TabsContent value="airtime" className="mt-4"><AirtimePay /></TabsContent>
+    78→      </Tabs>
+    79→    </div>
+    80→  );
+    81→}
+    82→
+    83→// ============================================================
+    84→// QrPay — REAL camera-based QR scanner (BarcodeDetector) with
+    85→// graceful fallback to manual entry when the browser doesn't
+    86→// expose `BarcodeDetector` (e.g. Firefox / iOS Safari).
+    87→// ============================================================
+    88→function QrPay() {
+    89→  const { fmt, symbol, currency: userCur } = useFormatMoney();
+    90→  const [scanning, setScanning] = useState(false);
+    91→  const [found, setFound] = useState<any>(null);
+    92→  const [amount, setAmount] = useState("");
+    93→  const [paying, setPaying] = useState(false);
+    94→  const [done, setDone] = useState<any>(null);
+    95→  const [error, setError] = useState<string | null>(null);
+    96→  const [manualCode, setManualCode] = useState("");
+    97→
+    98→  const videoRef = useRef<HTMLVideoElement>(null);
+    99→  const streamRef = useRef<MediaStream | null>(null);
+   100→  const detectorRef = useRef<any>(null);
+   101→  const scanIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+   102→
+   103→  // Stop the camera + detector — called on unmount, on cancel, and on
+   104→  // successful detection so the stream is released back to the OS.
+   105→  const stopScan = useCallback(() => {
+   106→    setScanning(false);
+   107→    if (scanIntervalRef.current) {
+   108→      clearInterval(scanIntervalRef.current);
+   109→      scanIntervalRef.current = null;
+   110→    }
+   111→    if (streamRef.current) {
+   112→      streamRef.current.getTracks().forEach((t) => t.stop());
+   113→      streamRef.current = null;
+   114→    }
+   115→    if (videoRef.current) {
+   116→      videoRef.current.srcObject = null;
+   117→    }
+   118→    detectorRef.current = null;
+   119→  }, []);
+   120→
+   121→  // Look up a scanned (or manually entered) code against the merchant catalog.
+   122→  const handleQrResult = useCallback(
+   123→    async (code: string) => {
+   124→      const trimmed = code.trim();
+   125→      if (!trimmed) return;
+   126→      let merchantId = trimmed;
+   127→      let amountFromQr = "";
+   128→      // If it's a URL with payment params, peel them out so a printed
+   129→      // GaexPay QR (e.g. https://gaexpay.app/pay?merchant=GXP-MER-001&amount=1500)
+   130→      // auto-fills the amount.
+   131→      if (trimmed.startsWith("http")) {
+   132→        try {
+   133→          const url = new URL(trimmed);
+   134→          merchantId =
+   135→            url.searchParams.get("merchant") ||
+   136→            url.searchParams.get("id") ||
+   137→            url.searchParams.get("account") ||
+   138→            trimmed;
+   139→          amountFromQr = url.searchParams.get("amount") || "";
+   140→        } catch {
+   141→          /* fall through with merchantId = trimmed */
+   142→        }
+   143→      } else if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+   144→        // JSON payload (the format /api/merchant-qr emits).
+   145→        try {
+   146→          const parsed = JSON.parse(trimmed);
+   147→          merchantId =
+   148→            parsed.merchantId || parsed.qrCode || parsed.account || parsed.id || trimmed;
+   149→          amountFromQr = parsed.amount ? String(parsed.amount) : "";
+   150→        } catch {
+   151→          /* fall through */
+   152→        }
+   153→      }
+   154→
+   155→      try {
+   156→        const res = await fetch(
+   157→          `/api/merchants/lookup?id=${encodeURIComponent(merchantId)}`,
+   158→          { cache: "no-store" },
+   159→        );
+   160→        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+   161→        const data = await res.json();
+   162→        if (data.merchant) {
+   163→          setFound(data.merchant);
+   164→          if (amountFromQr) setAmount(amountFromQr);
+   165→        } else {
+   166→          // Unknown merchant — let the user proceed with manual entry so
+   167→          // they can still pay an arbitrary code (we treat it as unverified).
+   168→          setFound({
+   169→            name: "Unknown Merchant",
+   170→            account: merchantId,
+   171→            category: "unknown",
+   172→            rating: 0,
+   173→            manual: true,
+   174→          });
+   175→        }
+   176→      } catch {
+   177→        setFound({
+   178→          name: "QR Code",
+   179→          account: merchantId,
+   180→          category: "unknown",
+   181→          rating: 0,
+   182→          manual: true,
+   183→        });
+   184→      }
+   185→    },
+   186→    [],
+   187→  );
+   188→
+   189→  // Start the camera + (if available) the BarcodeDetector polling loop.
+   190→  const startScan = useCallback(async () => {
+   191→    setError(null);
+   192→    setFound(null);
+   193→    setDone(null);
+   194→    setScanning(true);
+   195→    try {
+   196→      if (!navigator.mediaDevices?.getUserMedia) {
+   197→        throw new Error("Camera API not available in this browser.");
+   198→      }
+   199→      const stream = await navigator.mediaDevices.getUserMedia({
+   200→        video: { facingMode: "environment" },
+   201→        audio: false,
+   202→      });
+   203→      streamRef.current = stream;
+   204→      if (videoRef.current) {
+   205→        videoRef.current.srcObject = stream;
+   206→        await videoRef.current.play().catch(() => {
+   207→          /* autoplay can reject silently; the play() promise resolves once
+   208→             the video element is ready, even if muted+playsInline is set */
+   209→        });
+   210→      }
+   211→
+   212→      // Native BarcodeDetector — Chrome, Edge, Opera. Not on Firefox/Safari.
+   213→      const hasDetector =
+   214→        typeof window !== "undefined" && "BarcodeDetector" in window;
+   215→      if (hasDetector) {
+   216→        try {
+   217→          // @ts-expect-error — BarcodeDetector is not in TS lib yet
+   218→          detectorRef.current = new window.BarcodeDetector({
+   219→            formats: ["qr_code"],
+   220→          });
+   221→        } catch {
+   222→          detectorRef.current = null;
+   223→        }
+   224→      }
+   225→
+   226→      if (detectorRef.current) {
+   227→        scanIntervalRef.current = setInterval(async () => {
+   228→          if (!videoRef.current || !detectorRef.current) return;
+   229→          if (videoRef.current.readyState < 2) return; // not enough data yet
+   230→          try {
+   231→            const barcodes = await detectorRef.current.detect(videoRef.current);
+   232→            if (barcodes && barcodes.length > 0) {
+   233→              const code = barcodes[0].rawValue;
+   234→              if (code) {
+   235→                stopScan();
+   236→                handleQrResult(code);
+   237→              }
+   238→            }
+   239→          } catch {
+   240→            /* transient detect error — ignore, the interval will retry */
+   241→          }
+   242→        }, 350);
+   243→      } else {
+   244→        // No native detector — keep the camera preview running so the user
+   245→        // sees the scanning frame, but they must enter the code manually.
+   246→        setError(
+   247→          "Live QR detection isn't supported on this browser. Keep the camera on the QR, then type the code printed below it.",
+   248→        );
+   249→      }
+   250→    } catch (e: any) {
+   251→      const msg =
+   252→        e?.name === "NotAllowedError"
+   253→          ? "Camera permission denied. Grant access in your browser settings, or enter the merchant code manually below."
+   254→          : e?.name === "NotFoundError"
+   255→            ? "No camera found on this device. Enter the merchant code manually below."
+   256→            : e?.message || "Failed to access camera.";
+   257→      setError(msg);
+   258→      setScanning(false);
+   259→      stopScan();
+   260→    }
+   261→  }, [handleQrResult, stopScan]);
+   262→
+   263→  // Cleanup camera + interval when the component unmounts or scanning ends.
+   264→  useEffect(() => {
+   265→    return () => stopScan();
+   266→  }, [stopScan]);
+   267→
+   268→  // Also stop scanning if the user navigates away while found/done panels
+   269→  // are open — `useEffect` cleanup handles unmount; this guards tab switch.
+   270→  useEffect(() => {
+   271→    if ((found || done) && scanning) stopScan();
+   272→  }, [found, done, scanning, stopScan]);
+   273→
+   274→  const pay = async () => {
+   275→    if (!found || !amount) return;
+   276→    setPaying(true);
+   277→    setError(null);
+   278→    try {
+   279→      const res = await fetch("/api/pay-merchant", {
+   280→        method: "POST",
+   281→        headers: { "Content-Type": "application/json" },
+   282→        body: JSON.stringify({
+   283→          amount: Number(amount),
+   284→          currency: userCur,
+   285→          type: "payment",
+   286→          category: "shopping",
+   287→          counterpartyName: found.name,
+   288→          method: "qr",
+   289→          description: `QR payment to ${found.name}${found.manual ? " (unverified)" : ""}`,
+   290→        }),
+   291→      });
+   292→      const data = await res.json();
+   293→      if (!res.ok) throw new Error(data?.error || "Payment failed");
+   294→      setDone({
+   295→        amount: Number(amount),
+   296→        currency: userCur,
+   297→        merchant: found.name,
+   298→        reference: data.transaction?.reference,
+   299→        transactionId: data.transaction?.id,
+   300→        paidAt: data.transaction?.completedAt || new Date().toISOString(),
+   301→      });
+   302→      setFound(null);
+   303→      setAmount("");
+   304→      toast.success(`${fmt(Number(amount))} paid to ${found.name}`);
+   305→    } catch (e: any) {
+   306→      setError(e?.message || "Payment failed. Please try again.");
+   307→      toast.error(e?.message || "Payment failed");
+   308→    } finally {
+   309→      setPaying(false);
+   310→    }
+   311→  };
+   312→
+   313→  const reset = () => {
+   314→    setFound(null);
+   315→    setDone(null);
+   316→    setAmount("");
+   317→    setError(null);
+   318→    setManualCode("");
+   319→  };
+   320→
+   321→  return (
+   322→    <Card className="mx-auto max-w-md p-6">
+   323→      {!found && !done && (
+   324→        <div className="text-center">
+   325→          {/* ── Camera preview / scanning frame ── */}
+   326→          <div className="relative mx-auto mb-4 aspect-square w-full max-w-[18rem] overflow-hidden rounded-2xl border-2 border-dashed border-primary/40 bg-muted/20">
+   327→            {scanning ? (
+   328→              <>
+   329→                <video
+   330→                  ref={videoRef}
+   331→                  className="absolute inset-0 h-full w-full object-cover"
+   332→                  playsInline
+   333→                  muted
+   334→                />
+   335→                {/* Subtle dim overlay so the scanning frame pops */}
+   336→                <div className="absolute inset-0 bg-black/15" />
+   337→                {/* Animated corner brackets */}
+   338→                <div className="scan-corner absolute left-3 top-3 h-8 w-8 rounded-tl-lg border-t-4 border-l-4 border-primary" />
+   339→                <div className="scan-corner absolute right-3 top-3 h-8 w-8 rounded-tr-lg border-t-4 border-r-4 border-primary" />
+   340→                <div className="scan-corner absolute bottom-3 left-3 h-8 w-8 rounded-bl-lg border-b-4 border-l-4 border-primary" />
+   341→                <div className="scan-corner absolute bottom-3 right-3 h-8 w-8 rounded-br-lg border-b-4 border-r-4 border-primary" />
+   342→                {/* Animated scan line */}
+   343→                <div className="animate-scan absolute left-3 right-3 h-0.5 rounded-full bg-primary shadow-[0_0_12px_2px] shadow-primary/60" />
+   344→              </>
+   345→            ) : (
+   346→              <div className="absolute inset-0 grid place-items-center">
+   347→                <div className="text-center px-4">
+   348→                  <ScanLine className="mx-auto h-12 w-12 text-muted-foreground/40" />
+   349→                  <p className="mt-2 text-xs text-muted-foreground">
+   350→                    Point your camera at a GaexPay QR code
+   351→                  </p>
+   352→                </div>
+   353→              </div>
+   354→            )}
+   355→          </div>
+   356→
+   357→          {error && (
+   358→            <div className="mb-3 flex items-start gap-2 rounded-lg bg-rose-500/10 p-3 text-left text-xs text-rose-600 dark:text-rose-400">
+   359→              <AlertCircle className="h-4 w-4 shrink-0" />
+   360→              <span>{error}</span>
+   361→            </div>
+   362→          )}
+   363→
+   364→          {scanning ? (
+   365→            <Button variant="outline" onClick={stopScan} className="w-full">
+   366→              <X className="h-4 w-4 mr-2" /> Stop Scanning
+   367→            </Button>
+   368→          ) : (
+   369→            <Button onClick={startScan} className="w-full">
+   370→              <Camera className="h-4 w-4 mr-2" /> Start Scanning
+   371→            </Button>
+   372→          )}
+   373→
+   374→          {/* ── Manual entry fallback ── */}
+   375→          <div className="mt-5 text-left">
+   376→            <div className="relative">
+   377→              <div className="absolute inset-0 flex items-center">
+   378→                <span className="w-full border-t" />
+   379→              </div>
+   380→              <div className="relative flex justify-center text-xs uppercase">
+   381→                <span className="bg-card px-2 text-muted-foreground">or enter code manually</span>
+   382→              </div>
+   383→            </div>
+   384→            <div className="mt-3 flex gap-2">
+   385→              <Input
+   386→                placeholder="Merchant ID, QR code, or URL"
+   387→                value={manualCode}
+   388→                onChange={(e) => setManualCode(e.target.value)}
+   389→                onKeyDown={(e) => {
+   390→                  if (e.key === "Enter" && manualCode.trim()) {
+   391→                    handleQrResult(manualCode);
+   392→                    setManualCode("");
+   393→                  }
+   394→                }}
+   395→              />
+   396→              <Button
+   397→                variant="secondary"
+   398→                onClick={() => {
+   399→                  if (manualCode.trim()) {
+   400→                    handleQrResult(manualCode);
+   401→                    setManualCode("");
+   402→                  }
+   403→                }}
+   404→              >
+   405→                Look up
+   406→              </Button>
+   407→            </div>
+   408→          </div>
+   409→        </div>
+   410→      )}
+   411→
+   412→      {/* ── Payment confirmation form ── */}
+   413→      {found && !done && (
+   414→        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+   415→          <div className="mb-4 flex items-center justify-between">
+   416→            <Button
+   417→              size="sm"
+   418→              variant="ghost"
+   419→              className="h-7 px-2 text-muted-foreground"
+   420→              onClick={() => {
+   421→                setFound(null);
+   422→                setError(null);
+   423→              }}
+   424→            >
+   425→              <ArrowLeft className="h-4 w-4 mr-1" /> Back
+   426→            </Button>
+   427→            <h3 className="font-semibold">Confirm Payment</h3>
+   428→            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={reset}>
+   429→              <X className="h-4 w-4" />
+   430→            </Button>
+   431→          </div>
+   432→          <div className="rounded-xl border bg-muted/30 p-4 text-center">
+   433→            <div className="mx-auto mb-2 grid h-14 w-14 place-items-center rounded-full bg-primary/10 text-primary">
+   434→              <Store className="h-6 w-6" />
+   435→            </div>
+   436→            <p className="font-semibold">{found.name}</p>
+   437→            <p className="text-xs capitalize text-muted-foreground">
+   438→              Merchant · {found.category}
+   439→            </p>
+   440→            <div className="mt-1 flex items-center justify-center gap-1.5 text-xs">
+   441→              {found.rating > 0 && (
+   442→                <>
+   443→                  <span className="text-amber-500">★ {found.rating.toFixed(1)}</span>
+   444→                  <span className="text-muted-foreground">·</span>
+   445→                </>
+   446→              )}
+   447→              {found.manual ? (
+   448→                <Badge variant="outline" className="border-amber-500/40 text-[10px] text-amber-600 dark:text-amber-400">
+   449→                  Unverified
+   450→                </Badge>
+   451→              ) : (
+   452→                <span className="text-emerald-600 dark:text-emerald-400">Verified Merchant</span>
+   453→              )}
+   454→            </div>
+   455→            {found.account && (
+   456→              <p className="mt-2 font-mono text-xs text-muted-foreground">
+   457→                Account: {found.account}
+   458→              </p>
+   459→            )}
+   460→          </div>
+   461→          <div className="mt-4 space-y-2">
+   462→            <Label>Amount to pay ({userCur})</Label>
+   463→            <Input
+   464→              type="number"
+   465→              inputMode="decimal"
+   466→              value={amount}
+   467→              onChange={(e) => setAmount(e.target.value)}
+   468→              placeholder="0.00"
+   469→              className="text-xl font-bold"
+   470→            />
+   471→            <div className="flex flex-wrap gap-2">
+   472→              {[500, 1000, 2000, 5000].map((v) => (
+   473→                <button
+   474→                  key={v}
+   475→                  onClick={() => setAmount(String(v))}
+   476→                  className="flex-1 rounded-lg border py-1.5 text-xs font-medium hover:bg-muted"
+   477→                >
+   478→                  {symbol}
+   479→                  {v.toLocaleString()}
+   480→                </button>
+   481→              ))}
+   482→            </div>
+   483→          </div>
+   484→          <Button onClick={pay} disabled={!amount || paying} className="mt-4 w-full">
+   485→            {paying ? (
+   486→              <>
+   487→                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Paying...
+   488→              </>
+   489→            ) : (
+   490→              <>Pay {amount ? fmt(Number(amount)) : ""}</>
+   491→            )}
+   492→          </Button>
+   493→        </motion.div>
+   494→      )}
+   495→
+   496→      {/* ── Receipt / success screen ── */}
+   497→      {done && (
+   498→        <motion.div
+   499→          initial={{ opacity: 0, scale: 0.95 }}
+   500→          animate={{ opacity: 1, scale: 1 }}
+   501→          className="py-2"
+   502→        >
+   503→          <div className="text-center">
+   504→            <motion.div
+   505→              initial={{ scale: 0 }}
+   506→              animate={{ scale: 1 }}
+   507→              transition={{ type: "spring", delay: 0.1 }}
+   508→              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white"
+   509→            >
+   510→              <Check className="h-8 w-8" strokeWidth={3} />
+   511→            </motion.div>
+   512→            <h3 className="text-xl font-bold">Payment Successful</h3>
+   513→            <p className="mt-1 text-sm text-muted-foreground">
+   514→              {fmt(done.amount)} paid to {done.merchant}
+   515→            </p>
+   516→          </div>
+   517→
+   518→          <div className="mt-5 rounded-xl border bg-muted/30 p-4 text-sm">
+   519→            <div className="space-y-2.5">
+   520→              <ReceiptRow icon={Hash} label="Reference" value={done.reference || "—"} mono />
+   521→              <ReceiptRow
+   522→                icon={Store}
+   523→                label="Merchant"
+   524→                value={done.merchant}
+   525→              />
+   526→              <ReceiptRow
+   527→                icon={Wallet}
+   528→                label="Amount"
+   529→                value={fmt(done.amount)}
+   530→              />
+   531→              <ReceiptRow
+   532→                icon={Calendar}
+   533→                label="Date"
+   534→                value={new Date(done.paidAt).toLocaleString()}
+   535→              />
+   536→              <ReceiptRow
+   537→                icon={Check}
+   538→                label="Status"
+   539→                value={<span className="font-semibold text-emerald-600 dark:text-emerald-400">Completed</span>}
+   540→              />
+   541→            </div>
+   542→          </div>
+   543→
+   544→          <div className="mt-4 flex gap-2">
+   545→            <Button
+   546→              variant="outline"
+   547→              className="flex-1"
+   548→              onClick={() => window.print()}
+   549→            >
+   550→              <Printer className="h-4 w-4 mr-2" /> Print
+   551→            </Button>
+   552→            <Button className="flex-1" onClick={reset}>
+   553→              <RefreshCw className="h-4 w-4 mr-2" /> New Payment
+   554→            </Button>
+   555→          </div>
+   556→        </motion.div>
+   557→      )}
+   558→    </Card>
+   559→  );
+   560→}
+   561→
+   562→function ReceiptRow({
+   563→  icon: Icon,
+   564→  label,
+   565→  value,
+   566→  mono,
+   567→}: {
+   568→  icon: any;
+   569→  label: string;
+   570→  value: React.ReactNode;
+   571→  mono?: boolean;
+   572→}) {
+   573→  return (
+   574→    <div className="flex items-center justify-between gap-3">
+   575→      <span className="flex items-center gap-2 text-muted-foreground">
+   576→        <Icon className="h-3.5 w-3.5" />
+   577→        {label}
+   578→      </span>
+   579→      <span className={cn("text-right text-foreground", mono && "font-mono text-xs")}>{value}</span>
+   580→    </div>
+   581→  );
+   582→}
+   583→
+   584→// ============================================================
+   585→// MerchantsPay — browse verified merchants
+   586→// ============================================================
+   587→function MerchantsPay() {
+   588→  const { data } = useFetch<{ merchants: any[] }>("/api/merchants");
+   589→  const merchants = data?.merchants ?? [];
+   590→  return (
+   591→    <div>
+   592→      <p className="mb-3 text-sm text-muted-foreground">Browse and pay verified merchants</p>
+   593→      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+   594→        {merchants.length === 0 &&
+   595→          [1, 2, 3].map((i) => <Skeleton key={i} className="h-28" />)}
+   596→        {merchants.map((m) => (
+   597→          <Card key={m.id} className="card-lift cursor-pointer p-4">
+   598→            <div className="flex items-start gap-3">
+   599→              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+   600→                <Store className="h-5 w-5" />
+   601→              </div>
+   602→              <div className="min-w-0 flex-1">
+   603→                <p className="truncate text-sm font-semibold">{m.name}</p>
+   604→                <p className="capitalize text-xs text-muted-foreground">{m.category}</p>
+   605→                <div className="mt-1 flex items-center gap-2">
+   606→                  <Badge variant="outline" className="text-[10px]">
+   607→                    ★ {m.rating.toFixed(1)}
+   608→                  </Badge>
+   609→                  <Badge variant="outline" className="text-[10px] text-emerald-600">
+   610→                    Verified
+   611→                  </Badge>
+   612→                </div>
+   613→              </div>
+   614→              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+   615→            </div>
+   616→          </Card>
+   617→        ))}
+   618→      </div>
+   619→    </div>
+   620→  );
+   621→}
+   622→
+   623→// ============================================================
+   624→// BillsPay — REAL bill payment with category grid, expandable
+   625→// sections, processing state, printable receipt, and recent
+   626→// payment history.
+   627→// ============================================================
+   628→function BillsPay() {
+   629→  const { fmt, symbol } = useFormatMoney();
+   630→  const { data } = useFetch<{ billers: any[]; categories: any[] }>("/api/billers");
+   631→  const historyFetch = useFetch<{ transactions: any[] }>("/api/bills");
+   632→  const billers = data?.billers ?? [];
+   633→  const history = historyFetch.data?.transactions ?? [];
+   634→
+   635→  const [expandedCat, setExpandedCat] = useState<string | null>(null);
+   636→  const [selected, setSelected] = useState<any>(null);
+   637→  const [account, setAccount] = useState("");
+   638→  const [phone, setPhone] = useState("");
+   639→  const [amount, setAmount] = useState("");
+   640→  const [description, setDescription] = useState("");
+   641→  const [paying, setPaying] = useState(false);
+   642→  const [processingStep, setProcessingStep] = useState<string>("");
+   643→  const [receipt, setReceipt] = useState<any>(null);
+   644→  const [payError, setPayError] = useState<string | null>(null);
+   645→
+   646→  const categoryGroups = [
+   647→    { label: "Utilities", cats: ["electricity", "water", "gas", "internet", "tv", "phone"] },
+   648→    { label: "Government & Taxes", cats: ["taxes", "customs", "fines", "permits", "social", "government"] },
+   649→    { label: "Education", cats: ["education", "university", "college", "school", "exams"] },
+   650→    { label: "Financial", cats: ["loan", "insurance", "mortgage"] },
+   651→    { label: "Transport", cats: ["fuel", "toll", "transport"] },
+   652→    { label: "Entertainment & Health", cats: ["streaming", "gaming", "health", "gym"] },
+   653→    { label: "Other", cats: ["betting", "donations", "rent", "other"] },
+   654→  ];
+   655→
+   656→  const resetForm = () => {
+   657→    setSelected(null);
+   658→    setAccount("");
+   659→    setPhone("");
+   660→    setAmount("");
+   661→    setDescription("");
+   662→    setReceipt(null);
+   663→    setPayError(null);
+   664→    setProcessingStep("");
+   665→  };
+   666→
+   667→  const pay = async () => {
+   668→    if (!selected || !account || !amount) return;
+   669→    setPaying(true);
+   670→    setPayError(null);
+   671→    setProcessingStep("Validating biller...");
+   672→    try {
+   673→      // Real processing animation steps — gives the user feedback while
+   674→      // the single network round-trip happens.
+   675→      const steps = [
+   676→        "Validating biller...",
+   677→        "Verifying account number...",
+   678→        "Checking wallet balance...",
+   679→        "Processing payment...",
+   680→        "Generating receipt...",
+   681→      ];
+   682→      let stepIdx = 0;
+   683→      const stepInterval = setInterval(() => {
+   684→        stepIdx = Math.min(stepIdx + 1, steps.length - 1);
+   685→        setProcessingStep(steps[stepIdx]);
+   686→      }, 350);
+   687→
+   688→      const res = await fetch("/api/bills", {
+   689→        method: "POST",
+   690→        headers: { "Content-Type": "application/json" },
+   691→        body: JSON.stringify({
+   692→          billerId: selected.id,
+   693→          accountNumber: account,
+   694→          amount: Number(amount),
+   695→          phone: phone || undefined,
+   696→          description: description || undefined,
+   697→        }),
+   698→      });
+   699→      const data = await res.json();
+   700→      clearInterval(stepInterval);
+   701→
+   702→      if (!res.ok) {
+   703→        throw new Error(data?.error || "Bill payment failed");
+   704→      }
+   705→
+   706→      setReceipt(data.receipt);
+   707→      toast.success(
+   708→        `${symbol}${Number(amount).toLocaleString()} paid to ${selected.name}`,
+   709→      );
+   710→      // Refresh history
+   711→      historyFetch.reload();
+   712→    } catch (e: any) {
+   713→      setPayError(e?.message || "Payment failed. Please try again.");
+   714→      toast.error(e?.message || "Bill payment failed");
+   715→    } finally {
+   716→      setPaying(false);
+   717→      setProcessingStep("");
+   718→    }
+   719→  };
+   720→
+   721→  // ── Receipt view ──
+   722→  if (receipt) {
+   723→    return (
+   724→      <Card className="mx-auto max-w-md p-6">
+   725→        <motion.div
+   726→          initial={{ opacity: 0, scale: 0.95 }}
+   727→          animate={{ opacity: 1, scale: 1 }}
+   728→        >
+   729→          <div className="text-center">
+   730→            <motion.div
+   731→              initial={{ scale: 0 }}
+   732→              animate={{ scale: 1 }}
+   733→              transition={{ type: "spring", delay: 0.1 }}
+   734→              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white"
+   735→            >
+
+[showing lines 36-735 of 1412; use offset=736 with limit to continue reading]

@@ -28,12 +28,14 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useFormatMoney } from "@/hooks/use-format-money";
+import { useTranslation } from "@/hooks/use-translation";
 
 export function SendView() {
+  const { t } = useTranslation();
   return (
     <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Send & Receive</h1>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t("send.title")}</h1>
         <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Transfer money instantly, request payments, top up or withdraw</p>
       </div>
       <Tabs defaultValue="send">

@@ -23,6 +23,7 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface BusinessUser {
   id: string;
@@ -75,6 +76,7 @@ function build30DayRevenue(transactions: any[]) {
 const CHANNEL_COLORS = ["#10b981", "#f59e0b", "#8b5cf6", "#06b6d4", "#ec4899"];
 
 export function BusinessDashboardView() {
+  const { t } = useTranslation();
   const { setView, setSendPrefill } = useApp();
   const { fmt, fmtCompact, symbol } = useFormatMoney();
   const { data: meData } = useFetch<{ user: BusinessUser }>("/api/auth/me");

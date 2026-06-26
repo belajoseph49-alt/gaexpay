@@ -24,6 +24,7 @@ import { formatMoney, timeAgo } from "@/lib/gaexpay";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
+import { useTranslation } from "@/hooks/use-translation";
 
 // ---- Types ---------------------------------------------------------------
 
@@ -128,6 +129,7 @@ function MethodIcon({ name, className }: { name: string; className?: string }) {
 // ---- Component -----------------------------------------------------------
 
 export function UnifiedAddressView() {
+  const { t } = useTranslation();
   const { data, loading, reload } = useFetch<any>("/api/unified-address");
 
   return (
@@ -176,7 +178,7 @@ function HeaderStrip({ onReload, loading }: { onReload: () => void; loading: boo
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold tracking-tight">My Payment Address</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("unifiedAddress.title")}</h1>
           <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/20">
             <AtSign className="h-3 w-3 mr-1" /> Universal
           </Badge>

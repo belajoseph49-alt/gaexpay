@@ -23,6 +23,7 @@ import { AnimatedNumber } from "@/components/gaexpay/animated-number";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
+import { useTranslation } from "@/hooks/use-translation";
 
 const CATEGORY_META: Record<string, { icon: any; color: string }> = {
   "Food & Dining": { icon: Utensils, color: "bg-amber-500/15 text-amber-500" },
@@ -37,6 +38,7 @@ const CATEGORY_META: Record<string, { icon: any; color: string }> = {
 const CATEGORIES = ["Food & Dining", "Transport", "Shopping", "Bills & Utilities", "Entertainment", "Health"];
 
 export function BudgetsView() {
+  const { t } = useTranslation();
   const { data, reload } = useFetch<{ budgets: any[]; totalLimit: number; totalSpent: number }>("/api/budgets");
   const [open, setOpen] = useState(false);
   const { fmt, symbol, currency: userCur } = useFormatMoney();
@@ -68,7 +70,7 @@ export function BudgetsView() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Budgets</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("budgets.title")}</h1>
           <p className="text-sm text-muted-foreground">Track spending limits by category</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>

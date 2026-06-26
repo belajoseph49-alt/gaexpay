@@ -17,8 +17,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
+import { useTranslation } from "@/hooks/use-translation";
 
 export function AnalyticsView() {
+  const { t } = useTranslation();
   const { data } = useFetch<{ transactions: any[] }>("/api/transactions?limit=200&days=90");
   const [range, setRange] = useState("30");
   const { fmt, symbol, currency: userCur } = useFormatMoney();
@@ -41,7 +43,7 @@ export function AnalyticsView() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Analytics</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("analytics.title")}</h1>
           <p className="text-sm text-muted-foreground">Insights into your spending & income</p>
         </div>
         <Select value={range} onValueChange={setRange}>

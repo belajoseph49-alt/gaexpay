@@ -22,8 +22,10 @@ import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
+import { useTranslation } from "@/hooks/use-translation";
 
 export function SettingsView() {
+  const { t } = useTranslation();
   const { data } = useFetch<{ user: any }>("/api/me");
   const { data: devData } = useFetch<{ devices: any[] }>("/api/devices");
   const { theme, setTheme } = useTheme();
@@ -42,8 +44,8 @@ export function SettingsView() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">Manage your account, security & preferences</p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("settings.title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("settings.subtitle")}</p>
       </div>
 
       <Tabs defaultValue="profile">

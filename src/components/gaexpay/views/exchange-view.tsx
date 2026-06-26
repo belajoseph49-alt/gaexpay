@@ -22,8 +22,10 @@ import {
 } from "@/components/ui/dialog";
 import { AnimatedNumber } from "@/components/gaexpay/animated-number";
 import { useFormatMoney } from "@/hooks/use-format-money";
+import { useTranslation } from "@/hooks/use-translation";
 
 export function ExchangeView() {
+  const { t } = useTranslation();
   const { data: walletData, reload } = useFetch<{ wallets: any[] }>("/api/wallets");
   const { data: ratesData } = useFetch<{ rates: any[] }>("/api/exchange-rates");
   const wallets = walletData?.wallets ?? [];
@@ -96,7 +98,7 @@ export function ExchangeView() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Currency Exchange</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("ex.title")}</h1>
         <p className="text-sm text-muted-foreground">Convert between your wallets at live rates</p>
       </div>
 

@@ -16,8 +16,10 @@ import { AnimatedNumber } from "@/components/gaexpay/animated-number";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
+import { useTranslation } from "@/hooks/use-translation";
 
 export function StatementView() {
+  const { t } = useTranslation();
   const now = new Date();
   const [month, setMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
   const { fmt, symbol, currency: userCur } = useFormatMoney();
@@ -45,7 +47,7 @@ export function StatementView() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3 no-print">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Account Statement</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("statement.title")}</h1>
           <p className="text-sm text-muted-foreground">{summary.monthName} · Generated {new Date(generatedAt).toLocaleDateString()}</p>
         </div>
         <div className="flex gap-2">

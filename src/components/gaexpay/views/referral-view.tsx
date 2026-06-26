@@ -16,8 +16,10 @@ import { formatMoney, timeAgo } from "@/lib/gaexpay";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
+import { useTranslation } from "@/hooks/use-translation";
 
 export function ReferralView() {
+  const { t } = useTranslation();
   const { data } = useFetch<any>("/api/referral");
   const [copied, setCopied] = useState(false);
   const { fmt, symbol, currency: userCur } = useFormatMoney();
@@ -43,7 +45,7 @@ export function ReferralView() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Referral & Rewards</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("referral.title")}</h1>
         <p className="text-sm text-muted-foreground">Invite friends, earn rewards & climb the tiers</p>
       </div>
 

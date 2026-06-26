@@ -23,6 +23,7 @@ import { BILL_CATEGORIES, formatMoney } from "@/lib/gaexpay";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
+import { useTranslation } from "@/hooks/use-translation";
 
 const BILLER_ICONS: Record<string, any> = {
   electricity: Zap, water: Droplet, internet: Wifi, tv: Tv,
@@ -56,20 +57,21 @@ const DATA_PLANS = [
 ];
 
 export function PayView() {
+  const { t } = useTranslation();
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Pay & Bills</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("pay.title")}</h1>
         <p className="text-sm text-muted-foreground">
-          Pay EVERYTHING — scan-to-pay, utilities, taxes, customs, school fees, airtime & data
+          {t("pay.subtitle")}
         </p>
       </div>
       <Tabs defaultValue="qr">
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
-          <TabsTrigger value="qr"><QrCode className="h-4 w-4 mr-1.5" /> Scan & Pay</TabsTrigger>
-          <TabsTrigger value="merchants"><Store className="h-4 w-4 mr-1.5" /> Merchants</TabsTrigger>
-          <TabsTrigger value="bills"><Receipt className="h-4 w-4 mr-1.5" /> Bills</TabsTrigger>
-          <TabsTrigger value="airtime"><Smartphone className="h-4 w-4 mr-1.5" /> Airtime</TabsTrigger>
+          <TabsTrigger value="qr"><QrCode className="h-4 w-4 mr-1.5" /> {t("pay.scanPay")}</TabsTrigger>
+          <TabsTrigger value="merchants"><Store className="h-4 w-4 mr-1.5" /> {t("pay.merchants")}</TabsTrigger>
+          <TabsTrigger value="bills"><Receipt className="h-4 w-4 mr-1.5" /> {t("pay.bills")}</TabsTrigger>
+          <TabsTrigger value="airtime"><Smartphone className="h-4 w-4 mr-1.5" /> {t("pay.airtime")}</TabsTrigger>
         </TabsList>
         <TabsContent value="qr" className="mt-4"><QrPay /></TabsContent>
         <TabsContent value="merchants" className="mt-4"><MerchantsPay /></TabsContent>

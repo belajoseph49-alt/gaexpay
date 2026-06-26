@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
+import { useTranslation } from "@/hooks/use-translation";
 
 const WALLET_GRADIENTS: Record<string, string> = {
   NGN: "from-emerald-600 to-teal-700",
@@ -33,6 +34,7 @@ const WALLET_GRADIENTS: Record<string, string> = {
 };
 
 export function WalletsView() {
+  const { t } = useTranslation();
   const { data, reload } = useFetch<{ wallets: any[]; totalNGN: number }>("/api/wallets");
   const { data: ratesData } = useFetch<{ rates: any[] }>("/api/exchange-rates");
   const { setView, setSelectedWalletId } = useApp();
@@ -65,7 +67,7 @@ export function WalletsView() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Wallets</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("wallets.title")}</h1>
           <p className="text-sm text-muted-foreground">Manage your multi-currency balances</p>
         </div>
         <div className="flex gap-2">

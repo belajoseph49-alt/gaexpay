@@ -1,0 +1,748 @@
+    90→    backImage: "",
+    91→    selfieImage: "",
+    92→  });
+    93→  const [submitResult, setSubmitResult] = useState<null | { ok: true; submittedAt: string }>(null);
+    94→
+    95→  // Prefill from /api/me when it loads
+    96→  useEffect(() => {
+    97→    const u = meData?.user;
+    98→    if (u) {
+    99→      setForm((f) => ({
+   100→        ...f,
+   101→        firstName: f.firstName || u.firstName || "",
+   102→        lastName: f.lastName || u.lastName || "",
+   103→        phone: f.phone || u.phone || "",
+   104→        nationality: f.nationality || u.country || "Nigeria",
+   105→        address: f.address || u.address || "",
+   106→        city: f.city || u.city || "",
+   107→        dob: f.dob || u.dob || "",
+   108→      }));
+   109→    }
+   110→  }, [meData]);
+   111→
+   112→  const status = data?.kycStatus ?? "unverified";
+   113→  const tier = data?.kycTier ?? 0;
+   114→  const completion = Math.min(100, tier * 33 + (status === "verified" ? 1 : 0));
+   115→  const isWizardMode =
+   116→    submitResult !== null ||
+   117→    status === "unverified" ||
+   118→    status === "rejected";
+   119→
+   120→  const update = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
+   121→
+   122→  const detectGps = async () => {
+   123→    const c = await detectGpsAddress();
+   124→    if (!c) {
+   125→      toast.error("Could not detect your location. Please enter your address manually.");
+   126→      return;
+   127→    }
+   128→    toast.success(`Location detected: ${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}`);
+   129→    update({
+   130→      address:
+   131→        form.address ||
+   132→        `GPS: ${c.lat.toFixed(5)}, ${c.lon.toFixed(5)} (auto-detected — please refine)`,
+   133→    });
+   134→  };
+   135→
+   136→  const validateStep = (s: number): string | null => {
+   137→    if (s === 0) {
+   138→      if (!form.dob) return "Date of birth is required";
+   139→      if (!form.nationality) return "Nationality is required";
+   140→      if (!form.address) return "Address is required";
+   141→    }
+   142→    if (s === 1) {
+   143→      if (!form.documentNumber) return "Document number is required";
+   144→      if (!form.documentExpiry) return "Document expiry is required";
+   145→      if (!form.frontImage) return "Front image is required";
+   146→      const doc = DOC_TYPES.find((d) => d.id === form.documentType);
+   147→      if (doc?.hasBack && !form.backImage) return "Back image is required for this document";
+   148→    }
+   149→    if (s === 2) {
+   150→      if (!form.selfieImage) return "Selfie is required";
+   151→    }
+   152→    return null;
+   153→  };
+   154→
+   155→  const next = () => {
+   156→    const err = validateStep(step);
+   157→    if (err) {
+   158→      toast.error(err);
+   159→      return;
+   160→    }
+   161→    setStep((s) => Math.min(WIZARD_STEPS.length - 1, s + 1));
+   162→  };
+   163→  const back = () => setStep((s) => Math.max(0, s - 1));
+   164→
+   165→  const submit = async () => {
+   166→    // Final validation across all steps
+   167→    for (let i = 0; i < WIZARD_STEPS.length - 1; i++) {
+   168→      const err = validateStep(i);
+   169→      if (err) {
+   170→        setStep(i);
+   171→        toast.error(err);
+   172→        return;
+   173→      }
+   174→    }
+   175→    setSubmitting(true);
+   176→    try {
+   177→      const res = await fetch("/api/kyc/submit", {
+   178→        method: "POST",
+   179→        headers: { "Content-Type": "application/json" },
+   180→        body: JSON.stringify({
+   181→          dob: form.dob,
+   182→          nationality: form.nationality,
+   183→          address: form.address,
+   184→          city: form.city,
+   185→          documentType: form.documentType,
+   186→          documentNumber: form.documentNumber,
+   187→          documentExpiry: form.documentExpiry,
+   188→          frontImage: form.frontImage,
+   189→          backImage: form.backImage,
+   190→          selfieImage: form.selfieImage,
+   191→        }),
+   192→      });
+   193→      const json = await res.json();
+   194→      if (!res.ok) {
+   195→        throw new Error(json?.error ?? "Submission failed");
+   196→      }
+   197→      setSubmitResult({ ok: true, submittedAt: new Date().toISOString() });
+   198→      toast.success("KYC submitted for review");
+   199→      reload();
+   200→    } catch (e: any) {
+   201→      toast.error(e?.message ?? "Submission failed");
+   202→    } finally {
+   203→      setSubmitting(false);
+   204→    }
+   205→  };
+   206→
+   207→  // ---- Success screen ------------------------------------------------------
+   208→  if (submitResult) {
+   209→    return (
+   210→      <div className="mx-auto max-w-2xl py-10">
+   211→        <motion.div
+   212→          initial={{ opacity: 0, scale: 0.95 }}
+   213→          animate={{ opacity: 1, scale: 1 }}
+   214→        >
+   215→          <Card className="border-0 bg-gradient-to-br from-emerald-600 to-teal-700 p-8 text-center text-white">
+   216→            <div className="mx-auto mb-4 grid h-20 w-20 place-items-center rounded-full bg-white/20 backdrop-blur">
+   217→              <CheckCircle2 className="h-10 w-10" />
+   218→            </div>
+   219→            <h2 className="text-2xl font-bold">Submission Received!</h2>
+   220→            <p className="mt-2 text-white/90">
+   221→              We&apos;ll review your documents within 24-48 hours. You&apos;ll receive a
+   222→              notification as soon as your verification is complete.
+   223→            </p>
+   224→            <div className="mt-6 flex flex-wrap justify-center gap-3">
+   225→              <Button
+   226→                variant="secondary"
+   227→                onClick={() => {
+   228→                  setSubmitResult(null);
+   229→                  setStep(0);
+   230→                  reload();
+   231→                }}
+   232→              >
+   233→                Back to Identity
+   234→              </Button>
+   235→            </div>
+   236→            <p className="mt-4 text-xs text-white/70">
+   237→              Submitted at {formatDate(submitResult.submittedAt)}
+   238→            </p>
+   239→          </Card>
+   240→        </motion.div>
+   241→      </div>
+   242→    );
+   243→  }
+   244→
+   245→  return (
+   246→    <div className="space-y-6">
+   247→      <div>
+   248→        <h1 className="text-2xl font-bold tracking-tight">Identity Verification (KYC)</h1>
+   249→        <p className="text-sm text-muted-foreground">
+   250→          Verify your identity to unlock higher limits and all features
+   251→        </p>
+   252→      </div>
+   253→
+   254→      {/* Status banner */}
+   255→      <Card
+   256→        className={cn(
+   257→          "relative overflow-hidden border-0 p-6 text-white",
+   258→          status === "verified"
+   259→            ? "bg-gradient-to-br from-emerald-600 to-teal-700"
+   260→            : status === "pending"
+   261→            ? "bg-gradient-to-br from-amber-500 to-orange-600"
+   262→            : status === "rejected"
+   263→            ? "bg-gradient-to-br from-rose-500 to-red-600"
+   264→            : "bg-gradient-to-br from-slate-600 to-slate-800",
+   265→        )}
+   266→      >
+   267→        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+   268→        <div className="relative flex flex-wrap items-center justify-between gap-4">
+   269→          <div className="flex items-center gap-4">
+   270→            <div className="grid h-14 w-14 place-items-center rounded-full bg-white/20 backdrop-blur">
+   271→              {status === "verified" ? (
+   272→                <CheckCircle2 className="h-7 w-7" />
+   273→              ) : status === "pending" ? (
+   274→                <Clock className="h-7 w-7" />
+   275→              ) : status === "rejected" ? (
+   276→                <XCircle className="h-7 w-7" />
+   277→              ) : (
+   278→                <ShieldCheck className="h-7 w-7" />
+   279→              )}
+   280→            </div>
+   281→            <div>
+   282→              <div className="flex items-center gap-2">
+   283→                <h2 className="text-xl font-bold capitalize">{status}</h2>
+   284→                <Badge className="bg-white/20 text-white border-0">Tier {tier}</Badge>
+   285→              </div>
+   286→              <p className="text-sm text-white/80">
+   287→                {status === "verified"
+   288→                  ? "Your identity is fully verified. All features unlocked."
+   289→                  : status === "pending"
+   290→                  ? "Your documents are under review. This usually takes 24-48 hours."
+   291→                  : status === "rejected"
+   292→                  ? "Your last submission was rejected. Please review and resubmit."
+   293→                  : "Complete verification to unlock all features."}
+   294→              </p>
+   295→              {data?.kycRejectionReason && status === "rejected" && (
+   296→                <p className="mt-1 text-xs text-white/90">
+   297→                  Reason: {data.kycRejectionReason}
+   298→                </p>
+   299→              )}
+   300→              {data?.kycVerifiedAt && status === "verified" && (
+   301→                <p className="text-xs text-white/70 mt-0.5">
+   302→                  Verified on {formatDate(data.kycVerifiedAt)}
+   303→                </p>
+   304→              )}
+   305→            </div>
+   306→          </div>
+   307→          <div className="text-right">
+   308→            <p className="text-xs text-white/70">Verification Progress</p>
+   309→            <p className="text-2xl font-bold">{completion}%</p>
+   310→          </div>
+   311→        </div>
+   312→        <Progress value={completion} className="mt-4 h-1.5 bg-white/20" />
+   313→      </Card>
+   314→
+   315→      {/* Tier table — always visible */}
+   316→      <Card className="p-5">
+   317→        <div className="flex items-center justify-between mb-1">
+   318→          <h3 className="font-semibold">Verification Tiers &amp; Limits</h3>
+   319→          {data?.nextTier && status !== "pending" && (
+   320→            <Badge className="bg-primary/10 text-primary border-0">
+   321→              <Sparkles className="mr-1 h-3 w-3" />
+   322→              Next: {data.nextTier.name} · {symbol}
+   323→              {data.nextTier.dailyLimit.toLocaleString()}/day
+   324→            </Badge>
+   325→          )}
+   326→        </div>
+   327→        <p className="text-xs text-muted-foreground mb-4">
+   328→          Upgrade your tier to access more features
+   329→        </p>
+   330→        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+   331→          {KYC_TIERS.map((t) => {
+   332→            const unlocked = tier >= t.tier;
+   333→            const current = tier === t.tier;
+   334→            return (
+   335→              <div
+   336→                key={t.tier}
+   337→                className={cn(
+   338→                  "rounded-xl border p-4 transition",
+   339→                  current
+   340→                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+   341→                    : unlocked
+   342→                    ? "border-emerald-500/30 bg-emerald-500/5"
+   343→                    : "opacity-60",
+   344→                )}
+   345→              >
+   346→                <div className="flex items-center justify-between mb-2">
+   347→                  <div className="flex items-center gap-2">
+   348→                    {t.tier === 3 ? (
+   349→                      <Award className="h-4 w-4 text-amber-500" />
+   350→                    ) : t.tier === 0 ? (
+   351→                      <Lock className="h-4 w-4" />
+   352→                    ) : (
+   353→                      <ShieldCheck className="h-4 w-4" />
+   354→                    )}
+   355→                    <span className="font-semibold text-sm">{t.name}</span>
+   356→                  </div>
+   357→                  {current && <Badge className="text-[10px]">Current</Badge>}
+   358→                  {unlocked && !current && (
+   359→                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+   360→                  )}
+   361→                </div>
+   362→                <p className="text-xs text-muted-foreground mb-2">Daily limit</p>
+   363→                <p className="text-lg font-bold tabular-nums">
+   364→                  {symbol}
+   365→                  {t.daily.toLocaleString()}
+   366→                </p>
+   367→                <div className="mt-3 space-y-1">
+   368→                  {t.features.map((f) => (
+   369→                    <div key={f} className="flex items-start gap-1.5 text-xs">
+   370→                      <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-emerald-500" />
+   371→                      <span>{f}</span>
+   372→                    </div>
+   373→                  ))}
+   374→                </div>
+   375→              </div>
+   376→            );
+   377→          })}
+   378→        </div>
+   379→        {data?.nextTier && status !== "pending" && (
+   380→          <div className="mt-4 rounded-lg bg-muted/40 p-3">
+   381→            <p className="text-xs font-semibold mb-1">
+   382→              To reach Tier {data.nextTier.tier} ({data.nextTier.name}):
+   383→            </p>
+   384→            <ul className="space-y-1">
+   385→              {data.nextTier.requirements.map((r) => (
+   386→                <li key={r} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+   387→                  <ChevronRight className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
+   388→                  <span>{r}</span>
+   389→                </li>
+   390→              ))}
+   391→            </ul>
+   392→          </div>
+   393→        )}
+   394→      </Card>
+   395→
+   396→      {/* Wizard OR documents list */}
+   397→      {isWizardMode ? (
+   398→        <Card className="p-5">
+   399→          {/* Wizard header */}
+   400→          <div className="mb-6">
+   401→            <h3 className="font-semibold mb-1">Complete Your Verification</h3>
+   402→            <p className="text-xs text-muted-foreground">
+   403→              Step {step + 1} of {WIZARD_STEPS.length}: {WIZARD_STEPS[step].label}
+   404→            </p>
+   405→            <div className="mt-3 grid grid-cols-4 gap-1.5">
+   406→              {WIZARD_STEPS.map((s, i) => {
+   407→                const Icon = s.icon;
+   408→                const done = i < step;
+   409→                const active = i === step;
+   410→                return (
+   411→                  <div
+   412→                    key={s.id}
+   413→                    className={cn(
+   414→                      "flex flex-col items-center gap-1 rounded-lg border p-2 transition",
+   415→                      active
+   416→                        ? "border-primary bg-primary/5"
+   417→                        : done
+   418→                        ? "border-emerald-500/30 bg-emerald-500/5"
+   419→                        : "border-border opacity-60",
+   420→                    )}
+   421→                  >
+   422→                    <div
+   423→                      className={cn(
+   424→                        "grid h-7 w-7 place-items-center rounded-full text-xs font-bold",
+   425→                        active
+   426→                          ? "bg-primary text-primary-foreground"
+   427→                          : done
+   428→                          ? "bg-emerald-500 text-white"
+   429→                          : "bg-muted text-muted-foreground",
+   430→                      )}
+   431→                    >
+   432→                      {done ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-3.5 w-3.5" />}
+   433→                    </div>
+   434→                    <span className="text-[10px] font-medium text-center leading-tight">
+   435→                      {s.label}
+   436→                    </span>
+   437→                  </div>
+   438→                );
+   439→              })}
+   440→            </div>
+   441→          </div>
+   442→
+   443→          <AnimatePresence mode="wait">
+   444→            <motion.div
+   445→              key={step}
+   446→              initial={{ opacity: 0, x: 20 }}
+   447→              animate={{ opacity: 1, x: 0 }}
+   448→              exit={{ opacity: 0, x: -20 }}
+   449→              transition={{ duration: 0.18 }}
+   450→            >
+   451→              {/* STEP 0: Personal info */}
+   452→              {step === 0 && (
+   453→                <div className="space-y-4">
+   454→                  <div className="grid gap-4 sm:grid-cols-2">
+   455→                    <div>
+   456→                      <Label className="text-xs">First name</Label>
+   457→                      <Input
+   458→                        value={form.firstName}
+   459→                        onChange={(e) => update({ firstName: e.target.value })}
+   460→                        disabled
+   461→                        className="mt-1 bg-muted/40"
+   462→                      />
+   463→                    </div>
+   464→                    <div>
+   465→                      <Label className="text-xs">Last name</Label>
+   466→                      <Input
+   467→                        value={form.lastName}
+   468→                        onChange={(e) => update({ lastName: e.target.value })}
+   469→                        disabled
+   470→                        className="mt-1 bg-muted/40"
+   471→                      />
+   472→                    </div>
+   473→                  </div>
+   474→                  <div className="grid gap-4 sm:grid-cols-2">
+   475→                    <div>
+   476→                      <Label className="text-xs">
+   477→                        <Calendar className="mr-1 inline h-3 w-3" />
+   478→                        Date of birth
+   479→                      </Label>
+   480→                      <Input
+   481→                        type="date"
+   482→                        value={form.dob}
+   483→                        onChange={(e) => update({ dob: e.target.value })}
+   484→                        className="mt-1"
+   485→                      />
+   486→                    </div>
+   487→                    <div>
+   488→                      <Label className="text-xs">
+   489→                        <Globe className="mr-1 inline h-3 w-3" />
+   490→                        Nationality
+   491→                      </Label>
+   492→                      <Select
+   493→                        value={form.nationality}
+   494→                        onValueChange={(v) => update({ nationality: v })}
+   495→                      >
+   496→                        <SelectTrigger className="mt-1">
+   497→                          <SelectValue placeholder="Select country" />
+   498→                        </SelectTrigger>
+   499→                        <SelectContent>
+   500→                          {CURRENCIES.filter((c) => (c as any).type === "fiat").map((c) => (
+   501→                            <SelectItem key={c.code} value={(c as any).country}>
+   502→                              {(c as any).flag} {(c as any).country}
+   503→                            </SelectItem>
+   504→                          ))}
+   505→                        </SelectContent>
+   506→                      </Select>
+   507→                    </div>
+   508→                  </div>
+   509→                  <div>
+   510→                    <Label className="text-xs">
+   511→                      <MapPin className="mr-1 inline h-3 w-3" />
+   512→                      Residential address
+   513→                    </Label>
+   514→                    <div className="mt-1 flex gap-2">
+   515→                      <Textarea
+   516→                        rows={2}
+   517→                        value={form.address}
+   518→                        onChange={(e) => update({ address: e.target.value })}
+   519→                        placeholder="House number, street, district…"
+   520→                      />
+   521→                      <Button
+   522→                        type="button"
+   523→                        variant="outline"
+   524→                        size="sm"
+   525→                        onClick={detectGps}
+   526→                        className="shrink-0 self-end"
+   527→                      >
+   528→                        <Crosshair className="h-4 w-4" />
+   529→                      </Button>
+   530→                    </div>
+   531→                    <p className="mt-1 text-[10px] text-muted-foreground">
+   532→                      Use the crosshair to auto-detect your GPS coordinates.
+   533→                    </p>
+   534→                  </div>
+   535→                  <div className="grid gap-4 sm:grid-cols-2">
+   536→                    <div>
+   537→                      <Label className="text-xs">City</Label>
+   538→                      <Input
+   539→                        value={form.city}
+   540→                        onChange={(e) => update({ city: e.target.value })}
+   541→                        className="mt-1"
+   542→                      />
+   543→                    </div>
+   544→                    <div>
+   545→                      <Label className="text-xs">
+   546→                        <Phone className="mr-1 inline h-3 w-3" />
+   547→                        Phone
+   548→                      </Label>
+   549→                      <Input
+   550→                        value={form.phone}
+   551→                        onChange={(e) => update({ phone: e.target.value })}
+   552→                        disabled
+   553→                        className="mt-1 bg-muted/40"
+   554→                      />
+   555→                    </div>
+   556→                  </div>
+   557→                </div>
+   558→              )}
+   559→
+   560→              {/* STEP 1: ID document */}
+   561→              {step === 1 && (
+   562→                <div className="space-y-4">
+   563→                  <div>
+   564→                    <Label className="text-xs">Document type</Label>
+   565→                    <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+   566→                      {DOC_TYPES.map((d) => {
+   567→                        const Icon = d.icon;
+   568→                        const active = form.documentType === d.id;
+   569→                        return (
+   570→                          <button
+   571→                            key={d.id}
+   572→                            type="button"
+   573→                            onClick={() => update({ documentType: d.id })}
+   574→                            className={cn(
+   575→                              "flex flex-col items-center gap-1.5 rounded-lg border p-3 text-center transition",
+   576→                              active
+   577→                                ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+   578→                                : "border-border hover:border-primary/40 hover:bg-muted/30",
+   579→                            )}
+   580→                          >
+   581→                            <Icon className="h-5 w-5" />
+   582→                            <span className="text-[10px] font-medium leading-tight">
+   583→                              {d.label}
+   584→                            </span>
+   585→                          </button>
+   586→                        );
+   587→                      })}
+   588→                    </div>
+   589→                  </div>
+   590→                  <div className="grid gap-4 sm:grid-cols-2">
+   591→                    <div>
+   592→                      <Label className="text-xs">Document number</Label>
+   593→                      <Input
+   594→                        value={form.documentNumber}
+   595→                        onChange={(e) => update({ documentNumber: e.target.value })}
+   596→                        placeholder="e.g. A12345678"
+   597→                        className="mt-1"
+   598→                      />
+   599→                    </div>
+   600→                    <div>
+   601→                      <Label className="text-xs">Expiry date</Label>
+   602→                      <Input
+   603→                        type="date"
+   604→                        value={form.documentExpiry}
+   605→                        onChange={(e) => update({ documentExpiry: e.target.value })}
+   606→                        className="mt-1"
+   607→                      />
+   608→                    </div>
+   609→                  </div>
+   610→                  <div className="grid gap-4 sm:grid-cols-2">
+   611→                    <ImageUpload
+   612→                      label="Front of document"
+   613→                      value={form.frontImage}
+   614→                      onChange={(v) => update({ frontImage: v })}
+   615→                      hint="JPG/PNG · max 2 MB"
+   616→                    />
+   617→                    {DOC_TYPES.find((d) => d.id === form.documentType)?.hasBack ? (
+   618→                      <ImageUpload
+   619→                        label="Back of document"
+   620→                        value={form.backImage}
+   621→                        onChange={(v) => update({ backImage: v })}
+   622→                        hint="JPG/PNG · max 2 MB"
+   623→                      />
+   624→                    ) : (
+   625→                      <div className="hidden sm:block" />
+   626→                    )}
+   627→                  </div>
+   628→                </div>
+   629→              )}
+   630→
+   631→              {/* STEP 2: Selfie */}
+   632→              {step === 2 && (
+   633→                <div className="space-y-4">
+   634→                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+   635→                    <p className="mb-1 text-xs font-semibold text-amber-700 dark:text-amber-400">
+   636→                      Liveness check tips
+   637→                    </p>
+   638→                    <ul className="space-y-0.5 text-xs text-amber-700/90 dark:text-amber-400/90">
+   639→                      <li>• Look straight at the camera</li>
+   640→                      <li>• Remove glasses, hats, or face coverings</li>
+   641→                      <li>• Ensure good, even lighting on your face</li>
+   642→                      <li>• Keep a neutral expression</li>
+   643→                    </ul>
+   644→                  </div>
+   645→                  <div className="grid gap-4 sm:grid-cols-2">
+   646→                    <div>
+   647→                      <Label className="mb-1.5 block text-xs">Capture via webcam</Label>
+   648→                      <WebcamCapture
+   649→                        onCapture={(dataUrl) => update({ selfieImage: dataUrl })}
+   650→                      />
+   651→                    </div>
+   652→                    <div>
+   653→                      <ImageUpload
+   654→                        label="Or upload a selfie photo"
+   655→                        value={form.selfieImage}
+   656→                        onChange={(v) => update({ selfieImage: v })}
+   657→                        hint="JPG/PNG · max 2 MB"
+   658→                      />
+   659→                    </div>
+   660→                  </div>
+   661→                  {form.selfieImage && (
+   662→                    <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-400">
+   663→                      <CheckCircle2 className="h-3.5 w-3.5" />
+   664→                      Selfie captured. Ready to continue.
+   665→                    </div>
+   666→                  )}
+   667→                </div>
+   668→              )}
+   669→
+   670→              {/* STEP 3: Review */}
+   671→              {step === 3 && (
+   672→                <div className="space-y-4">
+   673→                  <div className="rounded-lg border p-4">
+   674→                    <h4 className="mb-2 text-sm font-semibold">Personal Info</h4>
+   675→                    <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+   676→                      <dt className="text-muted-foreground">Name</dt>
+   677→                      <dd>{form.firstName} {form.lastName}</dd>
+   678→                      <dt className="text-muted-foreground">Date of birth</dt>
+   679→                      <dd>{form.dob}</dd>
+   680→                      <dt className="text-muted-foreground">Nationality</dt>
+   681→                      <dd>{form.nationality}</dd>
+   682→                      <dt className="text-muted-foreground">Address</dt>
+   683→                      <dd className="truncate">{form.address}</dd>
+   684→                      <dt className="text-muted-foreground">Phone</dt>
+   685→                      <dd>{form.phone}</dd>
+   686→                    </dl>
+   687→                  </div>
+   688→                  <div className="rounded-lg border p-4">
+   689→                    <h4 className="mb-2 text-sm font-semibold">ID Document</h4>
+   690→                    <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+   691→                      <dt className="text-muted-foreground">Type</dt>
+   692→                      <dd className="capitalize">
+   693→                        {DOC_TYPES.find((d) => d.id === form.documentType)?.label}
+   694→                      </dd>
+   695→                      <dt className="text-muted-foreground">Number</dt>
+   696→                      <dd>{form.documentNumber}</dd>
+   697→                      <dt className="text-muted-foreground">Expiry</dt>
+   698→                      <dd>{form.documentExpiry}</dd>
+   699→                    </dl>
+   700→                    <div className="mt-3 flex gap-2">
+   701→                      {form.frontImage && (
+   702→                        <img
+   703→                          src={form.frontImage}
+   704→                          alt="Front"
+   705→                          className="h-16 w-20 rounded object-cover"
+   706→                        />
+   707→                      )}
+   708→                      {form.backImage && (
+   709→                        <img
+   710→                          src={form.backImage}
+   711→                          alt="Back"
+   712→                          className="h-16 w-20 rounded object-cover"
+   713→                        />
+   714→                      )}
+   715→                      {form.selfieImage && (
+   716→                        <img
+   717→                          src={form.selfieImage}
+   718→                          alt="Selfie"
+   719→                          className="h-16 w-20 rounded object-cover"
+   720→                        />
+   721→                      )}
+   722→                    </div>
+   723→                  </div>
+   724→                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs">
+   725→                    <ShieldCheck className="mr-1 inline h-3.5 w-3.5 text-primary" />
+   726→                    By submitting, you confirm the information is accurate. Your
+   727→                    documents will be reviewed within 24-48 hours.
+   728→                  </div>
+   729→                </div>
+   730→              )}
+   731→            </motion.div>
+   732→          </AnimatePresence>
+   733→
+   734→          {/* Wizard nav */}
+   735→          <div className="mt-6 flex items-center justify-between">
+   736→            <Button variant="outline" onClick={back} disabled={step === 0 || submitting}>
+   737→              <ChevronLeft className="mr-1 h-4 w-4" /> Back
+   738→            </Button>
+   739→            {step < WIZARD_STEPS.length - 1 ? (
+   740→              <Button onClick={next}>
+   741→                Continue <ChevronRight className="ml-1 h-4 w-4" />
+   742→              </Button>
+   743→            ) : (
+   744→              <Button onClick={submit} disabled={submitting}>
+   745→                {submitting ? (
+   746→                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+   747→                ) : (
+   748→                  <CheckCircle2 className="mr-1 h-4 w-4" />
+   749→                )}
+   750→                Submit for review
+   751→              </Button>
+   752→            )}
+   753→          </div>
+   754→        </Card>
+   755→      ) : (
+   756→        // ---- Submitted documents list (pending / verified states) ----
+   757→        <Card className="p-5">
+   758→          <h3 className="font-semibold mb-1">Submitted Documents</h3>
+   759→          <p className="text-xs text-muted-foreground mb-4">
+   760→            Your verification documents
+   761→          </p>
+   762→          <div className="space-y-2">
+   763→            {(!data?.documents || data.documents.length === 0) && (
+   764→              <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+   765→                {loading ? "Loading…" : "No documents submitted yet"}
+   766→              </div>
+   767→            )}
+   768→            {data?.documents.map((d) => {
+   769→              const Icon =
+   770→                DOC_TYPES.find((t) => t.id === d.type)?.icon || FileCheck;
+   771→              const sc: Record<string, { color: string; icon: any }> = {
+   772→                approved: {
+   773→                  color: "text-emerald-600 bg-emerald-500/10",
+   774→                  icon: CheckCircle2,
+   775→                },
+   776→                pending: {
+   777→                  color: "text-amber-600 bg-amber-500/10",
+   778→                  icon: Clock,
+   779→                },
+   780→                rejected: {
+   781→                  color: "text-rose-600 bg-rose-500/10",
+   782→                  icon: XCircle,
+   783→                },
+   784→              };
+   785→              const s = sc[d.status] ?? sc.pending;
+   786→              const SIcon = s.icon;
+   787→              return (
+   788→                <div key={d.id} className="flex items-center gap-3 rounded-lg border p-3">
+   789→                  <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary">
+   790→                    <Icon className="h-5 w-5" />
+   791→                  </div>
+   792→                  <div className="flex-1">
+   793→                    <p className="text-sm font-medium capitalize">
+   794→                      {d.type.replace(/_/g, " ")}
+   795→                    </p>
+   796→                    <p className="text-xs text-muted-foreground">
+   797→                      {d.documentNumber && `#${d.documentNumber} · `}
+   798→                      {d.reviewedAt
+   799→                        ? `Reviewed ${formatDate(d.reviewedAt)}`
+   800→                        : "Awaiting review"}
+   801→                    </p>
+   802→                  </div>
+   803→                  <Badge className={cn("border-0", s.color)} variant="outline">
+   804→                    <SIcon className="mr-1 h-3 w-3" /> {d.status}
+   805→                  </Badge>
+   806→                </div>
+   807→              );
+   808→            })}
+   809→          </div>
+   810→        </Card>
+   811→      )}
+   812→
+   813→      {/* Compliance badges */}
+   814→      <div className="grid gap-3 sm:grid-cols-3">
+   815→        {[
+   816→          { icon: ShieldCheck, title: "AML Compliant", desc: "Anti-Money Laundering checks" },
+   817→          { icon: Lock, title: "PCI-DSS", desc: "Card data security standard" },
+   818→          { icon: Globe, title: "ISO 27001", desc: "Information security mgmt" },
+   819→        ].map((b) => {
+   820→          const Icon = b.icon;
+   821→          return (
+   822→            <Card key={b.title} className="flex items-center gap-3 p-4">
+   823→              <div className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-500/15 text-emerald-500">
+   824→                <Icon className="h-5 w-5" />
+   825→              </div>
+   826→              <div>
+   827→                <p className="text-sm font-semibold">{b.title}</p>
+   828→                <p className="text-xs text-muted-foreground">{b.desc}</p>
+   829→              </div>
+   830→            </Card>
+   831→          );
+   832→        })}
+   833→      </div>
+   834→    </div>
+   835→  );
+   836→}
+   837→
