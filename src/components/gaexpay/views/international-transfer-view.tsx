@@ -192,6 +192,7 @@ export function InternationalTransferView() {
 // ---- Header -------------------------------------------------------------
 
 function HeaderStrip() {
+  const { t } = useTranslation();
   const { setView } = useApp();
   const { fmt, symbol, currency: userCur } = useFormatMoney();
   return (

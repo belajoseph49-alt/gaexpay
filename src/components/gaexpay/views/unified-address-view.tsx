@@ -157,7 +157,7 @@ export function UnifiedAddressView() {
           <AddressCardsGrid addresses={data.addresses} />
           <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
             <QrCodeSection data={data} />
-            <RecipientLookup />
+            <RecipientLookup addressData={data} />
           </div>
           <CryptoAddressesSection addresses={data.cryptoAddresses} />
           <PaymentMethodsGrid methods={data.supportedPaymentMethods} />
@@ -172,6 +172,7 @@ export function UnifiedAddressView() {
 // ---- Header --------------------------------------------------------------
 
 function HeaderStrip({ onReload, loading }: { onReload: () => void; loading: boolean }) {
+  const { t } = useTranslation();
   const { setView } = useApp();
   const { fmt, symbol, currency: userCur } = useFormatMoney();
   return (
@@ -516,7 +517,7 @@ function QrCodeSection({ data }: { data: any }) {
 
 // ---- Recipient lookup (uses /api/unified-address/resolve) ----------------
 
-function RecipientLookup() {
+function RecipientLookup({ addressData }: { addressData?: any }) {
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<ResolveResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -561,12 +562,12 @@ function RecipientLookup() {
   };
 
   // Sample lookup chips — derived from actual user data
-  const samples = data?.addresses
+  const samples = addressData?.addresses
     ? [
-        data.addresses.atHandle?.value,
-        data.addresses.email?.value,
-        data.addresses.phone?.value,
-        data.addresses.gaexpayId?.value,
+        addressData.addresses.atHandle?.value,
+        addressData.addresses.email?.value,
+        addressData.addresses.phone?.value,
+        addressData.addresses.gaexpayId?.value,
       ].filter(Boolean).slice(0, 4)
     : [];
 
