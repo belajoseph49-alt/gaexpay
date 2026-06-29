@@ -7,7 +7,7 @@ import {
   Sparkles, PiggyBank, Wallet2, CalendarClock, Store, FileText, Trophy,
   Calendar, MapPin, Bitcoin, Repeat, Globe, DollarSign, AtSign, Banknote,
   Building2, Briefcase, Landmark, Code2, UserCheck, Receipt, Crown,
-  Network,
+  Network, ShoppingBag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp, type View } from "@/lib/store";
@@ -120,6 +120,7 @@ const NAV: NavGroup[] = [
         featureFlag: "virtual_cards",
       },
       { id: "pay", label: "Pay & Bills", labelKey: "nav.payBills", icon: QrCode, featureFlag: "qr_payments" },
+      { id: "marketplace", label: "Marketplace", labelKey: "nav.marketplace", icon: ShoppingBag, badge: "New" },
       // Personal-only financial tools
       { id: "savings", label: "Savings Goals", labelKey: "nav.savingsGoals", icon: PiggyBank, accountTypes: ["personal"], featureFlag: "savings_goals" },
       { id: "budgets", label: "Budgets", labelKey: "nav.budgets", icon: Wallet2, accountTypes: ["personal"], featureFlag: "budgets" },

@@ -3836,3 +3836,33 @@ Stage Summary:
 - RTL support for Arabic
 - French translations completed for all new keys
 - Dev server: stable on port 3000
+
+---
+Task ID: redesign-marketplace
+Agent: Marketplace Redesign — Video App Style
+Task: Redesign marketplace to match video app design (white bg, purple accent, store pages, product detail, price comparison).
+
+Work Log:
+- Read worklog + explored codebase. Confirmed NO prior marketplace view/API/View-type existed — treated "COMPLETE REWRITE" as build-from-scratch to the video spec.
+- Inspected existing patterns: `useFetch`, `useFormatMoney` (NGN-based with currency conversion), `useTranslation` (12-language i18n with EN fallback), `View` union in `src/lib/store.ts`, app-shell view registry, sidebar/mobile-nav nav catalogs, shadcn/ui set, framer-motion conventions.
+- Added `"marketplace"` to the `View` union in `src/lib/store.ts`.
+- Added 40 `marketplace.*` translation keys + `nav.marketplace` to the EN base in `src/lib/i18n/translations.ts`. Other languages inherit via the existing `build({...en, ...overrides})` helper.
+- Created `src/app/api/marketplace/products/route.ts` — public REST endpoint returning a typed catalog: 6 categories, 2 promos (Nike 15% purple / Starbucks 10% emerald), 6 brand stores (Nike, Adidas, Macy's, Levi's, Starbucks, Puma) and 15 products, each with 2 vendor price-comparison offers (StockX vs Amazon). Prices are NGN so `useFormatMoney` converts them.
+- Created `src/components/gaexpay/views/marketplace-view.tsx` (834 lines) with three internal sub-views driven by local state (single-`/` constraint):
+  1. Marketplace home — search bar (rounded-xl, gray border, magnifier icon), horizontally scrollable category pills (Popular = purple filled), 2-col promo grid (purple + emerald gradients, brand emoji watermark, "Pay with GaexPay" cta, click-to-copy promo code), stores list (circular gradient logos, "Online & In-store", emerald check), "Popular picks" grid.
+  2. Store page — full-bleed purple gradient hero banner with emoji watermark + glow, logo chip, brand name + "Online & In-store", "Get Code" pill, rating/product-count chip, sub-category pills (Sport shoes / Sneakers), product count, 2-col product grid.
+  3. Product detail — large centered product image (rounded-3xl gradient, heart favorite, "Popular" purple pill), brand chip, title, purple star rating + reviews, horizontal size selector (selected = zinc-900 + white), 2 price-comparison cards (StockX highlighted with emerald ring + "Save X" + "In Stock" emerald badge; Amazon neutral), "Add to Cart" (emerald) + "Buy Now" (zinc-900) rounded-xl buttons, related-products grid.
+  4. Bottom navigation (mobile-only, lg:hidden) — Home / Shop (active purple) / Payment / More, safe-area-inset padding.
+  5. Loading skeleton matching the home layout.
+- Wired view into app: imported `MarketplaceView` in `app-shell.tsx` + registered `marketplace` in views map; added "Marketplace" nav item with `ShoppingBag` icon + "New" badge to both `sidebar.tsx` and `mobile-nav.tsx`.
+- Marketplace wraps itself in `bg-white text-zinc-900` so it always matches the video's light shopping-app look regardless of the global dark/light theme. Accent = `#6A11CB` (via Tailwind arbitrary values). All cards use `rounded-2xl` + `shadow-sm` (hover `shadow-md`); framer-motion provides staggered entrance animations.
+
+Self-Verification:
+- `cd /home/z/my-project && bun run lint` → EXIT=0, 0 errors, 0 warnings.
+- `GET /api/marketplace/products` → HTTP 200, returns 6 categories / 2 promos / 6 stores / 15 products (verified via curl + python json parse).
+- Dev server recompiled cleanly (dev.log shows `✓ Compiled` and the view successfully called `/api/marketplace/products`).
+
+Stage Summary:
+- Files created: `src/app/api/marketplace/products/route.ts`, `src/components/gaexpay/views/marketplace-view.tsx`.
+- Files edited: `src/lib/store.ts`, `src/lib/i18n/translations.ts`, `src/components/gaexpay/app-shell.tsx`, `src/components/gaexpay/sidebar.tsx`, `src/components/gaexpay/mobile-nav.tsx`.
+- Design highlights: white surface independent of global theme; purple `#6A11CB` for active pills/badges/hero buttons/star fills; emerald reserved for discounts + "In Stock" + "Add to Cart"; NGN-denominated prices flow through existing `useFormatMoney`; real `useFetch` + `useTranslation` + `useFormatMoney` retained; no new npm packages installed; no existing functionality removed.

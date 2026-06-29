@@ -44,6 +44,7 @@ import { ComplianceView } from "./views/compliance-view";
 import { TreasuryView } from "./views/treasury-view";
 import { DeveloperPortalView } from "./views/developer-portal-view";
 import { ReferralView } from "./views/referral-view";
+import { MarketplaceView } from "./views/marketplace-view";
 import { WalletDetailView } from "./views/wallet-detail-view";
 import { MerchantView } from "./views/merchant-view";
 import { BusinessProView } from "./views/business-pro-view";
@@ -114,6 +115,7 @@ export function AppShell() {
     treasury: <TreasuryView />,
     developer: <DeveloperPortalView />,
     referral: <ReferralView />,
+    marketplace: <MarketplaceView />,
   };
 
   return (

@@ -6,7 +6,7 @@ import {
   QrCode, BarChart3, ShieldCheck, Shield, Settings, LifeBuoy, Users, Gift,
   PiggyBank, Wallet2, CalendarClock, Store, FileText, Trophy, Calendar,
   MapPin, Bitcoin, Repeat, Globe, DollarSign, AtSign, Banknote, Building2,
-  Briefcase, Landmark, Code2, UserCheck, Crown, Network,
+  Briefcase, Landmark, Code2, UserCheck, Crown, Network, ShoppingBag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp, type View } from "@/lib/store";
@@ -53,6 +53,7 @@ const NAV: NavGroup[] = [
       { id: "transactions", label: "Transactions", icon: ArrowLeftRight },
       { id: "cards", label: "Cards", icon: CreditCard, featureFlag: "virtual_cards" },
       { id: "pay", label: "Pay & Bills", icon: QrCode, featureFlag: "qr_payments" },
+      { id: "marketplace", label: "Marketplace", icon: ShoppingBag, badge: "New" },
       { id: "savings", label: "Savings Goals", icon: PiggyBank, accountTypes: ["personal"], featureFlag: "savings_goals" },
       { id: "budgets", label: "Budgets", icon: Wallet2, accountTypes: ["personal"], featureFlag: "budgets" },
       { id: "scheduled", label: "Scheduled", icon: CalendarClock, featureFlag: "scheduled_transfers" },
