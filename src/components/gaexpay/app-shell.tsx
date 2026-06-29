@@ -65,9 +65,10 @@ export function AppShell() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       hydratePreferencesFromStorage();
+      // Don't auto-open currency picker — default to USD
       const stored = localStorage.getItem("gxp_default_currency");
       if (!stored) {
-        setCurrencyPickerOpen(true);
+        localStorage.setItem("gxp_default_currency", "USD");
       }
     }
   }, [setCurrencyPickerOpen]);
