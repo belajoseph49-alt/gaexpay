@@ -129,7 +129,7 @@ interface DeveloperData {
 
 /* ------------------------- config maps ------------------------- */
 const METHOD_BG: Record<string, string> = {
-  GET: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+  GET: "bg-violet-500/15 text-violet-400 border-violet-500/30",
   POST: "bg-blue-500/15 text-blue-400 border-blue-500/30",
   PATCH: "bg-amber-500/15 text-amber-400 border-amber-500/30",
   DELETE: "bg-rose-500/15 text-rose-400 border-rose-500/30",
@@ -138,22 +138,22 @@ const METHOD_BG: Record<string, string> = {
 
 const PERMISSION_COLORS: Record<string, string> = {
   read: "bg-sky-500/15 text-sky-400 border-sky-500/30",
-  write: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+  write: "bg-violet-500/15 text-violet-400 border-violet-500/30",
   admin: "bg-rose-500/15 text-rose-400 border-rose-500/30",
 };
 
 const EVENT_COLORS: Record<string, string> = {
-  "payment.received": "bg-emerald-500/15 text-emerald-400",
-  "payment.completed": "bg-emerald-500/15 text-emerald-400",
+  "payment.received": "bg-violet-500/15 text-violet-400",
+  "payment.completed": "bg-violet-500/15 text-violet-400",
   "payment.failed": "bg-rose-500/15 text-rose-400",
   "transfer.completed": "bg-sky-500/15 text-sky-400",
   "transfer.failed": "bg-rose-500/15 text-rose-400",
-  "kyc.approved": "bg-emerald-500/15 text-emerald-400",
+  "kyc.approved": "bg-violet-500/15 text-violet-400",
   "kyc.rejected": "bg-rose-500/15 text-rose-400",
   "kyc.under_review": "bg-amber-500/15 text-amber-400",
   "fraud.detected": "bg-rose-500/15 text-rose-400",
   "fraud.review": "bg-amber-500/15 text-amber-400",
-  "fraud.cleared": "bg-emerald-500/15 text-emerald-400",
+  "fraud.cleared": "bg-violet-500/15 text-violet-400",
 };
 
 /* =========================================================
@@ -171,7 +171,7 @@ export function DeveloperPortalView() {
         className="flex flex-wrap items-end justify-between gap-3"
       >
         <div className="flex items-center gap-2.5">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/20">
             <Code2 className="h-5 w-5" />
           </div>
           <div>
@@ -182,11 +182,11 @@ export function DeveloperPortalView() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge className="bg-emerald-500/15 text-emerald-600 border-0">
-            <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <Badge className="bg-violet-500/15 text-violet-600 border-0">
+            <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse" />
             Live
           </Badge>
-          <Badge variant="outline" className="border-emerald-500/30 text-emerald-600">
+          <Badge variant="outline" className="border-violet-500/30 text-violet-600">
             <Terminal className="h-3 w-3 mr-1" /> v1.4.2
           </Badge>
           <Button size="sm" variant="outline" onClick={() => reload()}>
@@ -292,7 +292,7 @@ function ApiKeysTab({ data }: { data: DeveloperData }) {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryCard
           icon={Key} label="Total Keys" value={data.apiKeys.length}
-          accent="emerald" sub={`${data.apiKeys.filter((k) => k.status === "active").length} active`}
+          accent="violet" sub={`${data.apiKeys.filter((k) => k.status === "active").length} active`}
         />
         <SummaryCard
           icon={Zap} label="Requests Today"
@@ -316,7 +316,7 @@ function ApiKeysTab({ data }: { data: DeveloperData }) {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-semibold flex items-center gap-2">
-              <Key className="h-4 w-4 text-emerald-500" /> API Keys
+              <Key className="h-4 w-4 text-violet-500" /> API Keys
             </h3>
             <p className="text-xs text-muted-foreground">
               Manage authentication keys for programmatic API access
@@ -422,7 +422,7 @@ function ApiKeysTab({ data }: { data: DeveloperData }) {
                       <div className={cn(
                         "grid h-7 w-7 place-items-center rounded-lg text-[10px] font-bold",
                         k.environment === "production"
-                          ? "bg-emerald-500/15 text-emerald-400"
+                          ? "bg-violet-500/15 text-violet-400"
                           : "bg-amber-500/15 text-amber-400"
                       )}>
                         {k.environment === "production" ? "L" : "T"}
@@ -450,7 +450,7 @@ function ApiKeysTab({ data }: { data: DeveloperData }) {
                         className="text-muted-foreground hover:text-foreground"
                         title="Copy"
                       >
-                        {copiedId === k.id ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                        {copiedId === k.id ? <Check className="h-3.5 w-3.5 text-violet-500" /> : <Copy className="h-3.5 w-3.5" />}
                       </button>
                     </div>
                   </td>
@@ -477,8 +477,8 @@ function ApiKeysTab({ data }: { data: DeveloperData }) {
                   </td>
                   <td className="py-3 pr-3">
                     {k.status === "active" ? (
-                      <Badge className="bg-emerald-500/15 text-emerald-600 border-0">
-                        <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /> Active
+                      <Badge className="bg-violet-500/15 text-violet-600 border-0">
+                        <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-violet-500" /> Active
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="border-rose-500/30 text-rose-600">
@@ -515,7 +515,7 @@ function ApiKeysTab({ data }: { data: DeveloperData }) {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+              <CheckCircle2 className="h-5 w-5 text-violet-500" />
               API key created
             </DialogTitle>
             <DialogDescription>
@@ -524,7 +524,7 @@ function ApiKeysTab({ data }: { data: DeveloperData }) {
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="rounded-lg border bg-muted/40 p-3">
-              <code className="block break-all font-mono text-sm text-emerald-600">{createdKey}</code>
+              <code className="block break-all font-mono text-sm text-violet-600">{createdKey}</code>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -599,7 +599,7 @@ function WebhooksTab({ data }: { data: DeveloperData }) {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryCard
           icon={Webhook} label="Endpoints"
-          value={data.webhooks.length} accent="emerald"
+          value={data.webhooks.length} accent="violet"
           sub={`${data.webhooks.filter((w) => statuses[w.id] === "active").length} active`}
         />
         <SummaryCard
@@ -610,7 +610,7 @@ function WebhooksTab({ data }: { data: DeveloperData }) {
         <SummaryCard
           icon={CheckCircle2} label="Avg Success"
           value={(data.webhooks.reduce((s, w) => s + w.successRate, 0) / data.webhooks.length).toFixed(1)}
-          suffix="%" accent="emerald" sub="across all endpoints"
+          suffix="%" accent="violet" sub="across all endpoints"
         />
         <SummaryCard
           icon={Clock} label="Last Delivery"
@@ -626,7 +626,7 @@ function WebhooksTab({ data }: { data: DeveloperData }) {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-semibold flex items-center gap-2">
-              <Webhook className="h-4 w-4 text-emerald-500" /> Webhook Endpoints
+              <Webhook className="h-4 w-4 text-violet-500" /> Webhook Endpoints
             </h3>
             <p className="text-xs text-muted-foreground">
               Receive real-time event notifications at your endpoints
@@ -693,8 +693,8 @@ function WebhooksTab({ data }: { data: DeveloperData }) {
                   <div className="flex items-center gap-2 mb-1.5">
                     <code className="text-sm font-mono truncate">{w.url}</code>
                     {statuses[w.id] === "active" ? (
-                      <Badge className="bg-emerald-500/15 text-emerald-600 border-0">
-                        <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /> Active
+                      <Badge className="bg-violet-500/15 text-violet-600 border-0">
+                        <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-violet-500" /> Active
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="border-amber-500/30 text-amber-600">
@@ -719,7 +719,7 @@ function WebhooksTab({ data }: { data: DeveloperData }) {
                     <span><Clock className="h-3 w-3 inline mr-1" />Last: {timeAgoShort(w.lastDelivery)}</span>
                     <span><Send className="h-3 w-3 inline mr-1" />{fmtNum(w.totalDeliveries)} deliveries</span>
                     <span className={cn(
-                      w.successRate >= 95 ? "text-emerald-600" : w.successRate >= 85 ? "text-amber-600" : "text-rose-600"
+                      w.successRate >= 95 ? "text-violet-600" : w.successRate >= 85 ? "text-amber-600" : "text-rose-600"
                     )}>
                       <CheckCircle2 className="h-3 w-3 inline mr-1" />
                       {w.successRate.toFixed(1)}% success
@@ -759,7 +759,7 @@ function WebhooksTab({ data }: { data: DeveloperData }) {
       {/* Recent deliveries */}
       <Card className="p-5">
         <h3 className="font-semibold flex items-center gap-2 mb-1">
-          <Activity className="h-4 w-4 text-emerald-500" /> Recent Deliveries
+          <Activity className="h-4 w-4 text-violet-500" /> Recent Deliveries
         </h3>
         <p className="text-xs text-muted-foreground mb-4">
           Last {data.recentDeliveries.length} webhook deliveries across all endpoints
@@ -801,7 +801,7 @@ function WebhooksTab({ data }: { data: DeveloperData }) {
                     <span className={cn(
                       "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-mono font-medium",
                       d.statusCode >= 200 && d.statusCode < 300
-                        ? "bg-emerald-500/15 text-emerald-600"
+                        ? "bg-violet-500/15 text-violet-600"
                         : d.statusCode >= 400 && d.statusCode < 500
                         ? "bg-amber-500/15 text-amber-600"
                         : "bg-rose-500/15 text-rose-600"
@@ -848,18 +848,18 @@ function UsageTab({ data }: { data: DeveloperData }) {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-emerald-950/50 to-slate-900 p-6 ring-1 ring-emerald-500/20"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-violet-950/50 to-slate-900 p-6 ring-1 ring-violet-500/20"
       >
-        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-emerald-500/20 blur-3xl" />
-        <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-teal-500/15 blur-3xl" />
+        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-violet-500/20 blur-3xl" />
+        <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-purple-500/15 blur-3xl" />
         <div className="relative grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <HeroStat
             icon={Activity} label="Total Requests (30d)"
-            value={u.totalRequests30d} accent="emerald"
+            value={u.totalRequests30d} accent="violet"
           />
           <HeroStat
             icon={AlertOctagon} label="Error Rate"
-            value={u.errorRate} suffix="%" decimals={2} accent={u.errorRate < 1 ? "emerald" : "amber"}
+            value={u.errorRate} suffix="%" decimals={2} accent={u.errorRate < 1 ? "violet" : "amber"}
           />
           <HeroStat
             icon={Gauge} label="Avg Response"
@@ -879,11 +879,11 @@ function UsageTab({ data }: { data: DeveloperData }) {
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h3 className="font-semibold flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-emerald-500" /> Request Volume (14 days)
+                <TrendingUp className="h-4 w-4 text-violet-500" /> Request Volume (14 days)
               </h3>
               <p className="text-xs text-muted-foreground">Daily API requests with error overlay</p>
             </div>
-            <Badge variant="outline" className="border-emerald-500/30 text-emerald-600">
+            <Badge variant="outline" className="border-violet-500/30 text-violet-600">
               Peak: {fmtCompact(u.peakDayRequests)}
             </Badge>
           </div>
@@ -931,7 +931,7 @@ function UsageTab({ data }: { data: DeveloperData }) {
         {/* Rate limit gauge */}
         <Card className="p-5">
           <h3 className="font-semibold flex items-center gap-2 mb-1">
-            <Gauge className="h-4 w-4 text-emerald-500" /> Rate Limit Usage
+            <Gauge className="h-4 w-4 text-violet-500" /> Rate Limit Usage
           </h3>
           <p className="text-xs text-muted-foreground mb-3">Current hour vs Pro tier limit</p>
           <div className="h-48 relative">
@@ -967,7 +967,7 @@ function UsageTab({ data }: { data: DeveloperData }) {
         {/* Requests by endpoint bar chart */}
         <Card className="p-5 lg:col-span-3">
           <h3 className="font-semibold flex items-center gap-2 mb-1">
-            <Server className="h-4 w-4 text-emerald-500" /> Requests by Endpoint (Top 10)
+            <Server className="h-4 w-4 text-violet-500" /> Requests by Endpoint (Top 10)
           </h3>
           <p className="text-xs text-muted-foreground mb-4">30-day aggregated request count</p>
           <div className="h-80">
@@ -1007,7 +1007,7 @@ function UsageTab({ data }: { data: DeveloperData }) {
         {/* Status code pie */}
         <Card className="p-5 lg:col-span-2">
           <h3 className="font-semibold flex items-center gap-2 mb-1">
-            <AlertOctagon className="h-4 w-4 text-emerald-500" /> Status Code Distribution
+            <AlertOctagon className="h-4 w-4 text-violet-500" /> Status Code Distribution
           </h3>
           <p className="text-xs text-muted-foreground mb-4">30-day response status breakdown</p>
           <div className="h-56">
@@ -1046,11 +1046,11 @@ function UsageTab({ data }: { data: DeveloperData }) {
       {/* Rate limit tiers */}
       <Card className="p-5">
         <h3 className="font-semibold flex items-center gap-2 mb-1">
-          <Cpu className="h-4 w-4 text-emerald-500" /> Rate Limit Tiers
+          <Cpu className="h-4 w-4 text-violet-500" /> Rate Limit Tiers
         </h3>
         <p className="text-xs text-muted-foreground mb-4">
           Compare plans and current usage · your plan is{" "}
-          <span className="font-medium text-emerald-600">{rl.currentTier}</span>
+          <span className="font-medium text-violet-600">{rl.currentTier}</span>
         </p>
         <div className="grid gap-4 sm:grid-cols-3">
           {rl.tiers.map((t, i) => {
@@ -1063,13 +1063,13 @@ function UsageTab({ data }: { data: DeveloperData }) {
                 transition={{ delay: i * 0.08 }}
                 className={cn(
                   "card-lift rounded-xl border p-4",
-                  isCurrent ? "border-emerald-500/40 bg-emerald-500/5" : "bg-card"
+                  isCurrent ? "border-violet-500/40 bg-violet-500/5" : "bg-card"
                 )}
               >
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-semibold">{t.tier}</h4>
                   {isCurrent && (
-                    <Badge className="bg-emerald-500/15 text-emerald-600 border-0">
+                    <Badge className="bg-violet-500/15 text-violet-600 border-0">
                       <Star className="h-3 w-3 mr-1" /> Current
                     </Badge>
                   )}
@@ -1088,7 +1088,7 @@ function UsageTab({ data }: { data: DeveloperData }) {
                     <span className="text-muted-foreground">Current usage</span>
                     <span className={cn(
                       "font-medium tabular-nums",
-                      t.usagePct > 80 ? "text-rose-600" : t.usagePct > 60 ? "text-amber-600" : "text-emerald-600"
+                      t.usagePct > 80 ? "text-rose-600" : t.usagePct > 60 ? "text-amber-600" : "text-violet-600"
                     )}>
                       {t.usagePct.toFixed(1)}%
                     </span>
@@ -1097,7 +1097,7 @@ function UsageTab({ data }: { data: DeveloperData }) {
                     <div
                       className={cn(
                         "h-full rounded-full",
-                        t.usagePct > 80 ? "bg-rose-500" : t.usagePct > 60 ? "bg-amber-500" : "bg-emerald-500"
+                        t.usagePct > 80 ? "bg-rose-500" : t.usagePct > 60 ? "bg-amber-500" : "bg-violet-500"
                       )}
                       style={{ width: `${Math.min(t.usagePct, 100)}%` }}
                     />
@@ -1106,7 +1106,7 @@ function UsageTab({ data }: { data: DeveloperData }) {
                 <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
                   {t.features.map((f) => (
                     <li key={f} className="flex items-start gap-1.5">
-                      <CheckCircle2 className="h-3 w-3 mt-0.5 text-emerald-500 shrink-0" />
+                      <CheckCircle2 className="h-3 w-3 mt-0.5 text-violet-500 shrink-0" />
                       {f}
                     </li>
                   ))}
@@ -1198,12 +1198,12 @@ print(response.json())`;
       <div className="grid gap-5 lg:grid-cols-2">
         <Card className="p-5">
           <h3 className="font-semibold flex items-center gap-2 mb-3">
-            <BookOpen className="h-4 w-4 text-emerald-500" /> Quick Start Guide
+            <BookOpen className="h-4 w-4 text-violet-500" /> Quick Start Guide
           </h3>
           <div className="space-y-3">
             {data.documentation.quickStart.map((qs) => (
               <div key={qs.step} className="flex gap-3">
-                <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-emerald-500/15 text-xs font-bold text-emerald-600">
+                <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-violet-500/15 text-xs font-bold text-violet-600">
                   {qs.step}
                 </div>
                 <div>
@@ -1217,12 +1217,12 @@ print(response.json())`;
 
         <Card className="p-5">
           <h3 className="font-semibold flex items-center gap-2 mb-3">
-            <Lock className="h-4 w-4 text-emerald-500" /> Authentication
+            <Lock className="h-4 w-4 text-violet-500" /> Authentication
           </h3>
           <p className="text-xs text-muted-foreground mb-3">
             {data.documentation.authentication.description}
           </p>
-          <div className="rounded-lg bg-slate-900 border border-slate-700 p-3 font-mono text-xs text-emerald-400 overflow-x-auto">
+          <div className="rounded-lg bg-slate-900 border border-slate-700 p-3 font-mono text-xs text-violet-400 overflow-x-auto">
             {data.documentation.authentication.header}
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
@@ -1243,7 +1243,7 @@ print(response.json())`;
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-semibold flex items-center gap-2">
-              <Server className="h-4 w-4 text-emerald-500" /> API Endpoints
+              <Server className="h-4 w-4 text-violet-500" /> API Endpoints
             </h3>
             <p className="text-xs text-muted-foreground">
               {filteredCount} of {totalCount} endpoints · grouped by category
@@ -1277,7 +1277,7 @@ print(response.json())`;
                   <button
                     key={`${ep.method}-${ep.path}`}
                     onClick={() => setActiveEndpoint(ep)}
-                    className="card-lift flex w-full items-center gap-3 rounded-lg border bg-card px-3 py-2.5 text-left transition-all hover:border-emerald-500/40"
+                    className="card-lift flex w-full items-center gap-3 rounded-lg border bg-card px-3 py-2.5 text-left transition-all hover:border-violet-500/40"
                   >
                     <span
                       className={cn(
@@ -1310,7 +1310,7 @@ print(response.json())`;
       <div className="grid gap-5 lg:grid-cols-2">
         <Card className="p-5">
           <h3 className="font-semibold flex items-center gap-2 mb-3">
-            <AlertOctagon className="h-4 w-4 text-emerald-500" /> Error Codes
+            <AlertOctagon className="h-4 w-4 text-violet-500" /> Error Codes
           </h3>
           <div className="space-y-1.5 max-h-80 overflow-y-auto no-scrollbar">
             {data.documentation.errorCodes.map((err) => (
@@ -1320,7 +1320,7 @@ print(response.json())`;
               >
                 <span className={cn(
                   "inline-flex w-12 shrink-0 justify-center rounded font-mono text-xs font-bold py-0.5",
-                  Number(err.code) < 300 ? "bg-emerald-500/15 text-emerald-600"
+                  Number(err.code) < 300 ? "bg-violet-500/15 text-violet-600"
                     : Number(err.code) < 500 ? "bg-amber-500/15 text-amber-600"
                     : "bg-rose-500/15 text-rose-600"
                 )}>
@@ -1337,7 +1337,7 @@ print(response.json())`;
 
         <Card className="p-5">
           <h3 className="font-semibold flex items-center gap-2 mb-3">
-            <FileCode2 className="h-4 w-4 text-emerald-500" /> Official SDKs
+            <FileCode2 className="h-4 w-4 text-violet-500" /> Official SDKs
           </h3>
           <div className="grid gap-2 sm:grid-cols-2">
             {data.documentation.sdks.map((sdk) => (
@@ -1386,7 +1386,7 @@ print(response.json())`;
                   className={cn(
                     "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
                     codeTab === lang
-                      ? "bg-emerald-500/15 text-emerald-600"
+                      ? "bg-violet-500/15 text-violet-600"
                       : "text-muted-foreground hover:bg-muted"
                   )}
                 >
@@ -1509,18 +1509,18 @@ function SandboxTab({ data }: { data: DeveloperData }) {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-emerald-950/50 to-slate-900 p-6 ring-1 ring-emerald-500/20"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-violet-950/50 to-slate-900 p-6 ring-1 ring-violet-500/20"
       >
-        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-emerald-500/20 blur-3xl" />
-        <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-teal-500/15 blur-3xl" />
+        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-violet-500/20 blur-3xl" />
+        <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-purple-500/15 blur-3xl" />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-emerald-300">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-violet-violet-300">
                 <FlaskConical className="h-4 w-4" />
               </span>
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-emerald-300/80">
+                <p className="text-xs font-medium uppercase tracking-wider text-violet-violet-300/80">
                   Sandbox Balance
                 </p>
                 <p className="text-[11px] text-slate-400">
@@ -1552,7 +1552,7 @@ function SandboxTab({ data }: { data: DeveloperData }) {
       {/* Test request runner */}
       <Card className="p-5">
         <h3 className="font-semibold flex items-center gap-2 mb-1">
-          <Terminal className="h-4 w-4 text-emerald-500" /> Test Request Runner
+          <Terminal className="h-4 w-4 text-violet-500" /> Test Request Runner
         </h3>
         <p className="text-xs text-muted-foreground mb-4">
           Send test requests to the GaexPay sandbox API
@@ -1613,7 +1613,7 @@ function SandboxTab({ data }: { data: DeveloperData }) {
             <Label>Response</Label>
             <div className="rounded-lg bg-slate-900 border border-slate-700 p-3 h-[calc(100%-24px)] min-h-[280px] overflow-y-auto no-scrollbar">
               {response ? (
-                <pre className="text-xs font-mono text-emerald-400 whitespace-pre-wrap">
+                <pre className="text-xs font-mono text-violet-400 whitespace-pre-wrap">
                   <code>{response}</code>
                 </pre>
               ) : sending ? (
@@ -1639,7 +1639,7 @@ function SandboxTab({ data }: { data: DeveloperData }) {
         {/* Test cards */}
         <Card className="p-5">
           <h3 className="font-semibold flex items-center gap-2 mb-1">
-            <CreditCard className="h-4 w-4 text-emerald-500" /> Test Cards
+            <CreditCard className="h-4 w-4 text-violet-500" /> Test Cards
           </h3>
           <p className="text-xs text-muted-foreground mb-3">
             Use these cards to simulate payment flows
@@ -1651,7 +1651,7 @@ function SandboxTab({ data }: { data: DeveloperData }) {
                   <span className="text-xs font-semibold">{c.brand}</span>
                   <Badge variant="outline" className={cn(
                     "text-[9px] border-0",
-                    c.behavior.includes("succeeds") ? "bg-emerald-500/15 text-emerald-600"
+                    c.behavior.includes("succeeds") ? "bg-violet-500/15 text-violet-600"
                       : c.behavior.includes("declines") || c.behavior.includes("Insufficient") ? "bg-rose-500/15 text-rose-600"
                       : "bg-amber-500/15 text-amber-600"
                   )}>
@@ -1663,7 +1663,7 @@ function SandboxTab({ data }: { data: DeveloperData }) {
                   <span>CVV: {c.cvv}</span>
                   <span>EXP: {c.exp}</span>
                   <button
-                    className="text-emerald-600 hover:underline ml-auto"
+                    className="text-violet-600 hover:underline ml-auto"
                     onClick={() => {
                       navigator.clipboard?.writeText(c.number);
                       toast.success("Card number copied");
@@ -1680,7 +1680,7 @@ function SandboxTab({ data }: { data: DeveloperData }) {
         {/* Test phones */}
         <Card className="p-5">
           <h3 className="font-semibold flex items-center gap-2 mb-1">
-            <Phone className="h-4 w-4 text-emerald-500" /> Test Phone Numbers
+            <Phone className="h-4 w-4 text-violet-500" /> Test Phone Numbers
           </h3>
           <p className="text-xs text-muted-foreground mb-3">
             Simulate OTP delivery & SMS flows
@@ -1691,7 +1691,7 @@ function SandboxTab({ data }: { data: DeveloperData }) {
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-semibold">{p.label}</span>
                   <button
-                    className="text-emerald-600 hover:underline text-[10px]"
+                    className="text-violet-600 hover:underline text-[10px]"
                     onClick={() => {
                       navigator.clipboard?.writeText(p.number);
                       toast.success("Phone number copied");
@@ -1710,7 +1710,7 @@ function SandboxTab({ data }: { data: DeveloperData }) {
         {/* Test banks */}
         <Card className="p-5">
           <h3 className="font-semibold flex items-center gap-2 mb-1">
-            <Building2 className="h-4 w-4 text-emerald-500" /> Test Bank Accounts
+            <Building2 className="h-4 w-4 text-violet-500" /> Test Bank Accounts
           </h3>
           <p className="text-xs text-muted-foreground mb-3">
             Resolve & simulate bank transfers
@@ -1722,7 +1722,7 @@ function SandboxTab({ data }: { data: DeveloperData }) {
                   <span className="text-xs font-semibold">{b.bank}</span>
                   <Badge variant="outline" className={cn(
                     "text-[9px] border-0",
-                    b.behavior.includes("Valid") ? "bg-emerald-500/15 text-emerald-600"
+                    b.behavior.includes("Valid") ? "bg-violet-500/15 text-violet-600"
                       : "bg-rose-500/15 text-rose-600"
                   )}>
                     {b.behavior}
@@ -1749,11 +1749,11 @@ function SummaryCard({
 }: {
   icon: any; label: string; value: number; sub?: string;
   suffix?: string; decimals?: number;
-  accent: "emerald" | "teal" | "sky" | "amber" | "rose";
+  accent: "violet" | "teal" | "sky" | "amber" | "rose";
 }) {
   const colorMap = {
-    emerald: "from-emerald-500 to-emerald-600 text-emerald-500",
-    teal: "from-teal-500 to-teal-600 text-teal-500",
+    emerald: "from-violet-500 to-violet-600 text-violet-500",
+    teal: "from-purple-500 to-purple-600 text-purple-500",
     sky: "from-sky-500 to-sky-600 text-sky-500",
     amber: "from-amber-500 to-amber-600 text-amber-500",
     rose: "from-rose-500 to-rose-600 text-rose-500",
@@ -1783,11 +1783,11 @@ function HeroStat({
   icon: Icon, label, value, suffix, decimals, accent,
 }: {
   icon: any; label: string; value: number; suffix?: string; decimals?: number;
-  accent: "emerald" | "teal" | "sky" | "amber" | "rose";
+  accent: "violet" | "teal" | "sky" | "amber" | "rose";
 }) {
   const colorMap = {
-    emerald: "text-emerald-300 bg-white/10",
-    teal: "text-teal-300 bg-white/10",
+    emerald: "text-violet-violet-300 bg-white/10",
+    teal: "text-purple-300 bg-white/10",
     sky: "text-sky-300 bg-white/10",
     amber: "text-amber-300 bg-white/10",
     rose: "text-rose-300 bg-white/10",

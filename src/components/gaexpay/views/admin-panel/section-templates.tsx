@@ -21,7 +21,7 @@ import { SectionHeader, LoadingTable, EmptyState, apiAction, showError } from ".
 
 const CHANNELS = [
   { id: "email", label: "Email Templates", icon: Mail, color: "bg-indigo-500/15 text-indigo-600" },
-  { id: "sms", label: "SMS Templates", icon: Smartphone, color: "bg-emerald-500/15 text-emerald-600" },
+  { id: "sms", label: "SMS Templates", icon: Smartphone, color: "bg-violet-500/15 text-violet-600" },
   { id: "push", label: "Push Templates", icon: Bell, color: "bg-amber-500/15 text-amber-600" },
 ];
 
@@ -100,7 +100,7 @@ export function TemplatesSection() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={`text-[10px] ${t.status === "active" ? "text-emerald-600 bg-emerald-500/15" : "text-muted-foreground"}`}>
+                            <Badge variant="outline" className={`text-[10px] ${t.status === "active" ? "text-violet-600 bg-violet-500/15" : "text-muted-foreground"}`}>
                               {t.status}
                             </Badge>
                           </TableCell>
@@ -148,7 +148,7 @@ export function TemplatesSection() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={`text-[10px] ${t.status === "active" ? "text-emerald-600 bg-emerald-500/15" : "text-muted-foreground"}`}>
+                            <Badge variant="outline" className={`text-[10px] ${t.status === "active" ? "text-violet-600 bg-violet-500/15" : "text-muted-foreground"}`}>
                               {t.status}
                             </Badge>
                           </TableCell>
@@ -198,7 +198,7 @@ export function TemplatesSection() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={`text-[10px] ${t.status === "active" ? "text-emerald-600 bg-emerald-500/15" : "text-muted-foreground"}`}>
+                            <Badge variant="outline" className={`text-[10px] ${t.status === "active" ? "text-violet-600 bg-violet-500/15" : "text-muted-foreground"}`}>
                               {t.status}
                             </Badge>
                           </TableCell>

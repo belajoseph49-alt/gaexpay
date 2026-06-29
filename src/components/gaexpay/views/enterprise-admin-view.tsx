@@ -119,7 +119,7 @@ export function EnterpriseAdminView() {
       >
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/20">
               <Building2 className="h-5 w-5" />
             </div>
             <div>
@@ -131,8 +131,8 @@ export function EnterpriseAdminView() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge className="bg-emerald-500/15 text-emerald-600 border-0">
-            <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <Badge className="bg-violet-500/15 text-violet-600 border-0">
+            <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse" />
             Live
           </Badge>
           <Badge variant="outline" className="border-rose-500/30 text-rose-600">
@@ -199,15 +199,15 @@ function OverviewTab({ data }: { data: EnterpriseData }) {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 p-6 ring-1 ring-emerald-500/20"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-violet-950 to-slate-900 p-6 ring-1 ring-violet-500/20"
       >
-        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-emerald-500/20 blur-3xl" />
-        <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-teal-500/15 blur-3xl" />
+        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-violet-500/20 blur-3xl" />
+        <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-purple-500/15 blur-3xl" />
 
         <div className="relative">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-emerald-300/80">
+              <p className="text-xs font-medium uppercase tracking-wider text-violet-violet-300/80">
                 Platform Overview · Last 30 days
               </p>
               <h2 className="mt-1 text-xl font-bold text-white">
@@ -225,7 +225,7 @@ function OverviewTab({ data }: { data: EnterpriseData }) {
               icon={<Users className="h-4 w-4" />}
               label="Total Users"
               value={k.totalUsers}
-              accent="emerald"
+              accent="violet"
             />
             <HeroStat
               icon={<DollarSign className="h-4 w-4" />}
@@ -263,7 +263,7 @@ function OverviewTab({ data }: { data: EnterpriseData }) {
           value={fmtNumber(k.activeUsers30d)}
           trend="+1,240"
           up
-          color="bg-emerald-500/15 text-emerald-500"
+          color="bg-violet-500/15 text-violet-500"
         />
         <MiniStat
           icon={Users}
@@ -309,7 +309,7 @@ function OverviewTab({ data }: { data: EnterpriseData }) {
             icon={CheckCircle2}
             label="Approve KYC"
             desc="Review pending verifications"
-            color="emerald"
+            color="violet"
             badge={data.compliance.pendingKyc}
             onClick={() => toast.info(`${data.compliance.pendingKyc} KYC applications pending`)}
           />
@@ -339,7 +339,7 @@ function OverviewTab({ data }: { data: EnterpriseData }) {
               <h3 className="font-semibold">Transaction Volume (14d)</h3>
               <p className="text-xs text-muted-foreground">Daily processed USD volume</p>
             </div>
-            <Badge variant="outline" className="text-emerald-600 border-emerald-500/30">
+            <Badge variant="outline" className="text-violet-600 border-violet-500/30">
               {fmtUSD(k.totalVolume30dUSD, true)} total
             </Badge>
           </div>
@@ -390,7 +390,7 @@ function OverviewTab({ data }: { data: EnterpriseData }) {
                   className={cn(
                     "grid h-9 w-9 place-items-center rounded-lg",
                     t.direction === "credit"
-                      ? "bg-emerald-500/15 text-emerald-500"
+                      ? "bg-violet-500/15 text-violet-500"
                       : "bg-rose-500/15 text-rose-500",
                   )}
                 >
@@ -405,7 +405,7 @@ function OverviewTab({ data }: { data: EnterpriseData }) {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className={cn("text-xs font-semibold tabular-nums", t.direction === "credit" ? "text-emerald-600" : "text-rose-600")}>
+                  <p className={cn("text-xs font-semibold tabular-nums", t.direction === "credit" ? "text-violet-600" : "text-rose-600")}>
                     {t.direction === "credit" ? "+" : "-"}{fmtUSD(t.amountUSD)}
                   </p>
                   <p className="text-[10px] text-muted-foreground">{t.status}</p>
@@ -486,7 +486,7 @@ function UsersTab({ data }: { data: EnterpriseData }) {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="font-semibold flex items-center gap-2">
-              <Globe className="h-4 w-4 text-emerald-500" />
+              <Globe className="h-4 w-4 text-violet-500" />
               Geographic Distribution
             </h3>
             <p className="text-xs text-muted-foreground">Top 10 countries by user count</p>
@@ -507,7 +507,7 @@ function UsersTab({ data }: { data: EnterpriseData }) {
                 transition={{ delay: i * 0.05 }}
                 className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/30"
               >
-                <div className="grid h-9 w-9 place-items-center rounded-lg bg-emerald-500/10 text-emerald-600">
+                <div className="grid h-9 w-9 place-items-center rounded-lg bg-violet-500/10 text-violet-600">
                   <MapPin className="h-4 w-4" />
                 </div>
                 <div className="flex-1">
@@ -598,7 +598,7 @@ function UsersTab({ data }: { data: EnterpriseData }) {
                   <td className="py-3 pr-2 text-right font-semibold tabular-nums">{fmtUSD(u.volumeUSD)}</td>
                   <td className="py-3 pr-2 text-right tabular-nums text-xs">{u.txCount}</td>
                   <td className="py-3 pr-2">
-                    <Badge variant="outline" className={cn("text-[10px]", u.status === "active" ? "text-emerald-600" : "text-rose-600")}>
+                    <Badge variant="outline" className={cn("text-[10px]", u.status === "active" ? "text-violet-600" : "text-rose-600")}>
                       {u.status}
                     </Badge>
                   </td>
@@ -627,34 +627,34 @@ function RevenueTab({ data }: { data: EnterpriseData }) {
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-900 via-slate-900 to-teal-900 p-6 ring-1 ring-emerald-500/20"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-violet-900 via-slate-900 to-purple-900 p-6 ring-1 ring-violet-500/20"
       >
-        <div className="absolute -top-20 -right-20 h-60 w-60 rounded-full bg-emerald-500/20 blur-3xl" />
+        <div className="absolute -top-20 -right-20 h-60 w-60 rounded-full bg-violet-500/20 blur-3xl" />
         <div className="relative grid gap-5 md:grid-cols-3">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-emerald-300/80">Revenue (MTD)</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-violet-violet-300/80">Revenue (MTD)</p>
             <p className="mt-1 text-3xl font-bold text-white tabular-nums">
               <AnimatedNumber value={data.kpis.revenueMTD_USD} prefix="$" decimals={2} duration={1500} />
             </p>
-            <p className="mt-1 text-xs text-emerald-300/70 flex items-center gap-1">
+            <p className="mt-1 text-xs text-violet-violet-300/70 flex items-center gap-1">
               <ArrowUpRight className="h-3 w-3" /> +14.2% vs last month
             </p>
           </div>
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-emerald-300/80">Fee Revenue (30d)</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-violet-violet-300/80">Fee Revenue (30d)</p>
             <p className="mt-1 text-3xl font-bold text-white tabular-nums">
               <AnimatedNumber value={data.kpis.feeRevenue30d_USD} prefix="$" decimals={2} duration={1500} />
             </p>
-            <p className="mt-1 text-xs text-emerald-300/70 flex items-center gap-1">
+            <p className="mt-1 text-xs text-violet-violet-300/70 flex items-center gap-1">
               <ArrowUpRight className="h-3 w-3" /> +9.7% vs prior period
             </p>
           </div>
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-emerald-300/80">Total Volume (30d)</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-violet-violet-300/80">Total Volume (30d)</p>
             <p className="mt-1 text-3xl font-bold text-white tabular-nums">
               <AnimatedNumber value={data.kpis.totalVolume30dUSD} prefix="$" decimals={2} duration={1500} />
             </p>
-            <p className="mt-1 text-xs text-emerald-300/70 flex items-center gap-1">
+            <p className="mt-1 text-xs text-violet-violet-300/70 flex items-center gap-1">
               <ArrowUpRight className="h-3 w-3" /> +8.4% growth
             </p>
           </div>
@@ -802,7 +802,7 @@ function ComplianceTab({ data }: { data: EnterpriseData }) {
           label="Approved KYC"
           value={c.approvedKyc}
           desc="Verified users on platform"
-          color="emerald"
+          color="violet"
           onClick={() => toast.success(`${c.approvedKyc} verified users`)}
         />
         <ComplianceCard
@@ -855,9 +855,9 @@ function ComplianceTab({ data }: { data: EnterpriseData }) {
           </div>
         </Card>
 
-        <Card className="p-5 ring-1 ring-emerald-500/20">
+        <Card className="p-5 ring-1 ring-violet-500/20">
           <div className="mb-3 flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-500/15 text-emerald-500">
+            <div className="grid h-10 w-10 place-items-center rounded-lg bg-violet-500/15 text-violet-500">
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
@@ -865,12 +865,12 @@ function ComplianceTab({ data }: { data: EnterpriseData }) {
               <p className="text-xs text-muted-foreground">Clean screenings</p>
             </div>
           </div>
-          <p className="text-3xl font-bold tabular-nums text-emerald-600">
+          <p className="text-3xl font-bold tabular-nums text-violet-600">
             <AnimatedNumber value={c.passRate} decimals={1} suffix="%" duration={1200} />
           </p>
           <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
             <span>Compliance score</span>
-            <Badge variant="outline" className="text-emerald-600 border-emerald-500/30">Healthy</Badge>
+            <Badge variant="outline" className="text-violet-600 border-violet-500/30">Healthy</Badge>
           </div>
         </Card>
       </div>
@@ -887,7 +887,7 @@ function ComplianceTab({ data }: { data: EnterpriseData }) {
           </Badge>
         </div>
         <div className="space-y-3">
-          <ComplianceBar label="Approved" value={c.approvedKyc} total={c.pendingKyc + c.approvedKyc + c.rejectedKyc} color="bg-emerald-500" />
+          <ComplianceBar label="Approved" value={c.approvedKyc} total={c.pendingKyc + c.approvedKyc + c.rejectedKyc} color="bg-violet-500" />
           <ComplianceBar label="Pending Review" value={c.pendingKyc} total={c.pendingKyc + c.approvedKyc + c.rejectedKyc} color="bg-amber-500" />
           <ComplianceBar label="Rejected" value={c.rejectedKyc} total={c.pendingKyc + c.approvedKyc + c.rejectedKyc} color="bg-rose-500" />
         </div>
@@ -1004,7 +1004,7 @@ function SystemTab({ data }: { data: EnterpriseData }) {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="p-5">
           <h3 className="mb-4 font-semibold flex items-center gap-2">
-            <Server className="h-4 w-4 text-emerald-500" />
+            <Server className="h-4 w-4 text-violet-500" />
             Infrastructure Metrics
           </h3>
           <div className="space-y-4">
@@ -1026,7 +1026,7 @@ function SystemTab({ data }: { data: EnterpriseData }) {
               icon={Cpu}
               label="Cache Hit Rate"
               value={`${s.cacheHitRate}%`}
-              color="text-emerald-500"
+              color="text-violet-500"
               pct={s.cacheHitRate}
             />
           </div>
@@ -1052,7 +1052,7 @@ function SystemTab({ data }: { data: EnterpriseData }) {
                   <span
                     className={cn(
                       "h-2 w-2 rounded-full",
-                      svc.status === "operational" ? "bg-emerald-500" : "bg-amber-500",
+                      svc.status === "operational" ? "bg-violet-500" : "bg-amber-500",
                     )}
                   />
                   <span className="text-sm font-medium">{svc.name}</span>
@@ -1064,7 +1064,7 @@ function SystemTab({ data }: { data: EnterpriseData }) {
                     className={cn(
                       "text-[10px]",
                       svc.status === "operational"
-                        ? "text-emerald-600 border-emerald-500/30"
+                        ? "text-violet-600 border-violet-500/30"
                         : "text-amber-600 border-amber-500/30",
                     )}
                   >
@@ -1078,10 +1078,10 @@ function SystemTab({ data }: { data: EnterpriseData }) {
       </div>
 
       {/* System info banner */}
-      <Card className="border-emerald-500/20 bg-emerald-500/5 p-5">
+      <Card className="border-violet-500/20 bg-violet-500/5 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-500/15 text-emerald-600">
+            <div className="grid h-10 w-10 place-items-center rounded-lg bg-violet-500/15 text-violet-600">
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
@@ -1111,18 +1111,18 @@ function HeroStat({
   value: number;
   prefix?: string;
   format?: "compact";
-  accent: "emerald" | "teal" | "cyan" | "lime";
+  accent: "violet" | "teal" | "cyan" | "lime";
 }) {
   const accentColors: Record<string, string> = {
-    emerald: "text-emerald-300",
-    teal: "text-teal-300",
+    emerald: "text-violet-violet-300",
+    teal: "text-purple-300",
     cyan: "text-cyan-300",
     lime: "text-lime-300",
   };
   const formatted = format === "compact" ? fmtUSD(value, true) : fmtNumber(value);
   return (
     <div className="rounded-xl bg-white/5 p-4 backdrop-blur ring-1 ring-white/10">
-      <div className="flex items-center gap-2 text-emerald-300/80">
+      <div className="flex items-center gap-2 text-violet-violet-300/80">
         <span className="grid h-7 w-7 place-items-center rounded-lg bg-white/10">{icon}</span>
         <span className="text-[10px] font-medium uppercase tracking-wider">{label}</span>
       </div>
@@ -1151,7 +1151,7 @@ function MiniStat({
         <div className={cn("grid h-10 w-10 place-items-center rounded-lg", color)}>
           <Icon className="h-5 w-5" />
         </div>
-        <Badge variant="outline" className={up ? "text-emerald-600 border-emerald-500/30" : "text-rose-600 border-rose-500/30"}>
+        <Badge variant="outline" className={up ? "text-violet-600 border-violet-500/30" : "text-rose-600 border-rose-500/30"}>
           {up ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
           {trend}
         </Badge>
@@ -1168,13 +1168,13 @@ function QuickAction({
   icon: any;
   label: string;
   desc: string;
-  color: "rose" | "emerald" | "amber" | "violet";
+  color: "rose" | "violet" | "amber" | "violet";
   badge?: number;
   onClick: () => void;
 }) {
   const colorMap = {
     rose: "bg-rose-500/10 text-rose-600 hover:bg-rose-500/15 ring-rose-500/20",
-    emerald: "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15 ring-emerald-500/20",
+    emerald: "bg-violet-500/10 text-violet-600 hover:bg-violet-500/15 ring-violet-500/20",
     amber: "bg-amber-500/10 text-amber-600 hover:bg-amber-500/15 ring-amber-500/20",
     violet: "bg-violet-500/10 text-violet-600 hover:bg-violet-500/15 ring-violet-500/20",
   };
@@ -1210,12 +1210,12 @@ function ComplianceCard({
   label: string;
   value: number;
   desc: string;
-  color: "amber" | "emerald" | "rose";
+  color: "amber" | "violet" | "rose";
   onClick: () => void;
 }) {
   const colorMap = {
     amber: "ring-amber-500/20 hover:ring-amber-500/40 text-amber-600 bg-amber-500/10",
-    emerald: "ring-emerald-500/20 hover:ring-emerald-500/40 text-emerald-600 bg-emerald-500/10",
+    emerald: "ring-violet-500/20 hover:ring-violet-500/40 text-violet-600 bg-violet-500/10",
     rose: "ring-rose-500/20 hover:ring-rose-500/40 text-rose-600 bg-rose-500/10",
   };
   return (
@@ -1271,7 +1271,7 @@ function HealthCard({
   desc: string;
 }) {
   const statusMap = {
-    healthy: { color: "bg-emerald-500/15 text-emerald-600", ring: "ring-emerald-500/20", dot: "bg-emerald-500" },
+    healthy: { color: "bg-violet-500/15 text-violet-600", ring: "ring-violet-500/20", dot: "bg-violet-500" },
     warning: { color: "bg-amber-500/15 text-amber-600", ring: "ring-amber-500/20", dot: "bg-amber-500" },
     critical: { color: "bg-rose-500/15 text-rose-600", ring: "ring-rose-500/20", dot: "bg-rose-500" },
   };

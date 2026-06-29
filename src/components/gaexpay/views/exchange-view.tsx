@@ -119,8 +119,8 @@ export function ExchangeView() {
             )}
           </div>
         </div>
-        <Badge variant="outline" className="text-emerald-600 border-emerald-500/30">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse mr-1.5" /> Live
+        <Badge variant="outline" className="text-violet-600 border-violet-500/30">
+          <span className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse mr-1.5" /> Live
         </Badge>
       </Card>
 
@@ -186,7 +186,7 @@ export function ExchangeView() {
               </div>
               <div className="flex items-center gap-3">
                 <WalletSelector wallets={wallets} selectedId={toId} onSelect={setToId} />
-                <div className="flex-1 text-2xl font-bold tabular-nums text-emerald-600">
+                <div className="flex-1 text-2xl font-bold tabular-nums text-violet-600">
                   {converted > 0 ? formatMoney(converted, toWallet?.currency || "NGN") : "0.00"}
                 </div>
               </div>
@@ -232,7 +232,7 @@ export function ExchangeView() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", delay: 0.1 }}
-              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white pulse-glow"
+              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-violet-500 text-white pulse-glow"
             >
               <Check className="h-8 w-8" strokeWidth={3} />
             </motion.div>

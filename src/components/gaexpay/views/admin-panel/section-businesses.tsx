@@ -116,7 +116,7 @@ export function BusinessesSection() {
                       <div className="flex gap-1 justify-end">
                         <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setDetail(b)} title="View details"><Eye className="h-3.5 w-3.5" /></Button>
                         {b.kybStatus !== "verified" && (
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-emerald-600" onClick={async () => {
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-violet-600" onClick={async () => {
                             const r = await apiAction(`/api/admin/businesses?action=verify`, "PATCH", { businessId: b.id }, "Business verified");
                             if (!r.ok) showError(r.error || "Failed"); else setReloadKey((k) => k + 1);
                           }} title="Verify KYB"><CheckCircle2 className="h-3.5 w-3.5" /></Button>

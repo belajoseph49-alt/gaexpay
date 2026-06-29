@@ -25,10 +25,10 @@ import { useFormatMoney } from "@/hooks/use-format-money";
 import { useTranslation } from "@/hooks/use-translation";
 
 const CARD_GRADIENTS: Record<string, string> = {
-  emerald: "from-emerald-600 via-teal-600 to-emerald-800",
+  emerald: "from-violet-600 via-purple-600 to-violet-800",
   midnight: "from-slate-800 via-slate-900 to-black",
   sunset: "from-orange-500 via-rose-500 to-fuchsia-600",
-  ocean: "from-cyan-500 via-blue-600 to-indigo-700",
+  ocean: "from-purple-500 via-blue-600 to-indigo-700",
   gold: "from-amber-400 via-yellow-500 to-orange-600",
 };
 
@@ -148,7 +148,7 @@ export function CardsView() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Available</p>
-                  <p className="text-xl font-bold tabular-nums text-emerald-600">{formatMoney(Math.max(0, card.limit - card.spending), card.currency)}</p>
+                  <p className="text-xl font-bold tabular-nums text-violet-600">{formatMoney(Math.max(0, card.limit - card.spending), card.currency)}</p>
                 </div>
               </div>
             </div>
@@ -189,8 +189,8 @@ export function CardsView() {
       </div>
 
       {/* Security note */}
-      <Card className="flex items-center gap-4 border-emerald-500/30 bg-emerald-500/5 p-5">
-        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-emerald-500/15 text-emerald-500">
+      <Card className="flex items-center gap-4 border-violet-500/30 bg-violet-500/5 p-5">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-violet-500/15 text-violet-500">
           <ShieldCheck className="h-5 w-5" />
         </div>
         <div>
@@ -273,7 +273,7 @@ function ActionButton({ icon: Icon, label, onClick, danger }: { icon: any; label
 function NewCardDialog({ onSubmit }: { onSubmit: (f: any) => void }) {
   const [type, setType] = useState("virtual");
   const [brand, setBrand] = useState("visa");
-  const [color, setColor] = useState("emerald");
+  const [color, setColor] = useState("violet");
   const [nickname, setNickname] = useState("GaexPay Card");
   const [currency, setCurrency] = useState("NGN");
   const [limit, setLimit] = useState("200000");
@@ -321,7 +321,7 @@ function NewCardDialog({ onSubmit }: { onSubmit: (f: any) => void }) {
           <Select value={color} onValueChange={setColor}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="emerald">Emerald</SelectItem>
+              <SelectItem value="violet">Emerald</SelectItem>
               <SelectItem value="midnight">Midnight</SelectItem>
               <SelectItem value="sunset">Sunset</SelectItem>
               <SelectItem value="ocean">Ocean</SelectItem>

@@ -73,7 +73,7 @@ function TiersGrid({ tiers, accountType, userCounts, onEdit }: {
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       {tiers.map((t, idx) => {
-        const tierColor = ["bg-muted text-muted-foreground", "bg-sky-500/15 text-sky-600", "bg-violet-500/15 text-violet-600", "bg-emerald-500/15 text-emerald-600"][idx] ?? "bg-muted text-muted-foreground";
+        const tierColor = ["bg-muted text-muted-foreground", "bg-sky-500/15 text-sky-600", "bg-violet-500/15 text-violet-600", "bg-violet-500/15 text-violet-600"][idx] ?? "bg-muted text-muted-foreground";
         return (
           <Card key={t.tier} className="p-5 flex flex-col">
             <header className="flex items-center justify-between mb-3">
@@ -101,7 +101,7 @@ function TiersGrid({ tiers, accountType, userCounts, onEdit }: {
               <ul className="space-y-1">
                 {(t.features ?? []).map((f: string, i: number) => (
                   <li key={i} className="flex items-start gap-1.5 text-xs">
-                    <Check className="h-3 w-3 text-emerald-600 mt-0.5 shrink-0" />
+                    <Check className="h-3 w-3 text-violet-600 mt-0.5 shrink-0" />
                     <span>{f}</span>
                   </li>
                 ))}

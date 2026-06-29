@@ -134,11 +134,11 @@ interface TreasuryData {
 
 /* ------------------------- config maps ------------------------- */
 const STATUS_CONFIG: Record<string, { color: string; bg: string; dot: string; label: string }> = {
-  healthy: { color: "text-emerald-600", bg: "bg-emerald-500/15 border-emerald-500/30", dot: "bg-emerald-500", label: "Healthy" },
+  healthy: { color: "text-violet-600", bg: "bg-violet-500/15 border-violet-500/30", dot: "bg-violet-500", label: "Healthy" },
   low: { color: "text-amber-600", bg: "bg-amber-500/15 border-amber-500/30", dot: "bg-amber-500", label: "Low" },
   critical: { color: "text-rose-600", bg: "bg-rose-500/15 border-rose-500/30", dot: "bg-rose-500", label: "Critical" },
   watch: { color: "text-amber-600", bg: "bg-amber-500/15 border-amber-500/30", dot: "bg-amber-500", label: "Watch" },
-  active: { color: "text-emerald-600", bg: "bg-emerald-500/15 border-emerald-500/30", dot: "bg-emerald-500", label: "Active" },
+  active: { color: "text-violet-600", bg: "bg-violet-500/15 border-violet-500/30", dot: "bg-violet-500", label: "Active" },
   "low-balance": { color: "text-amber-600", bg: "bg-amber-500/15 border-amber-500/30", dot: "bg-amber-500", label: "Low Balance" },
   frozen: { color: "text-slate-500", bg: "bg-slate-500/15 border-slate-500/30", dot: "bg-slate-400", label: "Frozen" },
   monitoring: { color: "text-sky-600", bg: "bg-sky-500/15 border-sky-500/30", dot: "bg-sky-500", label: "Monitoring" },
@@ -151,7 +151,7 @@ const PRIORITY_CONFIG: Record<string, { color: string; bg: string; dot: string; 
 };
 
 const TYPE_CONFIG: Record<string, { color: string; bg: string; icon: any; label: string }> = {
-  "top-up": { color: "text-emerald-600", bg: "bg-emerald-500/15", icon: Plus, label: "Top-up" },
+  "top-up": { color: "text-violet-600", bg: "bg-violet-500/15", icon: Plus, label: "Top-up" },
   "reduce": { color: "text-amber-600", bg: "bg-amber-500/15", icon: Minus, label: "Reduce" },
   "hedge": { color: "text-violet-600", bg: "bg-violet-500/15", icon: Shield, label: "Hedge" },
   "rebalance": { color: "text-sky-600", bg: "bg-sky-500/15", icon: ArrowLeftRight, label: "Rebalance" },
@@ -180,7 +180,7 @@ export function TreasuryView() {
         className="flex flex-wrap items-end justify-between gap-3"
       >
         <div className="flex items-center gap-2.5">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/20">
             <Landmark className="h-5 w-5" />
           </div>
           <div>
@@ -191,8 +191,8 @@ export function TreasuryView() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge className="bg-emerald-500/15 text-emerald-600 border-0">
-            <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <Badge className="bg-violet-500/15 text-violet-600 border-0">
+            <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse" />
             Live
           </Badge>
           <Badge variant="outline" className="border-rose-500/30 text-rose-600">
@@ -273,20 +273,20 @@ function OverviewTab({ data }: { data: TreasuryData }) {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-emerald-950/50 to-slate-900 p-6 ring-1 ring-emerald-500/20"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-violet-950/50 to-slate-900 p-6 ring-1 ring-violet-500/20"
       >
-        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-emerald-500/20 blur-3xl" />
-        <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-teal-500/15 blur-3xl" />
+        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-violet-500/20 blur-3xl" />
+        <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-purple-500/15 blur-3xl" />
 
         <div className="relative grid gap-6 lg:grid-cols-3">
           {/* Total USD value */}
           <div className="lg:col-span-2">
             <div className="mb-3 flex items-center gap-2">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-emerald-300">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-violet-violet-300">
                 <Wallet className="h-4 w-4" />
               </span>
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-emerald-300/80">
+                <p className="text-xs font-medium uppercase tracking-wider text-violet-violet-300/80">
                   Total Treasury Reserves
                 </p>
                 <p className="text-[11px] text-slate-400">All currencies + crypto · updated {timeAgoShort(tr.lastUpdated)}</p>
@@ -301,14 +301,14 @@ function OverviewTab({ data }: { data: TreasuryData }) {
 
             {/* Change + breakdown */}
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <Badge className={cn("border-0", tr.change24hPct >= 0 ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300")}>
+              <Badge className={cn("border-0", tr.change24hPct >= 0 ? "bg-violet-500/20 text-violet-violet-300" : "bg-rose-500/20 text-rose-300")}>
                 {tr.change24hPct >= 0 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
                 {tr.change24hPct >= 0 ? "+" : ""}<AnimatedNumber value={tr.change24hPct} duration={1400} decimals={2} suffix="%" />
               </Badge>
               <span className="text-[11px] text-slate-400">24h change</span>
               <span className="text-slate-700">·</span>
               <span className="text-[11px] text-slate-400">
-                Fiat: <span className="font-semibold text-emerald-300">{fmtUSD(tr.fiatUSD, true)}</span>
+                Fiat: <span className="font-semibold text-violet-violet-300">{fmtUSD(tr.fiatUSD, true)}</span>
               </span>
               <span className="text-slate-700">·</span>
               <span className="text-[11px] text-slate-400">
@@ -329,7 +329,7 @@ function OverviewTab({ data }: { data: TreasuryData }) {
                     </div>
                     <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400"
+                        className="h-full rounded-full bg-gradient-to-r from-violet-500 to-purple-400"
                         style={{ width: `${pct}%` }}
                       />
                     </div>
@@ -341,7 +341,7 @@ function OverviewTab({ data }: { data: TreasuryData }) {
 
           {/* Reserve ratio gauge */}
           <div className="flex flex-col items-center justify-center rounded-xl bg-white/5 p-4 ring-1 ring-white/10">
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-emerald-300/80">
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-violet-violet-300/80">
               Reserve Coverage Ratio
             </p>
             <ResponsiveContainer width="100%" height={170}>
@@ -392,7 +392,7 @@ function OverviewTab({ data }: { data: TreasuryData }) {
           label="Available Liquidity"
           valueUsd={liq.availableUSD}
           valueNgn={liq.availableNGN}
-          color="emerald"
+          color="violet"
           delay={0}
           footer={<>Of total reserves ({Math.round((liq.availableUSD / (liq.availableUSD + liq.lockedUSD)) * 100)}%)</>}
         />
@@ -419,7 +419,7 @@ function OverviewTab({ data }: { data: TreasuryData }) {
           label="Reserve Ratio"
           valueUsd={liq.reserveRatio}
           valueNgn={0}
-          color={liq.reserveRatio >= 100 ? "emerald" : liq.reserveRatio >= 80 ? "amber" : "rose"}
+          color={liq.reserveRatio >= 100 ? "violet" : liq.reserveRatio >= 80 ? "amber" : "rose"}
           delay={0.15}
           isPercent
           footer={<>Stress coverage · target ≥ 100%</>}
@@ -432,7 +432,7 @@ function OverviewTab({ data }: { data: TreasuryData }) {
         <Card className="p-5">
           <div className="mb-3">
             <h3 className="font-semibold flex items-center gap-2">
-              <PieIcon className="h-4 w-4 text-emerald-500" /> Reserve Allocation
+              <PieIcon className="h-4 w-4 text-violet-500" /> Reserve Allocation
             </h3>
             <p className="text-xs text-muted-foreground">Distribution of treasury reserves across all assets</p>
           </div>
@@ -493,7 +493,7 @@ function OverviewTab({ data }: { data: TreasuryData }) {
           <div className="space-y-2 max-h-[340px] overflow-y-auto no-scrollbar">
             {data.rebalancing.length === 0 && (
               <div className="py-8 text-center text-sm text-muted-foreground">
-                <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-500" />
+                <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-violet-500" />
                 All reserves within optimal range. No rebalancing needed.
               </div>
             )}
@@ -521,7 +521,7 @@ function OverviewTab({ data }: { data: TreasuryData }) {
                         <Badge className={cn("h-4 px-1 text-[9px] border-0", cfg.bg, cfg.color)}>{cfg.label}</Badge>
                         <Badge className={cn("h-4 px-1 text-[9px] border-0", prio.bg, prio.color)}>{prio.label}</Badge>
                       </div>
-                      <p className="mt-1 text-sm font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                      <p className="mt-1 text-sm font-bold tabular-nums text-violet-600 dark:text-violet-400">
                         {fmtUSD(r.amountUSD, true)}
                       </p>
                       <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug line-clamp-2">
@@ -588,7 +588,7 @@ function OverviewTab({ data }: { data: TreasuryData }) {
                       <p className="text-[10px] text-muted-foreground">{c.network}</p>
                     </div>
                   </div>
-                  <Badge className={cn("border-0", positive ? "bg-emerald-500/15 text-emerald-600" : "bg-rose-500/15 text-rose-600")}>
+                  <Badge className={cn("border-0", positive ? "bg-violet-500/15 text-violet-600" : "bg-rose-500/15 text-rose-600")}>
                     {positive ? <ArrowUpRight className="h-2.5 w-2.5 mr-0.5" /> : <ArrowDownRight className="h-2.5 w-2.5 mr-0.5" />}
                     {Math.abs(c.change24h).toFixed(2)}%
                   </Badge>
@@ -598,7 +598,7 @@ function OverviewTab({ data }: { data: TreasuryData }) {
                   {c.amount.toLocaleString("en-US", { maximumFractionDigits: 4 })} {c.code}
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-1.5">USD Value</p>
-                <p className="text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                <p className="text-lg font-bold tabular-nums text-violet-600 dark:text-violet-400">
                   {fmtUSD(c.usdValue, true)}
                 </p>
                 <div className="mt-2 flex items-center justify-between">
@@ -627,11 +627,11 @@ function LiquidityCard({
   icon, label, valueUsd, valueNgn, color, delay, footer, isPercent,
 }: {
   icon: React.ReactNode; label: string; valueUsd: number; valueNgn: number;
-  color: "emerald" | "amber" | "sky" | "rose"; delay: number;
+  color: "violet" | "amber" | "sky" | "rose"; delay: number;
   footer: React.ReactNode; isPercent?: boolean;
 }) {
   const colors = {
-    emerald: "from-emerald-500/15 to-emerald-500/5 text-emerald-600 ring-emerald-500/20",
+    emerald: "from-violet-500/15 to-violet-violet-500/5 text-violet-600 ring-violet-500/20",
     amber: "from-amber-500/15 to-amber-500/5 text-amber-600 ring-amber-500/20",
     sky: "from-sky-500/15 to-sky-500/5 text-sky-600 ring-sky-500/20",
     rose: "from-rose-500/15 to-rose-500/5 text-rose-600 ring-rose-500/20",
@@ -677,11 +677,11 @@ function ReservesTab({ data }: { data: TreasuryData }) {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-emerald-950/40 to-slate-900 p-6 ring-1 ring-emerald-500/20"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-violet-950/40 to-slate-900 p-6 ring-1 ring-violet-500/20"
       >
-        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-emerald-500/15 blur-3xl" />
+        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-violet-500/15 blur-3xl" />
         <div className="relative grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <HeroStat label="Total Reserves" value={data.totalReserves.totalUSD} prefix="$" icon={<Wallet className="h-4 w-4" />} color="emerald" />
+          <HeroStat label="Total Reserves" value={data.totalReserves.totalUSD} prefix="$" icon={<Wallet className="h-4 w-4" />} color="violet" />
           <HeroStat label="Fiat Reserves" value={data.totalReserves.fiatUSD} prefix="$" icon={<Coins className="h-4 w-4" />} color="teal" />
           <HeroStat label="Crypto Reserves" value={data.totalReserves.cryptoUSD} prefix="$" icon={<Bitcoin className="h-4 w-4" />} color="amber" />
           <HeroStat label="Currencies Tracked" value={data.currencyReserves.length + data.cryptoReserves.length} icon={<Layers className="h-4 w-4" />} color="sky" />
@@ -693,12 +693,12 @@ function ReservesTab({ data }: { data: TreasuryData }) {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="font-semibold flex items-center gap-2">
-              <Coins className="h-4 w-4 text-emerald-500" /> Currency Reserves
+              <Coins className="h-4 w-4 text-violet-500" /> Currency Reserves
             </h3>
             <p className="text-xs text-muted-foreground">Per-currency reserve health against minimum thresholds</p>
           </div>
           <div className="flex gap-1.5">
-            <Badge variant="outline" className="text-emerald-600 border-emerald-500/30">
+            <Badge variant="outline" className="text-violet-600 border-violet-500/30">
               {data.currencyReserves.filter((c) => c.status === "healthy").length} Healthy
             </Badge>
             <Badge variant="outline" className="text-amber-600 border-amber-500/30">
@@ -726,7 +726,7 @@ function ReservesTab({ data }: { data: TreasuryData }) {
               {data.currencyReserves.map((c, i) => {
                 const status = STATUS_CONFIG[c.status];
                 const actionLabel = c.status === "critical" ? "Top-up now" : c.status === "low" ? "Top-up" : c.ratio > 2.5 ? "Reduce" : "Rebalance";
-                const actionColor = c.status === "critical" ? "bg-rose-600 hover:bg-rose-700 text-white" : c.status === "low" ? "bg-amber-500 hover:bg-amber-600 text-white" : "bg-emerald-600 hover:bg-emerald-700 text-white";
+                const actionColor = c.status === "critical" ? "bg-rose-600 hover:bg-rose-700 text-white" : c.status === "low" ? "bg-amber-500 hover:bg-amber-600 text-white" : "bg-violet-600 hover:bg-violet-violet-700 text-white";
                 return (
                   <motion.tr
                     key={c.code}
@@ -762,7 +762,7 @@ function ReservesTab({ data }: { data: TreasuryData }) {
                           <div
                             className={cn(
                               "h-full rounded-full",
-                              c.status === "healthy" ? "bg-emerald-500" : c.status === "low" ? "bg-amber-500" : "bg-rose-500",
+                              c.status === "healthy" ? "bg-violet-500" : c.status === "low" ? "bg-amber-500" : "bg-rose-500",
                             )}
                             style={{ width: `${Math.min(100, c.ratio * 40)}%` }}
                           />
@@ -825,7 +825,7 @@ function ReservesTab({ data }: { data: TreasuryData }) {
                       <p className="text-[10px] text-muted-foreground">{c.name}</p>
                     </div>
                   </div>
-                  <Badge className={cn("border-0", positive ? "bg-emerald-500/15 text-emerald-600" : "bg-rose-500/15 text-rose-600")}>
+                  <Badge className={cn("border-0", positive ? "bg-violet-500/15 text-violet-600" : "bg-rose-500/15 text-rose-600")}>
                     {positive ? <ArrowUpRight className="h-2.5 w-2.5 mr-0.5" /> : <ArrowDownRight className="h-2.5 w-2.5 mr-0.5" />}
                     {Math.abs(c.change24h).toFixed(2)}%
                   </Badge>
@@ -842,7 +842,7 @@ function ReservesTab({ data }: { data: TreasuryData }) {
                 </div>
                 <div className="mt-2 border-t pt-2">
                   <p className="text-[10px] text-muted-foreground">USD Value</p>
-                  <p className="text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{fmtUSD(c.usdValue)}</p>
+                  <p className="text-lg font-bold tabular-nums text-violet-600 dark:text-violet-400">{fmtUSD(c.usdValue)}</p>
                 </div>
                 <div className="mt-2 flex items-center gap-2 text-[10px] text-muted-foreground">
                   <Snowflake className="h-3 w-3" />
@@ -868,11 +868,11 @@ function HeroStat({
   label, value, prefix, icon, color,
 }: {
   label: string; value: number; prefix?: string; icon: React.ReactNode;
-  color: "emerald" | "teal" | "amber" | "sky";
+  color: "violet" | "teal" | "amber" | "sky";
 }) {
   const colors = {
-    emerald: "text-emerald-300 bg-emerald-500/10",
-    teal: "text-teal-300 bg-teal-500/10",
+    emerald: "text-violet-violet-300 bg-violet-500/10",
+    teal: "text-purple-300 bg-purple-500/10",
     amber: "text-amber-300 bg-amber-500/10",
     sky: "text-sky-300 bg-sky-500/10",
   };
@@ -905,12 +905,12 @@ function FxExposureTab({ data }: { data: TreasuryData }) {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-teal-950/40 to-slate-900 p-6 ring-1 ring-teal-500/20"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-teal-950/40 to-slate-900 p-6 ring-1 ring-purple-500/20"
       >
-        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-teal-500/15 blur-3xl" />
+        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-purple-500/15 blur-3xl" />
         <div className="relative grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <HeroStat label="Total Exposure" value={fx.totalExposureUSD} prefix="$" icon={<ArrowLeftRight className="h-4 w-4" />} color="teal" />
-          <HeroStat label="Hedged" value={fx.hedgedUSD} prefix="$" icon={<Shield className="h-4 w-4" />} color="emerald" />
+          <HeroStat label="Hedged" value={fx.hedgedUSD} prefix="$" icon={<Shield className="h-4 w-4" />} color="violet" />
           <HeroStat label="Unhedged" value={fx.unhedgedUSD} prefix="$" icon={<AlertTriangle className="h-4 w-4" />} color="amber" />
           <div className="rounded-xl bg-white/5 p-4 ring-1 ring-white/10">
             <div className="flex items-center gap-2">
@@ -932,7 +932,7 @@ function FxExposureTab({ data }: { data: TreasuryData }) {
         <Card className="p-5 lg:col-span-3">
           <div className="mb-3">
             <h3 className="font-semibold flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-emerald-500" /> Net Position by Currency
+              <BarChart3 className="h-4 w-4 text-violet-500" /> Net Position by Currency
             </h3>
             <p className="text-xs text-muted-foreground">30-day net inflow / outflow per currency (USD)</p>
           </div>
@@ -970,7 +970,7 @@ function FxExposureTab({ data }: { data: TreasuryData }) {
         <Card className="p-5 lg:col-span-2">
           <div className="mb-3">
             <h3 className="font-semibold flex items-center gap-2">
-              <PieIcon className="h-4 w-4 text-emerald-500" /> Hedged vs Unhedged
+              <PieIcon className="h-4 w-4 text-violet-500" /> Hedged vs Unhedged
             </h3>
             <p className="text-xs text-muted-foreground">Overall FX hedge coverage</p>
           </div>
@@ -1000,9 +1000,9 @@ function FxExposureTab({ data }: { data: TreasuryData }) {
           </ResponsiveContainer>
           <div className="mt-2 grid grid-cols-2 gap-2">
             <div className="rounded-lg border p-2 text-center">
-              <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 mb-1" />
+              <span className="inline-block h-2 w-2 rounded-full bg-violet-500 mb-1" />
               <p className="text-[10px] text-muted-foreground">Hedged</p>
-              <p className="text-sm font-semibold tabular-nums text-emerald-600">{fmtUSD(fx.hedgedUSD, true)}</p>
+              <p className="text-sm font-semibold tabular-nums text-violet-600">{fmtUSD(fx.hedgedUSD, true)}</p>
               <p className="text-[10px] text-muted-foreground">{fx.overallHedgeRatio}%</p>
             </div>
             <div className="rounded-lg border p-2 text-center">
@@ -1046,7 +1046,7 @@ function FxExposureTab({ data }: { data: TreasuryData }) {
                   <p className="text-sm font-bold text-white">{p.pair}</p>
                   <Badge className={cn(
                     "border-0 text-[10px]",
-                    p.hedgeRatio >= 50 ? "bg-emerald-500/30 text-emerald-100" : p.hedgeRatio >= 25 ? "bg-amber-500/30 text-amber-100" : "bg-rose-500/30 text-rose-100",
+                    p.hedgeRatio >= 50 ? "bg-violet-500/30 text-violet-violet-100" : p.hedgeRatio >= 25 ? "bg-amber-500/30 text-amber-100" : "bg-rose-500/30 text-rose-100",
                   )}>
                     {p.hedgeRatio}% hedged
                   </Badge>
@@ -1056,7 +1056,7 @@ function FxExposureTab({ data }: { data: TreasuryData }) {
 
                 {/* Hedge progress bar */}
                 <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-white/10">
-                  <div className="bg-emerald-500" style={{ width: `${p.hedgeRatio}%` }} />
+                  <div className="bg-violet-500" style={{ width: `${p.hedgeRatio}%` }} />
                   <div className="bg-rose-500/70" style={{ width: `${100 - p.hedgeRatio}%` }} />
                 </div>
                 <div className="mt-1.5 flex justify-between text-[10px] text-slate-300/80">
@@ -1119,7 +1119,7 @@ function FxExposureTab({ data }: { data: TreasuryData }) {
                       className={cn(
                         "text-[10px]",
                         p.direction === "long"
-                          ? "text-emerald-600 bg-emerald-500/15 border-emerald-500/30"
+                          ? "text-violet-600 bg-violet-500/15 border-violet-500/30"
                           : "text-rose-600 bg-rose-500/15 border-rose-500/30",
                       )}
                     >
@@ -1136,7 +1136,7 @@ function FxExposureTab({ data }: { data: TreasuryData }) {
                   <td className="py-3 pr-3">
                     <div className="w-32 h-1.5 overflow-hidden rounded-full bg-muted">
                       <div
-                        className={cn("h-full rounded-full", p.direction === "long" ? "bg-emerald-500" : "bg-rose-500")}
+                        className={cn("h-full rounded-full", p.direction === "long" ? "bg-violet-500" : "bg-rose-500")}
                         style={{ width: `${(Math.abs(p.netUSD) / maxNet) * 100}%` }}
                       />
                     </div>
@@ -1163,11 +1163,11 @@ function CashFlowTab({ data }: { data: TreasuryData }) {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-emerald-950/40 to-slate-900 p-6 ring-1 ring-emerald-500/20"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-violet-950/40 to-slate-900 p-6 ring-1 ring-violet-500/20"
       >
-        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-emerald-500/15 blur-3xl" />
+        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-violet-500/15 blur-3xl" />
         <div className="relative grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <HeroStat label="Total Inflow (30d)" value={cf.totalInflow30d} prefix="$" icon={<ArrowDownRight className="h-4 w-4" />} color="emerald" />
+          <HeroStat label="Total Inflow (30d)" value={cf.totalInflow30d} prefix="$" icon={<ArrowDownRight className="h-4 w-4" />} color="violet" />
           <HeroStat label="Total Outflow (30d)" value={cf.totalOutflow30d} prefix="$" icon={<ArrowUpRight className="h-4 w-4" />} color="amber" />
           <HeroStat label="Net Cash Flow" value={cf.netCashFlow30d} prefix="$" icon={<Activity className="h-4 w-4" />} color="teal" />
           <HeroStat label="Avg Daily Inflow" value={cf.avgDailyInflow} prefix="$" icon={<TrendingUp className="h-4 w-4" />} color="sky" />
@@ -1179,13 +1179,13 @@ function CashFlowTab({ data }: { data: TreasuryData }) {
         <div className="mb-3 flex items-center justify-between">
           <div>
             <h3 className="font-semibold flex items-center gap-2">
-              <Activity className="h-4 w-4 text-emerald-500" /> 30-Day Cash Flow
+              <Activity className="h-4 w-4 text-violet-500" /> 30-Day Cash Flow
             </h3>
             <p className="text-xs text-muted-foreground">Daily inflow vs outflow across all currencies (USD-normalized)</p>
           </div>
           <div className="flex gap-1.5">
-            <Badge variant="outline" className="text-emerald-600 border-emerald-500/30">
-              <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 mr-1" /> Inflow
+            <Badge variant="outline" className="text-violet-600 border-violet-500/30">
+              <span className="inline-block h-2 w-2 rounded-full bg-violet-500 mr-1" /> Inflow
             </Badge>
             <Badge variant="outline" className="text-rose-600 border-rose-500/30">
               <span className="inline-block h-2 w-2 rounded-full bg-rose-500 mr-1" /> Outflow
@@ -1271,14 +1271,14 @@ function CashFlowTab({ data }: { data: TreasuryData }) {
                 return (
                   <tr key={d.date} className="border-b last:border-0 hover:bg-muted/30">
                     <td className="py-2 pr-3 text-xs font-medium">{d.label}</td>
-                    <td className="py-2 pr-3 text-right text-xs tabular-nums text-emerald-600">{fmtUSD(d.inflow, true)}</td>
+                    <td className="py-2 pr-3 text-right text-xs tabular-nums text-violet-600">{fmtUSD(d.inflow, true)}</td>
                     <td className="py-2 pr-3 text-right text-xs tabular-nums text-rose-600">{fmtUSD(d.outflow, true)}</td>
-                    <td className={cn("py-2 pr-3 text-right text-xs font-semibold tabular-nums", d.net >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                    <td className={cn("py-2 pr-3 text-right text-xs font-semibold tabular-nums", d.net >= 0 ? "text-violet-600" : "text-rose-600")}>
                       {d.net >= 0 ? "+" : "−"}{fmtUSD(Math.abs(d.net), true)}
                     </td>
                     <td className="py-2">
                       <div className="flex w-24 h-1.5 overflow-hidden rounded-full bg-muted">
-                        <div className="bg-emerald-500" style={{ width: `${(d.inflow / maxFlow) * 100}%` }} />
+                        <div className="bg-violet-500" style={{ width: `${(d.inflow / maxFlow) * 100}%` }} />
                       </div>
                     </td>
                   </tr>
@@ -1307,12 +1307,12 @@ function SettlementsTab({ data }: { data: TreasuryData }) {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-teal-950/40 to-slate-900 p-6 ring-1 ring-teal-500/20"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-teal-950/40 to-slate-900 p-6 ring-1 ring-purple-500/20"
       >
-        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-teal-500/15 blur-3xl" />
+        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-purple-500/15 blur-3xl" />
         <div className="relative grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <HeroStat label="Total Balance" value={totalBalanceUSD} prefix="$" icon={<Building2 className="h-4 w-4" />} color="teal" />
-          <HeroStat label="Available" value={totalAvailableUSD} prefix="$" icon={<Wallet className="h-4 w-4" />} color="emerald" />
+          <HeroStat label="Available" value={totalAvailableUSD} prefix="$" icon={<Wallet className="h-4 w-4" />} color="violet" />
           <HeroStat label="Locked" value={totalLockedUSD} prefix="$" icon={<Lock className="h-4 w-4" />} color="amber" />
           <HeroStat label="Active Accounts" value={accounts.filter((a) => a.status === "active").length} icon={<CheckCircle2 className="h-4 w-4" />} color="sky" />
         </div>
@@ -1323,7 +1323,7 @@ function SettlementsTab({ data }: { data: TreasuryData }) {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="font-semibold flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-emerald-500" /> Settlement Accounts
+              <Building2 className="h-4 w-4 text-violet-500" /> Settlement Accounts
             </h3>
             <p className="text-xs text-muted-foreground">{accounts.length} nostro & operating accounts across currencies</p>
           </div>
@@ -1345,7 +1345,7 @@ function SettlementsTab({ data }: { data: TreasuryData }) {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/20 text-emerald-600">
+                    <span className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-violet-500/20 to-purple-500/20 text-violet-600">
                       <Building2 className="h-4 w-4" />
                     </span>
                     <div>
@@ -1382,14 +1382,14 @@ function SettlementsTab({ data }: { data: TreasuryData }) {
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] text-muted-foreground">Available</p>
-                      <p className="text-sm font-semibold tabular-nums text-emerald-600">{fmtUSD(a.balanceUSD * (a.available / a.balance), true)}</p>
+                      <p className="text-sm font-semibold tabular-nums text-violet-600">{fmtUSD(a.balanceUSD * (a.available / a.balance), true)}</p>
                       <p className="text-[10px] text-muted-foreground">Locked: {fmtUSD(a.balanceUSD * (a.locked / a.balance), true)} ({lockedPct.toFixed(0)}%)</p>
                     </div>
                   </div>
 
                   {/* Locked vs Available bar */}
                   <div className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-muted">
-                    <div className="bg-emerald-500" style={{ width: `${100 - lockedPct}%` }} />
+                    <div className="bg-violet-500" style={{ width: `${100 - lockedPct}%` }} />
                     <div className="bg-amber-500" style={{ width: `${lockedPct}%` }} />
                   </div>
                   <div className="mt-1 flex justify-between text-[9px] text-muted-foreground">
@@ -1414,7 +1414,7 @@ function SettlementsTab({ data }: { data: TreasuryData }) {
                     </Button>
                     <Button
                       size="sm"
-                      className="h-7 px-2 text-[10px] bg-emerald-600 hover:bg-emerald-700"
+                      className="h-7 px-2 text-[10px] bg-violet-600 hover:bg-violet-violet-700"
                       disabled={a.status === "frozen"}
                       onClick={() => toast.success(`Transfer initiated from ${a.bank} (${a.currency})`)}
                     >

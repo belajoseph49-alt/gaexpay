@@ -62,8 +62,8 @@ export function SavingsSection() {
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard icon={PiggyBank} label="Savings Goals" value={totalGoals} color="bg-emerald-500/15 text-emerald-500" />
-        <KpiCard icon={PiggyBank} label="Total Saved" value={formatMoney(totalSaved, "NGN")} color="bg-teal-500/15 text-teal-500" />
+        <KpiCard icon={PiggyBank} label="Savings Goals" value={totalGoals} color="bg-violet-500/15 text-violet-500" />
+        <KpiCard icon={PiggyBank} label="Total Saved" value={formatMoney(totalSaved, "NGN")} color="bg-purple-500/15 text-purple-500" />
         <KpiCard icon={Edit3} label="Budgets" value={totalBudgets} color="bg-amber-500/15 text-amber-500" />
         <KpiCard icon={Edit3} label="Budget Utilization" value={totalBudgeted > 0 ? `${Math.round((totalSpent / totalBudgeted) * 100)}%` : "—"} color="bg-rose-500/15 text-rose-500" />
       </div>
@@ -128,7 +128,7 @@ export function SavingsSection() {
                       <TableCell className="min-w-[120px]">
                         <div className="space-y-1">
                           <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                            <div className="h-full bg-emerald-500" style={{ width: `${pct}%` }} />
+                            <div className="h-full bg-violet-500" style={{ width: `${pct}%` }} />
                           </div>
                           <p className="text-[10px] text-muted-foreground tabular-nums">{pct.toFixed(1)}%</p>
                         </div>

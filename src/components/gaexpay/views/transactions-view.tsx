@@ -33,7 +33,7 @@ const TYPE_ICONS: Record<string, any> = {
 };
 
 const STATUS_STYLES: Record<string, any> = {
-  completed: { icon: CheckCircle2, color: "text-emerald-600 bg-emerald-500/10" },
+  completed: { icon: CheckCircle2, color: "text-violet-600 bg-violet-500/10" },
   failed: { icon: XCircle, color: "text-rose-600 bg-rose-500/10" },
   pending: { icon: Clock, color: "text-amber-600 bg-amber-500/10" },
   flagged: { icon: Flag, color: "text-orange-600 bg-orange-500/10" },
@@ -155,7 +155,7 @@ export function TransactionsView() {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">Total In</p>
-          <p className="text-lg font-bold text-emerald-600 tabular-nums">{fmt(totalIn)}</p>
+          <p className="text-lg font-bold text-violet-600 tabular-nums">{fmt(totalIn)}</p>
         </Card>
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">Total Out</p>
@@ -286,7 +286,7 @@ export function TransactionsView() {
                       >
                         <div className={cn(
                           "grid h-10 w-10 shrink-0 place-items-center rounded-full",
-                          isCredit ? "bg-emerald-500/15 text-emerald-500" : "bg-rose-500/15 text-rose-500",
+                          isCredit ? "bg-violet-500/15 text-violet-500" : "bg-rose-500/15 text-rose-500",
                         )}>
                           <Icon className="h-4 w-4" />
                         </div>
@@ -300,7 +300,7 @@ export function TransactionsView() {
                           <span className={cn("inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium", S.color)}>
                             <StatusIcon className="h-3 w-3" /> {t.status}
                           </span>
-                          <p className={cn("text-sm font-semibold tabular-nums w-28 text-right", isCredit ? "text-emerald-600" : "")}>
+                          <p className={cn("text-sm font-semibold tabular-nums w-28 text-right", isCredit ? "text-violet-600" : "")}>
                             {isCredit ? "+" : "-"}{formatMoney(t.amount, t.currency)}
                           </p>
                         </div>
@@ -325,7 +325,7 @@ export function TransactionsView() {
               <div className="flex flex-col items-center py-4">
                 <div className={cn(
                   "grid h-14 w-14 place-items-center rounded-full mb-2",
-                  selected.direction === "credit" ? "bg-emerald-500/15 text-emerald-500" : "bg-rose-500/15 text-rose-500",
+                  selected.direction === "credit" ? "bg-violet-500/15 text-violet-500" : "bg-rose-500/15 text-rose-500",
                 )}>
                   {selected.direction === "credit" ? <ArrowDownRight className="h-6 w-6" /> : <ArrowUpRight className="h-6 w-6" />}
                 </div>
@@ -424,7 +424,7 @@ export function TransactionsView() {
                   <span className="text-xs font-mono text-muted-foreground">{d.transactionRef}</span>
                   <Badge variant="outline" className={cn("text-[10px]",
                     d.status === "open" ? "text-amber-600" :
-                    d.status === "resolved" || d.status === "refunded" ? "text-emerald-600" :
+                    d.status === "resolved" || d.status === "refunded" ? "text-violet-600" :
                     d.status === "rejected" ? "text-rose-600" : "text-sky-600")}>
                     {d.status.replace("_", " ")}
                   </Badge>

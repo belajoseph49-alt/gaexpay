@@ -119,7 +119,7 @@ export function WalletsSection() {
                             if (!r.ok) showError(r.error || "Failed"); else setReloadKey((k) => k + 1);
                           }} title="Freeze"><Snowflake className="h-3.5 w-3.5" /></Button>
                         ) : (
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-emerald-600" onClick={async () => {
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-violet-600" onClick={async () => {
                             const r = await apiAction(`/api/admin/wallets?action=unfreeze`, "PATCH", { walletId: w.id }, "Wallet unfrozen");
                             if (!r.ok) showError(r.error || "Failed"); else setReloadKey((k) => k + 1);
                           }} title="Unfreeze"><Sun className="h-3.5 w-3.5" /></Button>

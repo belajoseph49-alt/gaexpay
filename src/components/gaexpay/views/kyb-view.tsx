@@ -352,7 +352,7 @@ export function KybView() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
         >
-          <Card className="border-0 bg-gradient-to-br from-emerald-600 to-teal-700 p-8 text-center text-white">
+          <Card className="border-0 bg-gradient-to-br from-violet-600 to-purple-700 p-8 text-center text-white">
             <div className="mx-auto mb-4 grid h-20 w-20 place-items-center rounded-full bg-white/20 backdrop-blur">
               <CheckCircle2 className="h-10 w-10" />
             </div>
@@ -396,7 +396,7 @@ export function KybView() {
         className={cn(
           "relative overflow-hidden border-0 p-6 text-white",
           status === "verified"
-            ? "bg-gradient-to-br from-emerald-600 to-teal-700"
+            ? "bg-gradient-to-br from-violet-600 to-purple-700"
             : status === "pending"
             ? "bg-gradient-to-br from-amber-500 to-orange-600"
             : status === "rejected"
@@ -470,7 +470,7 @@ export function KybView() {
                       active
                         ? "border-primary bg-primary/5"
                         : done
-                        ? "border-emerald-500/30 bg-emerald-500/5"
+                        ? "border-violet-500/30 bg-violet-500/5"
                         : "border-border opacity-60",
                     )}
                   >
@@ -480,7 +480,7 @@ export function KybView() {
                         active
                           ? "bg-primary text-primary-foreground"
                           : done
-                          ? "bg-emerald-500 text-white"
+                          ? "bg-violet-500 text-white"
                           : "bg-muted text-muted-foreground",
                       )}
                     >
@@ -944,7 +944,7 @@ export function KybView() {
                         return (
                           <li key={d.type} className="flex items-center gap-2">
                             {d.dataUrl ? (
-                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                              <CheckCircle2 className="h-3.5 w-3.5 text-violet-500" />
                             ) : (
                               <XCircle className="h-3.5 w-3.5 text-rose-500" />
                             )}
@@ -1020,7 +1020,7 @@ export function KybView() {
           <div className="flex items-center justify-between">
             <h3 className="font-semibold">Business Profile</h3>
             <Badge variant="outline" className={cn(
-              status === "verified" && "border-emerald-500/40 text-emerald-600",
+              status === "verified" && "border-violet-500/40 text-violet-600",
               status === "pending" && "border-amber-500/40 text-amber-600",
               status === "rejected" && "border-rose-500/40 text-rose-600",
             )}>
@@ -1070,7 +1070,7 @@ export function KybView() {
           const Icon = b.icon;
           return (
             <Card key={b.title} className="flex items-center gap-3 p-4">
-              <div className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-500/15 text-emerald-500">
+              <div className="grid h-10 w-10 place-items-center rounded-lg bg-violet-500/15 text-violet-500">
                 <Icon className="h-5 w-5" />
               </div>
               <div>

@@ -26,7 +26,7 @@ import { useFormatMoney } from "@/hooks/use-format-money";
 import { useTranslation } from "@/hooks/use-translation";
 
 const QUICK_ACTIONS = [
-  { id: "send", labelKey: "common.send", icon: SendHorizontal, color: "from-emerald-500 to-teal-600" },
+  { id: "send", labelKey: "common.send", icon: SendHorizontal, color: "from-violet-500 to-purple-600" },
   { id: "pay", labelKey: "common.scan", icon: QrCode, color: "from-fuchsia-500 to-pink-600" },
   { id: "pay", labelKey: "common.topUp", icon: ArrowDownToLine, color: "from-amber-500 to-orange-600", prefill: "topup" },
   { id: "pay", labelKey: "common.bills", icon: Receipt, color: "from-sky-500 to-blue-600" },
@@ -80,7 +80,7 @@ export function DashboardView() {
         </div>
         <div className="flex items-center gap-2">
           {user?.kycStatus === "verified" ? (
-            <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border-0">
+            <Badge className="bg-violet-500/15 text-violet-600 dark:text-violet-400 hover:bg-violet-500/20 border-0">
               <ShieldCheck className="h-3.5 w-3.5 mr-1" /> {t("dashboard.tierVerified", { tier: user.kycTier ?? 1 })}
             </Badge>
           ) : (
@@ -99,7 +99,7 @@ export function DashboardView() {
           animate={{ opacity: 1, y: 0 }}
           className="lg:col-span-2"
         >
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-800 p-4 sm:p-6 text-white shadow-xl shadow-emerald-900/20">
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-violet-600 via-purple-600 to-violet-800 p-4 sm:p-6 text-white shadow-xl shadow-violet-900/20">
             <div className="absolute inset-0 opacity-30 mesh-bg" />
             <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
             <div className="absolute -right-6 top-10 h-24 w-24 rounded-full bg-white/10 blur-xl" />
@@ -172,7 +172,7 @@ export function DashboardView() {
           <Card className="p-3 sm:p-4 card-lift">
             <div className="flex items-center justify-between gap-1">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-lg bg-emerald-500/15 text-emerald-500 shrink-0">
+                <div className="grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-lg bg-violet-500/15 text-violet-500 shrink-0">
                   <ArrowDownRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </div>
                 <div className="min-w-0">
@@ -180,7 +180,7 @@ export function DashboardView() {
                   <p className="text-sm sm:text-lg font-bold tabular-nums truncate">{fmt(income)}</p>
                 </div>
               </div>
-              <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 shrink-0 text-[9px]">+8.2%</Badge>
+              <Badge variant="outline" className="text-violet-600 border-violet-500/30 shrink-0 text-[9px]">+8.2%</Badge>
             </div>
           </Card>
           <Card className="p-3 sm:p-4 card-lift">
@@ -265,7 +265,7 @@ export function DashboardView() {
               <p className="text-xs text-muted-foreground">{t("dashboard.last30Days")}</p>
             </div>
             <div className="flex items-center gap-3 text-xs">
-              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Inflow</span>
+              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-violet-500" /> Inflow</span>
               <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-500" /> Outflow</span>
             </div>
           </div>
@@ -405,7 +405,7 @@ function TxRow({ tx, onClick }: { tx: any; onClick?: () => void }) {
     >
       <div className={cn(
         "grid h-10 w-10 shrink-0 place-items-center rounded-full",
-        isCredit ? "bg-emerald-500/15 text-emerald-500" : "bg-rose-500/15 text-rose-500",
+        isCredit ? "bg-violet-500/15 text-violet-500" : "bg-rose-500/15 text-rose-500",
       )}>
         <Icon className="h-4 w-4" />
       </div>
@@ -416,7 +416,7 @@ function TxRow({ tx, onClick }: { tx: any; onClick?: () => void }) {
         </p>
       </div>
       <div className="text-right">
-        <p className={cn("text-sm font-semibold tabular-nums", isCredit ? "text-emerald-600" : "text-foreground")}>
+        <p className={cn("text-sm font-semibold tabular-nums", isCredit ? "text-violet-600" : "text-foreground")}>
           {isCredit ? "+" : "-"}{formatMoney(tx.amount, tx.currency)}
         </p>
         <p className="text-[10px] text-muted-foreground uppercase">{tx.status}</p>
@@ -545,8 +545,8 @@ function FinancialHealthWidget({ onClick }: { onClick: () => void }) {
 
   const { score, grade, insights, savingsRate, expenseRatio } = data;
   const gradeColors: Record<string, string> = {
-    emerald: "from-emerald-500 to-teal-600",
-    teal: "from-teal-500 to-cyan-600",
+    emerald: "from-violet-500 to-purple-600",
+    teal: "from-purple-500 to-purple-600",
     amber: "from-amber-500 to-orange-600",
     orange: "from-orange-500 to-rose-600",
     rose: "from-rose-500 to-red-600",

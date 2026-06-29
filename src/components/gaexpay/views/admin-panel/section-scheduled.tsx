@@ -63,7 +63,7 @@ export function ScheduledSection() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <KpiCard icon={CalendarClock} label="Total Schedules" value={items.length} color="bg-amber-500/15 text-amber-500" />
-        <KpiCard icon={Play} label="Active" value={totalActive} color="bg-emerald-500/15 text-emerald-500" />
+        <KpiCard icon={Play} label="Active" value={totalActive} color="bg-violet-500/15 text-violet-500" />
         <KpiCard icon={Pause} label="Paused" value={totalPaused} color="bg-sky-500/15 text-sky-500" />
         <KpiCard icon={Ban} label="Cancelled" value={totalCancelled} color="bg-rose-500/15 text-rose-500" />
       </div>
@@ -148,7 +148,7 @@ export function ScheduledSection() {
                             if (!r.ok) showError(r.error || "Failed"); else setReloadKey((k) => k + 1);
                           }} title="Pause"><Pause className="h-3.5 w-3.5" /></Button>
                         ) : s.status === "paused" ? (
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-emerald-600" onClick={async () => {
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-violet-600" onClick={async () => {
                             const r = await apiAction(`/api/admin/scheduled?action=resume`, "PATCH", { transferId: s.id }, "Transfer resumed");
                             if (!r.ok) showError(r.error || "Failed"); else setReloadKey((k) => k + 1);
                           }} title="Resume"><Play className="h-3.5 w-3.5" /></Button>

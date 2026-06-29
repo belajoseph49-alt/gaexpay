@@ -80,8 +80,8 @@ type SecurityOverview = {
 
 function gradeColor(grade: string) {
   switch (grade) {
-    case "A": return { ring: "#10b981", text: "text-emerald-500", glow: "shadow-emerald-500/30", bg: "from-emerald-500 to-teal-600" };
-    case "B": return { ring: "#14b8a6", text: "text-teal-500", glow: "shadow-teal-500/30", bg: "from-teal-500 to-cyan-600" };
+    case "A": return { ring: "#10b981", text: "text-violet-500", glow: "shadow-violet-500/30", bg: "from-violet-500 to-purple-600" };
+    case "B": return { ring: "#14b8a6", text: "text-purple-500", glow: "shadow-purple-500/30", bg: "from-purple-500 to-purple-600" };
     case "C": return { ring: "#f59e0b", text: "text-amber-500", glow: "shadow-amber-500/30", bg: "from-amber-500 to-orange-600" };
     case "D": return { ring: "#f97316", text: "text-orange-500", glow: "shadow-orange-500/30", bg: "from-orange-500 to-rose-600" };
     default: return { ring: "#f43f5e", text: "text-rose-500", glow: "shadow-rose-500/30", bg: "from-rose-500 to-red-700" };
@@ -165,10 +165,10 @@ function EventIcon({ action }: { action: string }) {
   const act = action || "";
   if (act.includes("login") || act.includes("logout")) return { icon: UserCheck, color: "text-sky-500 bg-sky-500/10" };
   if (act.includes("password")) return { icon: KeyRound, color: "text-violet-500 bg-violet-500/10" };
-  if (act.includes("mfa")) return { icon: Shield, color: "text-emerald-500 bg-emerald-500/10" };
+  if (act.includes("mfa")) return { icon: Shield, color: "text-violet-500 bg-violet-500/10" };
   if (act.includes("suspicious") || act.includes("blocked")) return { icon: AlertTriangle, color: "text-rose-500 bg-rose-500/10" };
   if (act.includes("biometric")) return { icon: Fingerprint, color: "text-amber-500 bg-amber-500/10" };
-  if (act.includes("device")) return { icon: Monitor, color: "text-teal-500 bg-teal-500/10" };
+  if (act.includes("device")) return { icon: Monitor, color: "text-purple-500 bg-purple-500/10" };
   return { icon: Activity, color: "text-muted-foreground bg-accent" };
 }
 
@@ -218,7 +218,7 @@ export function SecurityView() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-md shadow-violet-500/20">
               <Shield className="h-5 w-5" />
             </div>
             <div>
@@ -325,7 +325,7 @@ export function SecurityView() {
             const pct = (b.points / b.max) * 100;
             const sc =
               b.status === "pass"
-                ? "text-emerald-600 bg-emerald-500/10"
+                ? "text-violet-600 bg-violet-500/10"
                 : b.status === "warn"
                 ? "text-amber-600 bg-amber-500/10"
                 : "text-rose-600 bg-rose-500/10";
@@ -368,27 +368,27 @@ export function SecurityView() {
             if (f.key === "encryption") {
               active = true;
               statusLabel = "Active";
-              statusColor = "bg-emerald-500/15 text-emerald-600";
+              statusColor = "bg-violet-500/15 text-violet-600";
             } else if (f.key === "mfa") {
               active = data.mfaEnabled;
               statusLabel = active ? "Enabled" : "Disabled";
-              statusColor = active ? "bg-emerald-500/15 text-emerald-600" : "bg-rose-500/15 text-rose-600";
+              statusColor = active ? "bg-violet-500/15 text-violet-600" : "bg-rose-500/15 text-rose-600";
             } else if (f.key === "biometric") {
               active = data.biometricEnabled;
               statusLabel = active ? "Enabled" : "Disabled";
-              statusColor = active ? "bg-emerald-500/15 text-emerald-600" : "bg-amber-500/15 text-amber-600";
+              statusColor = active ? "bg-violet-500/15 text-violet-600" : "bg-amber-500/15 text-amber-600";
             } else if (f.key === "pci") {
               active = data.compliance.pciDss.status === "verified";
               statusLabel = active ? "Verified" : "Pending";
-              statusColor = active ? "bg-emerald-500/15 text-emerald-600" : "bg-amber-500/15 text-amber-600";
+              statusColor = active ? "bg-violet-500/15 text-violet-600" : "bg-amber-500/15 text-amber-600";
             } else if (f.key === "aml") {
               active = data.compliance.aml.status === "compliant";
               statusLabel = active ? "Compliant" : "Pending";
-              statusColor = active ? "bg-emerald-500/15 text-emerald-600" : "bg-amber-500/15 text-amber-600";
+              statusColor = active ? "bg-violet-500/15 text-violet-600" : "bg-amber-500/15 text-amber-600";
             } else if (f.key === "fraud") {
               active = true;
               statusLabel = "AI Active";
-              statusColor = "bg-emerald-500/15 text-emerald-600";
+              statusColor = "bg-violet-500/15 text-violet-600";
             }
             return (
               <motion.div
@@ -448,7 +448,7 @@ export function SecurityView() {
                   exit={{ opacity: 0, x: 8 }}
                   className={cn(
                     "flex items-center gap-3 rounded-xl border p-3 transition",
-                    d.trusted ? "border-emerald-500/20 bg-emerald-500/[0.03]" : "border-amber-500/20 bg-amber-500/[0.03]",
+                    d.trusted ? "border-violet-500/20 bg-violet-500/[0.03]" : "border-amber-500/20 bg-amber-500/[0.03]",
                   )}
                 >
                   <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
@@ -457,7 +457,7 @@ export function SecurityView() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <p className="text-sm font-medium truncate">{d.name}</p>
-                      {d.trusted && <BadgeCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
+                      {d.trusted && <BadgeCheck className="h-3.5 w-3.5 text-violet-500 shrink-0" />}
                     </div>
                     <p className="text-xs text-muted-foreground truncate">
                       {d.os || "Unknown OS"} · {d.browser || "Unknown"}
@@ -559,7 +559,7 @@ export function SecurityView() {
           <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
             {data.fraudAlerts.list.length === 0 && (
               <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                <div className="grid h-12 w-12 place-items-center rounded-full bg-emerald-500/10 text-emerald-500 mb-2">
+                <div className="grid h-12 w-12 place-items-center rounded-full bg-violet-500/10 text-violet-500 mb-2">
                   <CheckCircle2 className="h-6 w-6" />
                 </div>
                 <p className="text-sm font-medium">No fraud alerts</p>
@@ -597,7 +597,7 @@ export function SecurityView() {
                         <div
                           className={cn(
                             "h-full rounded-full",
-                            risk >= 80 ? "bg-rose-500" : risk >= 60 ? "bg-amber-500" : "bg-emerald-500",
+                            risk >= 80 ? "bg-rose-500" : risk >= 60 ? "bg-amber-500" : "bg-violet-500",
                           )}
                           style={{ width: `${risk}%` }}
                         />
@@ -630,13 +630,13 @@ export function SecurityView() {
                   ? "border-rose-500/30 bg-rose-500/[0.04]"
                   : r.severity === "medium"
                   ? "border-amber-500/30 bg-amber-500/[0.04]"
-                  : "border-emerald-500/30 bg-emerald-500/[0.04]";
+                  : "border-violet-500/30 bg-violet-500/[0.04]";
               const icColor =
                 r.severity === "high"
                   ? "bg-rose-500/10 text-rose-500"
                   : r.severity === "medium"
                   ? "bg-amber-500/10 text-amber-500"
-                  : "bg-emerald-500/10 text-emerald-500";
+                  : "bg-violet-500/10 text-violet-500";
               return (
                 <motion.div
                   key={r.id}
@@ -712,7 +712,7 @@ export function SecurityView() {
             <h3 className="font-semibold">Certifications & Compliance</h3>
             <p className="text-xs text-muted-foreground">GaexPay is independently audited & certified</p>
           </div>
-          <BadgeCheck className="h-5 w-5 text-emerald-500" />
+          <BadgeCheck className="h-5 w-5 text-violet-500" />
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {[
@@ -725,11 +725,11 @@ export function SecurityView() {
             const Icon = c.icon;
             return (
               <div key={c.name} className="rounded-xl border p-3.5 text-center">
-                <div className="mx-auto mb-2 grid h-10 w-10 place-items-center rounded-lg bg-emerald-500/10 text-emerald-500">
+                <div className="mx-auto mb-2 grid h-10 w-10 place-items-center rounded-lg bg-violet-500/10 text-violet-500">
                   <Icon className="h-5 w-5" />
                 </div>
                 <p className="text-sm font-semibold">{c.name}</p>
-                <p className="text-[11px] capitalize text-emerald-600 font-medium">{c.detail}</p>
+                <p className="text-[11px] capitalize text-violet-600 font-medium">{c.detail}</p>
                 <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{c.sub}</p>
               </div>
             );
@@ -760,7 +760,7 @@ function MetaCard({
   icon: any; label: string; value: string; sub: string; tone?: "default" | "ok" | "warn";
 }) {
   const toneClass =
-    tone === "ok" ? "bg-emerald-500/10 text-emerald-500"
+    tone === "ok" ? "bg-violet-500/10 text-violet-500"
     : tone === "warn" ? "bg-amber-500/10 text-amber-500"
     : "bg-primary/10 text-primary";
   return (
@@ -787,7 +787,7 @@ function SecuritySkeleton() {
           <Skeleton className="h-3 w-64" />
         </div>
       </div>
-      <Card className="relative overflow-hidden border-0 p-6 bg-gradient-to-br from-emerald-600 to-teal-700 text-white">
+      <Card className="relative overflow-hidden border-0 p-6 bg-gradient-to-br from-violet-600 to-purple-700 text-white">
         <div className="grid gap-6 lg:grid-cols-[auto_1fr]">
           <Skeleton className="h-[220px] w-[220px] rounded-3xl bg-white/15" />
           <div className="space-y-4">

@@ -56,7 +56,7 @@ export function SupportView() {
           <Button variant="ghost" size="sm" className="mt-3 p-0 h-auto">Start chatting <ChevronRight className="h-4 w-4" /></Button>
         </Card>
         <Card className="cursor-pointer card-lift p-5">
-          <div className="grid h-12 w-12 place-items-center rounded-xl bg-emerald-500/10 text-emerald-500 mb-3">
+          <div className="grid h-12 w-12 place-items-center rounded-xl bg-violet-500/10 text-violet-500 mb-3">
             <Headphones className="h-6 w-6" />
           </div>
           <h3 className="font-semibold">Live Agent</h3>
@@ -149,7 +149,7 @@ function StatusBadge({ status }: { status: string }) {
   const map: Record<string, any> = {
     open: "bg-sky-500/15 text-sky-600",
     in_progress: "bg-amber-500/15 text-amber-600",
-    resolved: "bg-emerald-500/15 text-emerald-600",
+    resolved: "bg-violet-500/15 text-violet-600",
     closed: "bg-muted text-muted-foreground",
   };
   return <Badge className={cn("border-0 text-[10px]", map[status])}>{status.replace("_", " ")}</Badge>;
@@ -206,7 +206,7 @@ function ChatPanel({ ticket }: { ticket: any }) {
             <div key={i} className={cn("flex gap-2.5", m.senderType === "user" && "flex-row-reverse")}>
               <div className={cn(
                 "grid h-8 w-8 shrink-0 place-items-center rounded-full",
-                m.senderType === "user" ? "bg-primary text-primary-foreground" : m.senderType === "agent" ? "bg-emerald-500/15 text-emerald-500" : "bg-muted",
+                m.senderType === "user" ? "bg-primary text-primary-foreground" : m.senderType === "agent" ? "bg-violet-500/15 text-violet-500" : "bg-muted",
               )}>
                 {m.senderType === "user" ? <User className="h-4 w-4" /> : <Headphones className="h-4 w-4" />}
               </div>
@@ -220,7 +220,7 @@ function ChatPanel({ ticket }: { ticket: any }) {
           ))}
           {sending && (
             <div className="flex gap-2.5">
-              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-500/15 text-emerald-500">
+              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-violet-500/15 text-violet-500">
                 <Headphones className="h-4 w-4" />
               </div>
               <div className="rounded-2xl rounded-tl-sm bg-muted px-4 py-3">

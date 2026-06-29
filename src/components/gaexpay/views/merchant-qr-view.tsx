@@ -90,7 +90,7 @@ export function MerchantQRView() {
                   />
                   {/* Center logo overlay */}
                   <div className="absolute left-1/2 top-1/2 grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-xl bg-white shadow-md ring-2 ring-slate-900/10">
-                    <div className="grid h-7 w-7 place-items-center rounded-md bg-gradient-to-br from-emerald-500 to-teal-600">
+                    <div className="grid h-7 w-7 place-items-center rounded-md bg-gradient-to-br from-violet-500 to-purple-600">
                       <QrCode className="h-4 w-4 text-white" />
                     </div>
                   </div>
@@ -100,11 +100,11 @@ export function MerchantQRView() {
               )}
               {/* GaexPay logo below */}
               <div className="mt-4 flex items-center justify-center gap-1.5">
-                <div className="grid h-6 w-6 place-items-center rounded-md bg-gradient-to-br from-emerald-500 to-teal-600">
+                <div className="grid h-6 w-6 place-items-center rounded-md bg-gradient-to-br from-violet-500 to-purple-600">
                   <QrCode className="h-3.5 w-3.5 text-white" />
                 </div>
                 <span className="text-sm font-bold text-slate-800">
-                  Gaex<span className="text-emerald-600">Pay</span>
+                  Gaex<span className="text-violet-600">Pay</span>
                 </span>
               </div>
             </motion.div>
@@ -169,7 +169,7 @@ export function MerchantQRView() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Status</span>
-                <Badge variant="outline" className="text-emerald-600 text-[10px]">Active</Badge>
+                <Badge variant="outline" className="text-violet-600 text-[10px]">Active</Badge>
               </div>
             </div>
           </Card>
@@ -243,7 +243,7 @@ function QRMatrix({ matrix }: { matrix: number[][] }) {
       )}
       {/* Center logo overlay */}
       <div className="absolute left-1/2 top-1/2 grid h-10 w-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-lg bg-white shadow-md ring-2 ring-slate-900">
-        <div className="grid h-6 w-6 place-items-center rounded bg-gradient-to-br from-emerald-500 to-teal-600">
+        <div className="grid h-6 w-6 place-items-center rounded bg-gradient-to-br from-violet-500 to-purple-600">
           <QrCode className="h-3.5 w-3.5 text-white" />
         </div>
       </div>

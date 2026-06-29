@@ -58,7 +58,7 @@ export function CryptoSection() {
         <KpiCard icon={Bitcoin} label="Crypto Wallets" value={totalWallets} color="bg-orange-500/15 text-orange-500" />
         <KpiCard icon={ArrowLeftRight} label="Trades" value={totalTrades} color="bg-amber-500/15 text-amber-500" />
         <KpiCard icon={ArrowLeftRight} label="Swaps" value={totalSwaps} color="bg-violet-500/15 text-violet-500" />
-        <KpiCard icon={Settings} label="Wallet Balance (sum)" value={formatMoney(totalWalletValue, "USD")} color="bg-emerald-500/15 text-emerald-500" />
+        <KpiCard icon={Settings} label="Wallet Balance (sum)" value={formatMoney(totalWalletValue, "USD")} color="bg-violet-500/15 text-violet-500" />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -156,7 +156,7 @@ export function CryptoSection() {
                     <TableCell>
                       <Badge variant="outline" className={
                         t.action === "buy"
-                          ? "text-[10px] bg-emerald-500/15 text-emerald-600 border-emerald-500/20 capitalize"
+                          ? "text-[10px] bg-violet-500/15 text-violet-600 border-violet-500/20 capitalize"
                           : "text-[10px] bg-rose-500/15 text-rose-600 border-rose-500/20 capitalize"
                       }>
                         {t.action}

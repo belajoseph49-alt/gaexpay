@@ -116,7 +116,7 @@ export function SupportSection() {
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <KpiCard icon={AlertCircle} label="Open Tickets" value={stats?.open ?? 0} color="bg-sky-500/15 text-sky-500" />
         <KpiCard icon={Clock} label="Avg Resolution" value={stats ? `${stats.avgResolutionHours}h` : "—"} color="bg-amber-500/15 text-amber-500" />
-        <KpiCard icon={Smile} label="Satisfaction Rate" value={stats ? `${stats.satisfactionRate}%` : "—"} color="bg-emerald-500/15 text-emerald-500" />
+        <KpiCard icon={Smile} label="Satisfaction Rate" value={stats ? `${stats.satisfactionRate}%` : "—"} color="bg-violet-500/15 text-violet-500" />
         <KpiCard icon={TrendingUp} label="Urgent Tickets" value={stats?.urgent ?? 0} color="bg-rose-500/15 text-rose-500" />
       </div>
 
@@ -325,7 +325,7 @@ function TicketDetailDialog({
               <DropdownMenuItem onClick={() => changeStatus("open")}>Open</DropdownMenuItem>
               <DropdownMenuItem onClick={() => changeStatus("in_progress")}>In Progress</DropdownMenuItem>
               <DropdownMenuItem onClick={() => changeStatus("resolved")}>
-                <CheckCircle2 className="h-3 w-3 mr-2 text-emerald-600" /> Resolved
+                <CheckCircle2 className="h-3 w-3 mr-2 text-violet-600" /> Resolved
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => changeStatus("closed")}>Closed</DropdownMenuItem>
             </DropdownMenuContent>

@@ -74,8 +74,8 @@ export function StatsTab({ stats, loading }: Props) {
           icon={CheckCircle2}
           label="Healthy"
           value={totals.healthy}
-          color="bg-emerald-500/15 text-emerald-600"
-          dot="bg-emerald-500"
+          color="bg-violet-500/15 text-violet-600"
+          dot="bg-violet-500"
         />
         <HealthCard
           icon={AlertTriangle}
@@ -334,7 +334,7 @@ export function StatsTab({ stats, loading }: Props) {
           </div>
           {topErrors.length === 0 ? (
             <div className="py-10 text-center">
-              <CheckCircle2 className="h-8 w-8 text-emerald-500/50 mx-auto mb-2" />
+              <CheckCircle2 className="h-8 w-8 text-violet-500/50 mx-auto mb-2" />
               <p className="text-xs text-muted-foreground">No errors recorded 🎉</p>
             </div>
           ) : (
@@ -384,7 +384,7 @@ export function StatsTab({ stats, loading }: Props) {
         </div>
         {recentErrors.length === 0 ? (
           <div className="py-10 text-center">
-            <CheckCircle2 className="h-8 w-8 text-emerald-500/50 mx-auto mb-2" />
+            <CheckCircle2 className="h-8 w-8 text-violet-500/50 mx-auto mb-2" />
             <p className="text-xs text-muted-foreground">No recent errors. All systems nominal.</p>
           </div>
         ) : (

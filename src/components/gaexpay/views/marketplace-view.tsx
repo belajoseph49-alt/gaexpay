@@ -384,7 +384,7 @@ function MarketplaceHome({
                   <p className="truncate text-sm font-bold text-zinc-900">{s.name}</p>
                   <p className="truncate text-xs text-zinc-500">{t("marketplace.onlineInStore")}</p>
                 </div>
-                <div className="grid h-6 w-6 place-items-center rounded-full bg-emerald-50 text-emerald-600">
+                <div className="grid h-6 w-6 place-items-center rounded-full bg-violet-violet-50 text-violet-600">
                   <Check size={14} />
                 </div>
               </motion.button>
@@ -660,7 +660,7 @@ function ProductDetail({
               <Card
                 className={cn(
                   "relative flex flex-col gap-3 p-4 shadow-sm",
-                  i === 0 ? "border-emerald-200 ring-1 ring-emerald-100" : "border-zinc-100",
+                  i === 0 ? "border-violet-violet-200 ring-1 ring-violet-violet-100" : "border-zinc-100",
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -679,13 +679,13 @@ function ProductDetail({
                   <div>
                     <p className="text-xl font-bold text-zinc-900">{fmt(o.price)}</p>
                     {i === 0 && (
-                      <p className="text-[11px] font-medium text-emerald-600">
+                      <p className="text-[11px] font-medium text-violet-600">
                         Save {fmt(product.offers[1].price - o.price)}
                       </p>
                     )}
                   </div>
                   {o.inStock ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-violet-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-violet-700">
                       <Check size={11} /> {t("marketplace.inStock")}
                     </span>
                   ) : (
@@ -704,7 +704,7 @@ function ProductDetail({
       <div className="grid grid-cols-2 gap-3">
         <Button
           size="lg"
-          className="rounded-xl bg-emerald-500 text-white shadow-sm hover:bg-emerald-600"
+          className="rounded-xl bg-violet-500 text-white shadow-sm hover:bg-violet-600"
           onClick={() => toast.success(t("marketplace.addedToCart"))}
         >
           <Plus size={16} className="mr-1.5" />

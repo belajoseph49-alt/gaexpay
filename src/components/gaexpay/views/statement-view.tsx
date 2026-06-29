@@ -113,11 +113,11 @@ export function StatementView() {
       {/* Summary KPIs */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="p-5 card-lift">
-          <div className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-500/15 text-emerald-500 mb-3">
+          <div className="grid h-10 w-10 place-items-center rounded-lg bg-violet-500/15 text-violet-500 mb-3">
             <TrendingUp className="h-5 w-5" />
           </div>
           <p className="text-xs text-muted-foreground">Total Inflow</p>
-          <p className="text-xl font-bold text-emerald-600 tabular-nums">
+          <p className="text-xl font-bold text-violet-600 tabular-nums">
             <AnimatedNumber value={summary.totalIn} prefix={symbol} decimals={2} />
           </p>
         </Card>
@@ -135,7 +135,7 @@ export function StatementView() {
             <Wallet className="h-5 w-5" />
           </div>
           <p className="text-xs text-muted-foreground">Net Flow</p>
-          <p className={cn("text-xl font-bold tabular-nums", summary.net >= 0 ? "text-emerald-600" : "text-rose-600")}>
+          <p className={cn("text-xl font-bold tabular-nums", summary.net >= 0 ? "text-violet-600" : "text-rose-600")}>
             <AnimatedNumber value={summary.net} prefix={symbol} decimals={2} />
           </p>
         </Card>
@@ -200,12 +200,12 @@ export function StatementView() {
                       <td className="py-2.5 pr-3 font-mono text-xs">{t.reference.slice(0, 14)}</td>
                       <td className="py-2.5 pr-3 max-w-[200px] truncate">{t.counterpartyName || t.description}</td>
                       <td className="py-2.5 pr-3 capitalize text-xs">{t.type}</td>
-                      <td className={cn("py-2.5 pr-3 text-right font-semibold tabular-nums", isCredit ? "text-emerald-600" : "")}>
+                      <td className={cn("py-2.5 pr-3 text-right font-semibold tabular-nums", isCredit ? "text-violet-600" : "")}>
                         {isCredit ? "+" : "-"}{formatMoney(t.amount, t.currency)}
                       </td>
                       <td className="py-2.5">
                         <Badge variant="outline" className={cn("text-[10px]",
-                          t.status === "completed" ? "text-emerald-600" :
+                          t.status === "completed" ? "text-violet-600" :
                           t.status === "failed" ? "text-rose-600" : "text-amber-600")}>
                           {t.status}
                         </Badge>

@@ -29,9 +29,9 @@ const CATEGORY_META: Record<string, { icon: any; color: string }> = {
   "Food & Dining": { icon: Utensils, color: "bg-amber-500/15 text-amber-500" },
   "Transport": { icon: Car, color: "bg-sky-500/15 text-sky-500" },
   "Shopping": { icon: ShoppingBag, color: "bg-violet-500/15 text-violet-500" },
-  "Bills & Utilities": { icon: Zap, color: "bg-emerald-500/15 text-emerald-500" },
+  "Bills & Utilities": { icon: Zap, color: "bg-violet-500/15 text-violet-500" },
   "Entertainment": { icon: Film, color: "bg-rose-500/15 text-rose-500" },
-  "Health": { icon: Heart, color: "bg-teal-500/15 text-teal-500" },
+  "Health": { icon: Heart, color: "bg-purple-500/15 text-purple-500" },
   "general": { icon: Wallet, color: "bg-slate-500/15 text-slate-500" },
 };
 
@@ -115,7 +115,7 @@ export function BudgetsView() {
           label="On Track"
           value={String(budgets.filter((b) => (b.spent / b.limit) * 100 < 80).length)}
           subtitle="budgets under 80%"
-          color="bg-emerald-500/15 text-emerald-500"
+          color="bg-violet-500/15 text-violet-500"
         />
         <InsightCard
           icon={AlertTriangle}
@@ -164,7 +164,7 @@ export function BudgetsView() {
                   <div className="flex items-center gap-1">
                     {isOver && <Badge className="bg-rose-500/15 text-rose-600 border-0 text-[10px]">Over</Badge>}
                     {isWarning && <Badge className="bg-amber-500/15 text-amber-600 border-0 text-[10px]">Warning</Badge>}
-                    {!isOver && !isWarning && <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[10px]">On Track</Badge>}
+                    {!isOver && !isWarning && <Badge className="bg-violet-500/15 text-violet-600 border-0 text-[10px]">On Track</Badge>}
                     <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition" onClick={() => deleteBudget(b.id)}>
                       <Trash2 className="h-3.5 w-3.5 text-rose-500" />
                     </Button>
@@ -184,7 +184,7 @@ export function BudgetsView() {
                 />
 
                 <div className="mt-2 flex items-center justify-between text-xs">
-                  <span className={cn("font-medium", isOver ? "text-rose-600" : isWarning ? "text-amber-600" : "text-emerald-600")}>
+                  <span className={cn("font-medium", isOver ? "text-rose-600" : isWarning ? "text-amber-600" : "text-violet-600")}>
                     {pct.toFixed(1)}% used
                   </span>
                   <span className="text-muted-foreground">

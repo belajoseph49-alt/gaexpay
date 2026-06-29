@@ -77,10 +77,10 @@ const NAV_GROUPS: { group: string; items: NavItem[] }[] = [
   {
     group: "Operations",
     items: [
-      { id: "users", label: "Users", icon: Users, description: "Manage user accounts", color: "bg-emerald-500/15 text-emerald-500" },
+      { id: "users", label: "Users", icon: Users, description: "Manage user accounts", color: "bg-violet-500/15 text-violet-500" },
       { id: "businesses", label: "Businesses", icon: Building2, description: "KYB verification", color: "bg-violet-500/15 text-violet-500" },
       { id: "transactions", label: "Transactions", icon: ArrowLeftRight, description: "All platform transactions", color: "bg-amber-500/15 text-amber-500" },
-      { id: "wallets", label: "Wallets", icon: Wallet, description: "Adjust & freeze wallets", color: "bg-teal-500/15 text-teal-500" },
+      { id: "wallets", label: "Wallets", icon: Wallet, description: "Adjust & freeze wallets", color: "bg-purple-500/15 text-purple-500" },
       { id: "disputes", label: "Disputes", icon: AlertTriangle, description: "Resolution center", color: "bg-rose-500/15 text-rose-500" },
     ],
   },
@@ -88,7 +88,7 @@ const NAV_GROUPS: { group: string; items: NavItem[] }[] = [
     group: "Compliance",
     items: [
       { id: "aml", label: "AML & Compliance", icon: FileCheck, description: "Anti-money laundering rules", color: "bg-red-500/15 text-red-500" },
-      { id: "kyc-review", label: "KYC Review", icon: UserCheck, description: "Identity verification queue", color: "bg-emerald-500/15 text-emerald-500" },
+      { id: "kyc-review", label: "KYC Review", icon: UserCheck, description: "Identity verification queue", color: "bg-violet-500/15 text-violet-500" },
       { id: "limits", label: "Limits & Tiers", icon: Gauge, description: "KYC tier limits", color: "bg-orange-500/15 text-orange-500" },
     ],
   },
@@ -96,16 +96,16 @@ const NAV_GROUPS: { group: string; items: NavItem[] }[] = [
     group: "Financial",
     items: [
       { id: "cards", label: "Cards", icon: CreditCard, description: "User card management", color: "bg-indigo-500/15 text-indigo-500" },
-      { id: "savings", label: "Savings & Budgets", icon: PiggyBank, description: "User savings goals & budgets", color: "bg-emerald-500/15 text-emerald-500" },
+      { id: "savings", label: "Savings & Budgets", icon: PiggyBank, description: "User savings goals & budgets", color: "bg-violet-500/15 text-violet-500" },
       { id: "scheduled", label: "Scheduled Transfers", icon: CalendarClock, description: "Recurring & scheduled transfers", color: "bg-amber-500/15 text-amber-500" },
       { id: "crypto", label: "Crypto", icon: Bitcoin, description: "Crypto wallets & trading", color: "bg-orange-500/15 text-orange-500" },
-      { id: "exchange-rates", label: "Exchange Rates", icon: TrendingUp, description: "Manual & auto rates", color: "bg-cyan-500/15 text-cyan-500" },
+      { id: "exchange-rates", label: "Exchange Rates", icon: TrendingUp, description: "Manual & auto rates", color: "bg-purple-500/15 text-purple-500" },
     ],
   },
   {
     group: "Configuration",
     items: [
-      { id: "currencies", label: "Currencies", icon: Coins, description: "Fiat & crypto + rates", color: "bg-cyan-500/15 text-cyan-500" },
+      { id: "currencies", label: "Currencies", icon: Coins, description: "Fiat & crypto + rates", color: "bg-purple-500/15 text-purple-500" },
       { id: "fees", label: "Fees & Commission", icon: Percent, description: "Fee configs", color: "bg-orange-500/15 text-orange-500" },
       { id: "products", label: "Products & Services", icon: ShoppingBag, description: "Billers & merchants", color: "bg-pink-500/15 text-pink-500" },
       { id: "notifications", label: "Notifications", icon: Bell, description: "Broadcast & templates", color: "bg-blue-500/15 text-blue-500" },
@@ -118,9 +118,9 @@ const NAV_GROUPS: { group: string; items: NavItem[] }[] = [
     items: [
       { id: "system-settings", label: "System Settings", icon: Settings, description: "Platform configuration", color: "bg-slate-500/15 text-slate-500" },
       { id: "templates", label: "Templates", icon: Mail, description: "Email, SMS & push templates", color: "bg-indigo-500/15 text-indigo-500" },
-      { id: "corridors", label: "Transfer Corridors", icon: Globe, description: "International transfer routes", color: "bg-cyan-500/15 text-cyan-500" },
+      { id: "corridors", label: "Transfer Corridors", icon: Globe, description: "International transfer routes", color: "bg-purple-500/15 text-purple-500" },
       { id: "analytics", label: "Platform Analytics", icon: Activity, description: "Deep-dive metrics", color: "bg-purple-500/15 text-purple-500" },
-      { id: "treasury", label: "Treasury", icon: Landmark, description: "Platform liquidity & reserves", color: "bg-teal-500/15 text-teal-500" },
+      { id: "treasury", label: "Treasury", icon: Landmark, description: "Platform liquidity & reserves", color: "bg-purple-500/15 text-purple-500" },
     ],
   },
   {

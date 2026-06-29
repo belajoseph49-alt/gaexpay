@@ -85,7 +85,7 @@ export function Landing({ onEnter, onSignup }: { onEnter: () => void; onSignup: 
               >
                 <div className="relative w-72 rounded-[2.5rem] border-8 border-slate-900 bg-slate-900 p-3 shadow-2xl dark:border-slate-800">
                   <div className="absolute left-1/2 top-0 h-6 w-32 -translate-x-1/2 rounded-b-2xl bg-slate-900" />
-                  <div className="overflow-hidden rounded-[2rem] bg-gradient-to-br from-emerald-600 to-teal-700 p-5 text-white">
+                  <div className="overflow-hidden rounded-[2rem] bg-gradient-to-br from-violet-600 to-purple-700 p-5 text-white">
                     <div className="flex items-center justify-between mb-6">
                       <span className="text-xs text-white/70">Total Balance</span>
                       <Wallet className="h-4 w-4" />
@@ -159,7 +159,7 @@ export function Landing({ onEnter, onSignup }: { onEnter: () => void; onSignup: 
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {[
-              { icon: Zap, title: "Instant Transfers", desc: "Send & receive money in seconds. GaexPay-to-GaexPay is always free.", color: "from-emerald-500 to-teal-600" },
+              { icon: Zap, title: "Instant Transfers", desc: "Send & receive money in seconds. GaexPay-to-GaexPay is always free.", color: "from-violet-500 to-purple-600" },
               { icon: Smartphone, title: "Mobile Money", desc: "MTN MoMo, Orange, Airtel, Moov & M-PESA integrated natively.", color: "from-amber-500 to-orange-600" },
               { icon: CreditCard, title: "Virtual & Physical Cards", desc: "Issue a Visa/Mastercard instantly. Spend globally online & offline.", color: "from-violet-500 to-purple-600" },
               { icon: QrCode, title: "QR Payments", desc: "Scan to pay at millions of merchants. No cash, no cards needed.", color: "from-fuchsia-500 to-pink-600" },
@@ -200,10 +200,10 @@ export function Landing({ onEnter, onSignup }: { onEnter: () => void; onSignup: 
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5 }}
-                className="relative rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 p-8 grid place-items-center min-h-[320px] lg:p-12"
+                className="relative rounded-3xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 to-purple-500/5 p-8 grid place-items-center min-h-[320px] lg:p-12"
               >
                 <div className="absolute inset-0 mesh-bg rounded-3xl opacity-60" />
-                <div className="relative grid h-32 w-32 place-items-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 shadow-2xl shadow-emerald-500/30">
+                <div className="relative grid h-32 w-32 place-items-center rounded-full bg-gradient-to-br from-violet-400 to-purple-500 shadow-2xl shadow-violet-500/30">
                   <Shield className="h-16 w-16 text-white" />
                 </div>
                 <div className="absolute right-6 top-6 rounded-full border bg-background/80 px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur">
@@ -225,7 +225,7 @@ export function Landing({ onEnter, onSignup }: { onEnter: () => void; onSignup: 
                 </p>
                 <div className="mt-8 grid gap-5 sm:grid-cols-2">
                   {[
-                    { icon: Lock, title: "256-bit encryption", desc: "AES-256 end-to-end on every transaction.", color: "bg-emerald-500" },
+                    { icon: Lock, title: "256-bit encryption", desc: "AES-256 end-to-end on every transaction.", color: "bg-violet-500" },
                     { icon: Fingerprint, title: "Biometric auth", desc: "Face ID, Touch ID & fingerprint unlock.", color: "bg-violet-500" },
                     { icon: FileCheck, title: "PCI-DSS compliant", desc: "Level 1 certified payment infrastructure.", color: "bg-amber-500" },
                     { icon: BadgeCheck, title: "Regulated & licensed", desc: "AML & KYC compliant, CBN licensed operator.", color: "bg-sky-500" },
@@ -269,7 +269,7 @@ export function Landing({ onEnter, onSignup }: { onEnter: () => void; onSignup: 
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { icon: Smartphone, title: "iOS & Android", desc: "Native apps with offline sync & biometrics", color: "from-emerald-500 to-teal-600" },
+              { icon: Smartphone, title: "iOS & Android", desc: "Native apps with offline sync & biometrics", color: "from-violet-500 to-purple-600" },
               { icon: Globe, title: "Web App", desc: "Full-featured wallet in your browser", color: "from-sky-500 to-cyan-600" },
               { icon: CreditCard, title: "Desktop", desc: "Windows, macOS & Linux native experience", color: "from-violet-500 to-purple-600" },
               { icon: Users, title: "Admin Console", desc: "Complete operations & compliance suite", color: "from-amber-500 to-orange-600" },
@@ -289,8 +289,8 @@ export function Landing({ onEnter, onSignup }: { onEnter: () => void; onSignup: 
                   </div>
                   <h3 className="mt-4 font-semibold">{p.title}</h3>
                   <p className="mt-1.5 text-sm text-muted-foreground">{p.desc}</p>
-                  <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-violet-500/10 px-2.5 py-1 text-xs font-medium text-violet-600 dark:text-violet-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
                     Available
                   </div>
                 </motion.div>
@@ -374,7 +374,7 @@ export function Landing({ onEnter, onSignup }: { onEnter: () => void; onSignup: 
 
         {/* CTA */}
         <section className="px-4 pb-16 pt-16 lg:px-8 lg:pb-24 lg:pt-24">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 py-20 lg:py-28">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 via-purple-600 to-violet-700 py-20 lg:py-28">
             {/* Decorative orbs */}
             <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
             <div className="absolute -bottom-20 -left-20 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
@@ -397,7 +397,7 @@ export function Landing({ onEnter, onSignup }: { onEnter: () => void; onSignup: 
                 <Button
                   size="lg"
                   onClick={onSignup}
-                  className="h-12 w-full rounded-full bg-white px-8 font-semibold text-emerald-700 shadow-lg transition hover:bg-white/90 active:scale-95 sm:h-14 sm:w-auto"
+                  className="h-12 w-full rounded-full bg-white px-8 font-semibold text-violet-violet-700 shadow-lg transition hover:bg-white/90 active:scale-95 sm:h-14 sm:w-auto"
                 >
                   Open Free Account <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>

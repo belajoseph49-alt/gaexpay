@@ -90,7 +90,7 @@ export function ReferralView() {
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard icon={Users} label="Friends Invited" value={String(count)} color="bg-sky-500/15 text-sky-500" trend="+3 this week" />
-        <StatCard icon={TrendingUp} label="Total Earnings" value={fmt(earnings)} color="bg-emerald-500/15 text-emerald-500" trend="+₦2,500 this week" />
+        <StatCard icon={TrendingUp} label="Total Earnings" value={fmt(earnings)} color="bg-violet-500/15 text-violet-500" trend="+₦2,500 this week" />
         <StatCard icon={Sparkles} label="Reward Points" value={points.toLocaleString()} color="bg-amber-500/15 text-amber-500" trend="240 pts to next reward" />
       </div>
 
@@ -123,14 +123,14 @@ export function ReferralView() {
             return (
               <div key={t.name} className={cn(
                 "rounded-xl border p-3 text-center transition",
-                current ? "border-amber-500 bg-amber-500/10 ring-2 ring-amber-500/20" : unlocked ? "border-emerald-500/30 bg-emerald-500/5" : "opacity-60",
+                current ? "border-amber-500 bg-amber-500/10 ring-2 ring-amber-500/20" : unlocked ? "border-violet-500/30 bg-violet-500/5" : "opacity-60",
               )}>
                 <div className={cn("mx-auto mb-1.5 grid h-9 w-9 place-items-center rounded-full", unlocked ? "bg-amber-500/20 text-amber-600" : "bg-muted text-muted-foreground")}>
                   <Award className="h-4 w-4" />
                 </div>
                 <p className="text-sm font-semibold">{t.name}</p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">{t.reward}</p>
-                {unlocked && <Check className="mx-auto mt-1 h-3 w-3 text-emerald-500" />}
+                {unlocked && <Check className="mx-auto mt-1 h-3 w-3 text-violet-500" />}
               </div>
             );
           })}
@@ -152,10 +152,10 @@ export function ReferralView() {
                 <p className="text-sm font-medium">{f.firstName} {f.lastName}</p>
                 <p className="text-xs text-muted-foreground">Joined {timeAgo(f.createdAt)}</p>
               </div>
-              <Badge variant="outline" className={cn("text-[10px]", f.status === "active" ? "text-emerald-600" : "text-amber-600")}>
+              <Badge variant="outline" className={cn("text-[10px]", f.status === "active" ? "text-violet-600" : "text-amber-600")}>
                 {f.status}
               </Badge>
-              <span className="text-xs font-medium text-emerald-600">+Bonus</span>
+              <span className="text-xs font-medium text-violet-600">+Bonus</span>
             </div>
           ))}
         </div>
@@ -200,7 +200,7 @@ function StatCard({ icon: Icon, label, value, color, trend }: any) {
       </div>
       <p className="mt-3 text-xs text-muted-foreground">{label}</p>
       <p className="text-xl font-bold tabular-nums">{value}</p>
-      <p className="mt-1 text-xs text-emerald-600">{trend}</p>
+      <p className="mt-1 text-xs text-violet-600">{trend}</p>
     </Card>
   );
 }

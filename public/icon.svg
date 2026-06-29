@@ -2,10 +2,10 @@
   <defs>
     <!-- Brand gradient: emerald → teal → cyan -->
     <linearGradient id="gxp-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#34d399"/>
-      <stop offset="45%" stop-color="#10b981"/>
-      <stop offset="70%" stop-color="#14b8a6"/>
-      <stop offset="100%" stop-color="#06b6d4"/>
+      <stop offset="0%" stop-color="#8B5CF6"/>
+      <stop offset="45%" stop-color="#7C3AED"/>
+      <stop offset="70%" stop-color="#6D28D9"/>
+      <stop offset="100%" stop-color="#5B21B6"/>
     </linearGradient>
     <!-- White sheen on the mark stroke for a glassy premium feel -->
     <linearGradient id="gxp-stroke" x1="0%" y1="0%" x2="100%" y2="100%">

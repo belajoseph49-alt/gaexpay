@@ -58,7 +58,7 @@ export function AnalyticsView() {
 
       {/* KPI cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard icon={ArrowDownToLine} label="Total Inflow" value={fmt(totalIn)} trend="+12.4%" up color="emerald" />
+        <KpiCard icon={ArrowDownToLine} label="Total Inflow" value={fmt(totalIn)} trend="+12.4%" up color="violet" />
         <KpiCard icon={ArrowUpFromLine} label="Total Outflow" value={fmt(totalOut)} trend="-3.1%" up={false} color="rose" />
         <KpiCard icon={ArrowLeftRight} label="Avg. Transaction" value={fmt(avgTx)} trend="+5.2%" up color="amber" />
         <KpiCard icon={Wallet} label="Success Rate" value={`${successRate.toFixed(1)}%`} trend="+1.2%" up color="violet" />
@@ -72,7 +72,7 @@ export function AnalyticsView() {
             <p className="text-xs text-muted-foreground">Daily breakdown</p>
           </div>
           <div className="flex items-center gap-3 text-xs">
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" /> In</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-violet-500" /> In</span>
             <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-500" /> Out</span>
           </div>
         </div>
@@ -173,8 +173,8 @@ function FinancialHealthSection() {
 
   const { score, grade, insights, savingsRate, expenseRatio, scoreBreakdown, income, expenses, incomeChange, expenseChange, activeDays, topCategory, categoryCount } = data;
   const gradeColors: Record<string, string> = {
-    emerald: "from-emerald-500 to-teal-600",
-    teal: "from-teal-500 to-cyan-600",
+    emerald: "from-violet-500 to-purple-600",
+    teal: "from-purple-500 to-purple-600",
     amber: "from-amber-500 to-orange-600",
     orange: "from-orange-500 to-rose-600",
     rose: "from-rose-500 to-red-600",
@@ -235,7 +235,7 @@ function FinancialHealthSection() {
           <p className="text-xs text-muted-foreground">Monthly Income</p>
           <p className="text-lg font-bold tabular-nums">{fmt(income)}</p>
           {incomeChange !== 0 && (
-            <p className={cn("text-xs mt-0.5", incomeChange > 0 ? "text-emerald-600" : "text-rose-600")}>
+            <p className={cn("text-xs mt-0.5", incomeChange > 0 ? "text-violet-600" : "text-rose-600")}>
               {incomeChange > 0 ? "↑" : "↓"} {Math.abs(incomeChange).toFixed(1)}% vs last month
             </p>
           )}
@@ -244,21 +244,21 @@ function FinancialHealthSection() {
           <p className="text-xs text-muted-foreground">Monthly Expenses</p>
           <p className="text-lg font-bold tabular-nums">{fmt(expenses)}</p>
           {expenseChange !== 0 && (
-            <p className={cn("text-xs mt-0.5", expenseChange > 0 ? "text-rose-600" : "text-emerald-600")}>
+            <p className={cn("text-xs mt-0.5", expenseChange > 0 ? "text-rose-600" : "text-violet-600")}>
               {expenseChange > 0 ? "↑" : "↓"} {Math.abs(expenseChange).toFixed(1)}% vs last month
             </p>
           )}
         </Card>
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">Savings Rate</p>
-          <p className={cn("text-lg font-bold tabular-nums", savingsRate >= 20 ? "text-emerald-600" : savingsRate > 0 ? "text-amber-600" : "text-rose-600")}>
+          <p className={cn("text-lg font-bold tabular-nums", savingsRate >= 20 ? "text-violet-600" : savingsRate > 0 ? "text-amber-600" : "text-rose-600")}>
             {savingsRate.toFixed(1)}%
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">Target: 20%+</p>
         </Card>
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">Expense Ratio</p>
-          <p className={cn("text-lg font-bold tabular-nums", expenseRatio < 70 ? "text-emerald-600" : expenseRatio < 100 ? "text-amber-600" : "text-rose-600")}>
+          <p className={cn("text-lg font-bold tabular-nums", expenseRatio < 70 ? "text-violet-600" : expenseRatio < 100 ? "text-amber-600" : "text-rose-600")}>
             {expenseRatio.toFixed(0)}%
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">of income</p>
@@ -272,7 +272,7 @@ function FinancialHealthSection() {
           {insights.map((ins: any, i: number) => (
             <div key={i} className={cn(
               "flex items-start gap-2 rounded-lg border p-3",
-              ins.type === "positive" ? "border-emerald-500/30 bg-emerald-500/5" :
+              ins.type === "positive" ? "border-violet-500/30 bg-violet-500/5" :
               ins.type === "warning" ? "border-amber-500/30 bg-amber-500/5" :
               ins.type === "critical" ? "border-rose-500/30 bg-rose-500/5" :
               "border-sky-500/30 bg-sky-500/5"
@@ -318,13 +318,13 @@ function FinancialHealthHistory() {
           </div>
           <div className="text-center">
             <p className="text-muted-foreground">Best</p>
-            <p className="font-bold tabular-nums text-emerald-600">{bestScore}</p>
+            <p className="font-bold tabular-nums text-violet-600">{bestScore}</p>
           </div>
           <div className="text-center">
             <p className="text-muted-foreground">Worst</p>
             <p className="font-bold tabular-nums text-rose-600">{worstScore}</p>
           </div>
-          <Badge variant="outline" className={cn(trend >= 0 ? "text-emerald-600 border-emerald-500/30" : "text-rose-600 border-rose-500/30")}>
+          <Badge variant="outline" className={cn(trend >= 0 ? "text-violet-600 border-violet-500/30" : "text-rose-600 border-rose-500/30")}>
             {trend >= 0 ? "↑" : "↓"} {Math.abs(trend)} pts
           </Badge>
         </div>
@@ -343,7 +343,7 @@ function FinancialHealthHistory() {
         </LineChart>
       </ResponsiveContainer>
       <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-emerald-500" /> Health Score</span>
+        <span className="flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-violet-500" /> Health Score</span>
         <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-amber-500" style={{ borderTop: "2px dashed #f59e0b" }} /> Savings Rate %</span>
       </div>
     </Card>
@@ -352,7 +352,7 @@ function FinancialHealthHistory() {
 
 function KpiCard({ icon: Icon, label, value, trend, up, color }: any) {
   const colors: Record<string, string> = {
-    emerald: "bg-emerald-500/15 text-emerald-500",
+    emerald: "bg-violet-500/15 text-violet-500",
     rose: "bg-rose-500/15 text-rose-500",
     amber: "bg-amber-500/15 text-amber-500",
     violet: "bg-violet-500/15 text-violet-500",
@@ -363,7 +363,7 @@ function KpiCard({ icon: Icon, label, value, trend, up, color }: any) {
         <div className={cn("grid h-10 w-10 place-items-center rounded-lg", colors[color])}>
           <Icon className="h-5 w-5" />
         </div>
-        <Badge variant="outline" className={up ? "text-emerald-600 border-emerald-500/30" : "text-rose-600 border-rose-500/30"}>
+        <Badge variant="outline" className={up ? "text-violet-600 border-violet-500/30" : "text-rose-600 border-rose-500/30"}>
           {up ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}{trend}
         </Badge>
       </div>

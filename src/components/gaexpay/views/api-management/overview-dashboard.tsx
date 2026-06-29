@@ -106,8 +106,8 @@ export function OverviewDashboard({
                             <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> warn
                           </span>
                         ) : enabled.length > 0 ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-600">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> live
+                          <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-medium text-violet-600">
+                            <span className="h-1.5 w-1.5 rounded-full bg-violet-500" /> live
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 rounded-full bg-zinc-500/15 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
@@ -143,7 +143,7 @@ export function OverviewDashboard({
                     <p className={cn("text-sm font-semibold tabular-nums",
                       totalReq > 0 && failedReq / totalReq > 0.05 ? "text-rose-600"
                       : totalReq > 0 && failedReq / totalReq > 0.01 ? "text-amber-600"
-                      : "text-emerald-600")}>
+                      : "text-violet-600")}>
                       {totalReq > 0 ? `${(failedReq / totalReq * 100).toFixed(1)}%` : "—"}
                     </p>
                   </div>

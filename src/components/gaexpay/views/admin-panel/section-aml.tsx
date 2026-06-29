@@ -71,7 +71,7 @@ export function AmlSection() {
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <StatTile icon={AlertTriangle} label="Total Flags" value={stats.total} color="bg-orange-500/15 text-orange-600" />
         <StatTile icon={ShieldAlert} label="Pending Review" value={stats.flagged} color="bg-rose-500/15 text-rose-600" />
-        <StatTile icon={CheckCircle2} label="Reviewed" value={stats.reviewed} color="bg-emerald-500/15 text-emerald-600" />
+        <StatTile icon={CheckCircle2} label="Reviewed" value={stats.reviewed} color="bg-violet-500/15 text-violet-600" />
         <StatTile icon={FileText} label="Reports Filed" value={stats.reported} color="bg-violet-500/15 text-violet-600" />
       </div>
 

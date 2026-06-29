@@ -350,7 +350,7 @@ function SendFlow() {
                       className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
                     >
                       <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-emerald-500/15 text-emerald-600 text-xs font-semibold">
+                        <AvatarFallback className="bg-violet-500/15 text-violet-600 text-xs font-semibold">
                           {m.firstName[0]}{m.lastName[0]}
                         </AvatarFallback>
                       </Avatar>
@@ -358,7 +358,7 @@ function SendFlow() {
                         <div className="flex items-center gap-1.5">
                           <p className="text-sm font-medium truncate">{m.firstName} {m.lastName}</p>
                           {m.kycStatus === "verified" && (
-                            <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[9px] shrink-0">
+                            <Badge className="bg-violet-500/15 text-violet-600 border-0 text-[9px] shrink-0">
                               <Check className="h-2.5 w-2.5 mr-0.5" /> KYC
                             </Badge>
                           )}
@@ -367,7 +367,7 @@ function SendFlow() {
                           {m.username ? `@${m.username}` : m.phone}
                         </p>
                       </div>
-                      <Badge className="bg-emerald-500/10 text-emerald-600 border-0 shrink-0">
+                      <Badge className="bg-violet-500/10 text-violet-600 border-0 shrink-0">
                         <WalletIcon className="h-3 w-3 mr-0.5" /> Instant
                       </Badge>
                     </button>
@@ -408,20 +408,20 @@ function SendFlow() {
                       className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
                     >
                       <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-emerald-500/15 text-emerald-600 text-xs font-semibold">
+                        <AvatarFallback className="bg-violet-500/15 text-violet-600 text-xs font-semibold">
                           {mc.contactName.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <p className="text-sm font-medium truncate">{mc.contactName}</p>
-                          <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[9px] shrink-0">
+                          <Badge className="bg-violet-500/15 text-violet-600 border-0 text-[9px] shrink-0">
                             <UserCheck className="h-2.5 w-2.5 mr-0.5" /> GaexPay
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground truncate">{mc.phone || mc.email}</p>
                       </div>
-                      <Badge className="bg-emerald-500/10 text-emerald-600 border-0 shrink-0">
+                      <Badge className="bg-violet-500/10 text-violet-600 border-0 shrink-0">
                         <WalletIcon className="h-3 w-3 mr-0.5" /> Instant
                       </Badge>
                     </button>
@@ -502,7 +502,7 @@ function SendFlow() {
                       <Avatar className="h-10 w-10">
                         <AvatarFallback className={cn(
                           "text-xs font-semibold",
-                          b.isGaexpayMember ? "bg-emerald-500/15 text-emerald-600" : "bg-primary/10 text-primary",
+                          b.isGaexpayMember ? "bg-violet-500/15 text-violet-600" : "bg-primary/10 text-primary",
                         )}>
                           {b.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
                         </AvatarFallback>
@@ -511,7 +511,7 @@ function SendFlow() {
                         <div className="flex items-center gap-1.5">
                           <p className="text-sm font-medium truncate">{b.name}</p>
                           {b.isGaexpayMember && (
-                            <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[9px] shrink-0">
+                            <Badge className="bg-violet-500/15 text-violet-600 border-0 text-[9px] shrink-0">
                               <UserCheck className="h-2.5 w-2.5 mr-0.5" /> GaexPay
                             </Badge>
                           )}
@@ -670,7 +670,7 @@ function SendFlow() {
               </div>
             </div>
 
-            <div className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-400">
+            <div className="mt-4 flex items-center gap-2 rounded-lg bg-violet-500/10 p-3 text-xs text-violet-violet-700 dark:text-violet-400">
               <ShieldCheck className="h-4 w-4 shrink-0" />
               Protected by GaexPay Buyer Protection & end-to-end encryption.
             </div>
@@ -737,7 +737,7 @@ function SendFlow() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", delay: 0.1 }}
-                className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white pulse-glow"
+                className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-violet-500 text-white pulse-glow"
               >
                 <Check className="h-8 w-8" strokeWidth={3} />
               </motion.div>
@@ -853,7 +853,7 @@ function TopUpFlow() {
       <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 mb-4">Add funds from card, bank or mobile money</p>
       <div className="grid gap-2.5 sm:gap-3 sm:grid-cols-2">
         {[
-          { icon: Landmark, title: "Bank Transfer", desc: "Free · Instant", color: "bg-emerald-500/15 text-emerald-500" },
+          { icon: Landmark, title: "Bank Transfer", desc: "Free · Instant", color: "bg-violet-500/15 text-violet-500" },
           { icon: Smartphone, title: "Mobile Money", desc: "MTN, Orange, Airtel", color: "bg-amber-500/15 text-amber-500" },
           { icon: WalletIcon, title: "Debit Card", desc: "Visa, Mastercard", color: "bg-violet-500/15 text-violet-500" },
           { icon: QrCode, title: "Voucher / Code", desc: "Redeem a code", color: "bg-sky-500/15 text-sky-500" },

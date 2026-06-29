@@ -107,7 +107,7 @@ const METHOD_META: Record<Method, { label: string; icon: any; gradient: string; 
   bank: {
     label: "Bank Transfer",
     icon: Landmark,
-    gradient: "from-emerald-500 to-teal-600",
+    gradient: "from-violet-500 to-purple-600",
     delivery: "1–3 business days",
     feeNote: "1.5% + $5 · max $50",
   },
@@ -200,7 +200,7 @@ function HeaderStrip() {
       <div>
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold tracking-tight">{t("international.title")}</h1>
-          <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/20">
+          <Badge className="bg-violet-500/15 text-violet-500 border-violet-500/30 hover:bg-violet-500/20">
             <Globe className="h-3 w-3 mr-1" /> Cross-Border
           </Badge>
         </div>
@@ -367,7 +367,7 @@ function Wizard() {
       {/* Main wizard card */}
       <Card className="overflow-hidden p-0">
         {/* Stepper header */}
-        <div className="border-b bg-gradient-to-br from-emerald-500/5 to-teal-500/5 p-5">
+        <div className="border-b bg-gradient-to-br from-violet-500/5 to-purple-500/5 p-5">
           <div className="flex items-center justify-between">
             {STEPS.map((s, i) => (
               <div key={s} className="flex flex-1 items-center last:flex-none">
@@ -375,9 +375,9 @@ function Wizard() {
                   <div className={cn(
                     "grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-semibold transition",
                     i < step
-                      ? "bg-emerald-500 text-white"
+                      ? "bg-violet-500 text-white"
                       : i === step
-                        ? "bg-emerald-500 text-white ring-4 ring-emerald-500/20"
+                        ? "bg-violet-500 text-white ring-4 ring-violet-500/20"
                         : "bg-muted text-muted-foreground",
                   )}>
                     {i < step ? <Check className="h-4 w-4" /> : i + 1}
@@ -388,7 +388,7 @@ function Wizard() {
                   )}>{s}</span>
                 </div>
                 {i < STEPS.length - 1 && (
-                  <div className={cn("mx-3 h-0.5 flex-1 rounded transition", i < step ? "bg-emerald-500" : "bg-muted")} />
+                  <div className={cn("mx-3 h-0.5 flex-1 rounded transition", i < step ? "bg-violet-500" : "bg-muted")} />
                 )}
               </div>
             ))}
@@ -419,7 +419,7 @@ function Wizard() {
                   <Label className="text-xs text-muted-foreground">Destination country</Label>
                   <button
                     onClick={() => setCountryPickerOpen(true)}
-                    className="mt-1.5 flex w-full items-center gap-3 rounded-xl border bg-muted/30 p-3 text-left transition hover:border-emerald-500/40 hover:bg-muted/50"
+                    className="mt-1.5 flex w-full items-center gap-3 rounded-xl border bg-muted/30 p-3 text-left transition hover:border-violet-500/40 hover:bg-muted/50"
                   >
                     <span className="text-2xl leading-none">{getCountry(recipientCountry)?.flag ?? "🏳️"}</span>
                     <div className="flex-1 min-w-0">
@@ -449,7 +449,7 @@ function Wizard() {
                           className={cn(
                             "relative flex flex-col items-center gap-1 rounded-xl border p-3 text-center transition",
                             active
-                              ? "border-emerald-500 bg-emerald-500/10 ring-2 ring-emerald-500/20"
+                              ? "border-violet-500 bg-violet-500/10 ring-2 ring-violet-500/20"
                               : "hover:bg-muted/40",
                           )}
                         >
@@ -549,7 +549,7 @@ function Wizard() {
                           onClick={() => setProvider(p.id)}
                           className={cn(
                             "rounded-lg border p-2 text-center text-xs transition",
-                            provider === p.id ? "border-emerald-500 ring-2 ring-emerald-500/20" : "hover:bg-muted/40",
+                            provider === p.id ? "border-violet-500 ring-2 ring-violet-500/20" : "hover:bg-muted/40",
                           )}
                           style={provider === p.id ? { borderColor: p.color } : {}}
                         >
@@ -631,12 +631,12 @@ function Wizard() {
                 {/* Rate strip */}
                 <div className="flex items-center justify-center">
                   <div className="flex items-center gap-2 rounded-full border bg-background px-3 py-1.5 text-xs">
-                    <RefreshCw className={cn("h-3 w-3 text-emerald-500", quoteLoading && "animate-spin")} />
+                    <RefreshCw className={cn("h-3 w-3 text-violet-500", quoteLoading && "animate-spin")} />
                     <span className="font-medium tabular-nums">
                       1 {fromCurrency} = {(quote?.exchangeRate ?? 0).toFixed(4)} {toCurrency}
                     </span>
-                    <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/20 text-[10px] h-4 px-1.5">
-                      <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <Badge className="bg-violet-500/15 text-violet-500 border-violet-500/30 hover:bg-violet-500/20 text-[10px] h-4 px-1.5">
+                      <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse" />
                       LIVE
                     </Badge>
                   </div>
@@ -683,7 +683,7 @@ function Wizard() {
                         onClick={() => setPurpose(p.id)}
                         className={cn(
                           "flex items-center gap-2 rounded-lg border p-2 text-left text-xs transition",
-                          purpose === p.id ? "border-emerald-500 bg-emerald-500/10" : "hover:bg-muted/40",
+                          purpose === p.id ? "border-violet-500 bg-violet-500/10" : "hover:bg-muted/40",
                         )}
                       >
                         <span className="text-base">{p.icon}</span>
@@ -737,7 +737,7 @@ function Wizard() {
                 <div className="rounded-xl border bg-muted/30 p-4">
                   <div className="flex items-center gap-3 mb-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-emerald-500/15 text-emerald-500 text-xs font-semibold">
+                      <AvatarFallback className="bg-violet-500/15 text-violet-500 text-xs font-semibold">
                         {recipientName.split(" ").map((n) => n[0]).slice(0, 2).join("")}
                       </AvatarFallback>
                     </Avatar>
@@ -747,7 +747,7 @@ function Wizard() {
                         {getCountry(recipientCountry)?.flag} {getCountry(recipientCountry)?.name}
                       </p>
                     </div>
-                    <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/20 capitalize text-[10px]">
+                    <Badge className="bg-violet-500/15 text-violet-500 border-violet-500/30 hover:bg-violet-500/20 capitalize text-[10px]">
                       {METHOD_META[method].label}
                     </Badge>
                   </div>
@@ -823,7 +823,7 @@ function Wizard() {
                 </div>
 
                 {/* Security note */}
-                <div className="flex items-start gap-2.5 rounded-xl bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-400">
+                <div className="flex items-start gap-2.5 rounded-xl bg-violet-500/10 p-3 text-xs text-violet-violet-700 dark:text-violet-400">
                   <Lock className="h-4 w-4 shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold">Bank-grade encryption</p>
@@ -865,7 +865,7 @@ function Wizard() {
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", delay: 0.1 }}
-                    className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white pulse-glow"
+                    className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-violet-500 text-white pulse-glow"
                   >
                     <Check className="h-8 w-8" strokeWidth={3} />
                   </motion.div>
@@ -894,7 +894,7 @@ function Wizard() {
                       className={cn(
                         "text-[10px]",
                         result.status === "completed"
-                          ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/30"
+                          ? "bg-violet-500/15 text-violet-500 border-violet-500/30"
                           : "bg-amber-500/15 text-amber-500 border-amber-500/30",
                       )}
                     >
@@ -1003,7 +1003,7 @@ function ReviewRow({
         className={cn(
           "text-sm text-right truncate",
           bold ? "font-bold" : "font-medium",
-          accent ? "text-emerald-500" : "",
+          accent ? "text-violet-500" : "",
         )}
       >
         {value || "—"}
@@ -1029,11 +1029,11 @@ function LiveRateCard({
   const toMeta = getCurrencyMeta(toCurrency);
   return (
     <Card className="relative overflow-hidden p-5">
-      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-purple-500/5 to-transparent pointer-events-none" />
       <div className="relative">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Globe2 className="h-4 w-4 text-emerald-500" />
+            <Globe2 className="h-4 w-4 text-violet-500" />
             <h3 className="text-sm font-semibold">Live exchange rate</h3>
           </div>
           <button
@@ -1051,9 +1051,9 @@ function LiveRateCard({
             <span className="text-[10px] font-semibold text-muted-foreground mt-0.5">{fromCurrency}</span>
           </div>
           <div className="flex-1 flex flex-col items-center">
-            <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] font-semibold text-emerald-500">LIVE</span>
+            <div className="flex items-center gap-1.5 rounded-full bg-violet-500/10 px-2.5 py-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse" />
+              <span className="text-[10px] font-semibold text-violet-500">LIVE</span>
             </div>
             <ArrowRight className="h-4 w-4 text-muted-foreground mt-1" />
           </div>
@@ -1086,9 +1086,9 @@ function LiveRateCard({
               <p className="text-[10px] text-muted-foreground">You send</p>
               <p className="text-sm font-semibold tabular-nums">{formatMoney(amount, fromCurrency)}</p>
             </div>
-            <div className="rounded-lg bg-emerald-500/10 p-2 ring-1 ring-emerald-500/30">
-              <p className="text-[10px] text-emerald-600 dark:text-emerald-400">They get</p>
-              <p className="text-sm font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+            <div className="rounded-lg bg-violet-500/10 p-2 ring-1 ring-violet-500/30">
+              <p className="text-[10px] text-violet-600 dark:text-violet-400">They get</p>
+              <p className="text-sm font-semibold tabular-nums text-violet-600 dark:text-violet-400">
                 {formatMoney(quote.convertedAmount, toCurrency)}
               </p>
             </div>
@@ -1159,7 +1159,7 @@ function CostBreakdownCard({
           <div className="border-t pt-2.5">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">Recipient gets</span>
-              <span className="font-bold tabular-nums text-emerald-500">{formatMoney(quote.convertedAmount, toCurrency)}</span>
+              <span className="font-bold tabular-nums text-violet-500">{formatMoney(quote.convertedAmount, toCurrency)}</span>
             </div>
           </div>
         </div>
@@ -1187,7 +1187,7 @@ function WhyGaexPayCard() {
   return (
     <Card className="p-5">
       <div className="flex items-center gap-2 mb-3">
-        <Sparkles className="h-4 w-4 text-emerald-500" />
+        <Sparkles className="h-4 w-4 text-violet-500" />
         <h3 className="text-sm font-semibold">Why send with GaexPay?</h3>
       </div>
       <div className="space-y-2.5">
@@ -1195,7 +1195,7 @@ function WhyGaexPayCard() {
           const Icon = it.icon;
           return (
             <div key={it.title} className="flex items-start gap-3 group">
-              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-emerald-500/10 text-emerald-500 transition group-hover:scale-110">
+              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-violet-500/10 text-violet-500 transition group-hover:scale-110">
                 <Icon className="h-4 w-4" />
               </div>
               <div>
@@ -1262,7 +1262,7 @@ function CountryPickerDialog({
             <button
               key={c.code}
               onClick={() => onSelect(c.code)}
-              className="flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition hover:border-emerald-500/50 hover:bg-emerald-500/5"
+              className="flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition hover:border-violet-500/50 hover:bg-violet-500/5"
             >
               <span className="text-2xl leading-none">{c.flag}</span>
               <div className="min-w-0">
@@ -1298,7 +1298,7 @@ function RecentInternationalTransfers() {
     <Card className="p-5">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Globe className="h-4 w-4 text-emerald-500" />
+          <Globe className="h-4 w-4 text-violet-500" />
           <h3 className="text-sm font-semibold">Recent international transfers</h3>
         </div>
         <Button variant="ghost" size="sm" className="text-xs" onClick={() => (window.location.hash = "#transactions")}>
@@ -1332,7 +1332,7 @@ function RecentInternationalTransfers() {
                   exit={{ opacity: 0, y: -8 }}
                   className="flex items-center gap-3 rounded-xl border p-3 hover:bg-muted/30 transition"
                 >
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-emerald-500/10 text-emerald-500 text-lg">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-violet-500/10 text-violet-500 text-lg">
                     {meta?.recipientFlag ?? "🌍"}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -1352,7 +1352,7 @@ function RecentInternationalTransfers() {
                     className={cn(
                       "text-[10px] ml-1",
                       t.status === "completed"
-                        ? "border-emerald-500/40 text-emerald-500"
+                        ? "border-violet-500/40 text-violet-500"
                         : t.status === "pending"
                           ? "border-amber-500/40 text-amber-500"
                           : "border-muted-foreground/30 text-muted-foreground",

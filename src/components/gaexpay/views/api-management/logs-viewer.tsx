@@ -263,7 +263,7 @@ export function LogsViewer({ configs, initialConfigId }: Props) {
                           </Badge>
                           {log.statusCode != null && (
                             <Badge variant="outline" className={cn("text-[10px] h-5",
-                              log.statusCode >= 200 && log.statusCode < 300 ? "text-emerald-600 border-emerald-500/30"
+                              log.statusCode >= 200 && log.statusCode < 300 ? "text-violet-600 border-violet-500/30"
                               : log.statusCode >= 400 && log.statusCode < 500 ? "text-amber-600 border-amber-500/30"
                               : log.statusCode >= 500 ? "text-rose-600 border-rose-500/30"
                               : "text-muted-foreground")}>

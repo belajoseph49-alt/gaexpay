@@ -120,7 +120,7 @@ export function RolesSection() {
                               return (
                                 <TableCell key={r.value} className="text-center">
                                   {has ? (
-                                    <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+                                    <span className="inline-block h-2 w-2 rounded-full bg-violet-500" />
                                   ) : (
                                     <span className="inline-block h-2 w-2 rounded-full bg-muted" />
                                   )}

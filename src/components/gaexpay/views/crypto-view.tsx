@@ -21,7 +21,7 @@ import { useTranslation } from "@/hooks/use-translation";
 const CRYPTO_META: Record<string, any> = {
   BTC: { name: "Bitcoin", icon: "🪙", color: "#F7931A", gradient: "from-amber-500 to-orange-600" },
   ETH: { name: "Ethereum", icon: "💎", color: "#627EEA", gradient: "from-blue-500 to-indigo-600" },
-  USDT: { name: "Tether", icon: "💵", color: "#26A17B", gradient: "from-emerald-500 to-teal-600" },
+  USDT: { name: "Tether", icon: "💵", color: "#26A17B", gradient: "from-violet-500 to-purple-600" },
   USDC: { name: "USD Coin", icon: "💵", color: "#2775CA", gradient: "from-blue-500 to-sky-600" },
   BUSD: { name: "Binance USD", icon: "💵", color: "#F0B90B", gradient: "from-yellow-500 to-amber-600" },
   DAI: { name: "Dai", icon: "💵", color: "#F5AC37", gradient: "from-amber-400 to-yellow-600" },
@@ -82,7 +82,7 @@ export function CryptoView() {
               ≈ <AnimatedNumber value={totalValueNGN} prefix={symbol} decimals={2} />
             </p>
             <div className="mt-2 flex items-center gap-2">
-              <Badge className="bg-emerald-500/20 text-emerald-400 border-0">
+              <Badge className="bg-violet-500/20 text-violet-400 border-0">
                 <TrendingUp className="h-3 w-3 mr-1" /> +8.4% (24h)
               </Badge>
               <span className="text-xs text-white/60">{wallets.length} assets</span>
@@ -148,7 +148,7 @@ export function CryptoView() {
                       <p className="text-xs text-muted-foreground">{meta.name}</p>
                     </div>
                   </div>
-                  <Badge variant="outline" className={cn("text-[10px]", change24h >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                  <Badge variant="outline" className={cn("text-[10px]", change24h >= 0 ? "text-violet-600" : "text-rose-600")}>
                     {change24h >= 0 ? <TrendingUp className="h-3 w-3 mr-0.5" /> : <TrendingDown className="h-3 w-3 mr-0.5" />}
                     {Math.abs(change24h).toFixed(2)}%
                   </Badge>
@@ -189,8 +189,8 @@ export function CryptoView() {
             <h3 className="font-semibold">Live Crypto Prices</h3>
             <p className="text-xs text-muted-foreground">Real-time market rates</p>
           </div>
-          <Badge variant="outline" className="text-emerald-600 border-emerald-500/30">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse mr-1.5" /> Live
+          <Badge variant="outline" className="text-violet-600 border-violet-500/30">
+            <span className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse mr-1.5" /> Live
           </Badge>
         </div>
         <div className="overflow-x-auto">
@@ -222,7 +222,7 @@ export function CryptoView() {
                       ${r.priceUSD < 1 ? r.priceUSD.toFixed(4) : r.priceUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className="py-2.5 pr-3 text-right">
-                      <span className={cn("font-medium tabular-nums", r.change24h >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                      <span className={cn("font-medium tabular-nums", r.change24h >= 0 ? "text-violet-600" : "text-rose-600")}>
                         {r.change24h >= 0 ? "+" : ""}{r.change24h.toFixed(2)}%
                       </span>
                     </td>
@@ -241,8 +241,8 @@ export function CryptoView() {
       </Card>
 
       {/* Security note */}
-      <Card className="flex items-center gap-4 border-emerald-500/30 bg-emerald-500/5 p-5">
-        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-500/15 text-emerald-500">
+      <Card className="flex items-center gap-4 border-violet-500/30 bg-violet-500/5 p-5">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-violet-500/15 text-violet-500">
           <Shield className="h-5 w-5" />
         </div>
         <div className="flex-1">

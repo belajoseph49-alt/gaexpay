@@ -50,7 +50,7 @@ export function DisputesSection() {
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard label="Open" value={stats.open ?? 0} color="bg-sky-500/15 text-sky-600" />
         <StatCard label="Under Review" value={stats.under_review ?? 0} color="bg-amber-500/15 text-amber-600" />
-        <StatCard label="Resolved" value={stats.resolved ?? 0} color="bg-emerald-500/15 text-emerald-600" />
+        <StatCard label="Resolved" value={stats.resolved ?? 0} color="bg-violet-500/15 text-violet-600" />
         <StatCard label="Rejected" value={stats.rejected ?? 0} color="bg-rose-500/15 text-rose-600" />
         <StatCard label="Refunded" value={stats.refunded ?? 0} color="bg-violet-500/15 text-violet-600" />
       </div>

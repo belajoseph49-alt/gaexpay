@@ -106,11 +106,11 @@ type ResolveResult = {
 // ---- Accent color map (kept local so the linter doesn't complain) --------
 
 const ACCENT: Record<string, { bg: string; text: string; ring: string }> = {
-  emerald: { bg: "bg-emerald-500/15", text: "text-emerald-500", ring: "ring-emerald-500/30" },
+  emerald: { bg: "bg-violet-500/15", text: "text-violet-500", ring: "ring-violet-500/30" },
   sky: { bg: "bg-sky-500/15", text: "text-sky-500", ring: "ring-sky-500/30" },
   amber: { bg: "bg-amber-500/15", text: "text-amber-500", ring: "ring-amber-500/30" },
   violet: { bg: "bg-violet-500/15", text: "text-violet-500", ring: "ring-violet-500/30" },
-  teal: { bg: "bg-teal-500/15", text: "text-teal-500", ring: "ring-teal-500/30" },
+  teal: { bg: "bg-purple-500/15", text: "text-purple-500", ring: "ring-purple-500/30" },
   rose: { bg: "bg-rose-500/15", text: "text-rose-500", ring: "ring-rose-500/30" },
 };
 
@@ -180,7 +180,7 @@ function HeaderStrip({ onReload, loading }: { onReload: () => void; loading: boo
       <div>
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold tracking-tight">{t("unifiedAddress.title")}</h1>
-          <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/20">
+          <Badge className="bg-violet-500/15 text-violet-500 border-violet-500/30 hover:bg-violet-500/20">
             <AtSign className="h-3 w-3 mr-1" /> Universal
           </Badge>
         </div>
@@ -235,16 +235,16 @@ function HeroCard({ data }: { data: any }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
-      <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 p-6 sm:p-8 text-white shadow-2xl">
+      <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-violet-950 to-slate-900 p-6 sm:p-8 text-white shadow-2xl">
         {/* Glow blobs */}
-        <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-emerald-500/20 blur-3xl" />
-        <div className="absolute -left-12 bottom-0 h-40 w-40 rounded-full bg-teal-500/20 blur-2xl" />
-        <div className="absolute right-32 top-10 h-20 w-20 rounded-full bg-cyan-500/10 blur-xl" />
+        <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-violet-500/20 blur-3xl" />
+        <div className="absolute -left-12 bottom-0 h-40 w-40 rounded-full bg-purple-500/20 blur-2xl" />
+        <div className="absolute right-32 top-10 h-20 w-20 rounded-full bg-purple-500/10 blur-xl" />
 
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-3">
-              <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30">
+              <Badge className="bg-violet-500/20 text-violet-violet-300 border-violet-500/40 hover:bg-violet-500/30">
                 <Sparkles className="h-3 w-3 mr-1" /> Receives all payment types
               </Badge>
               {user.verified && (
@@ -253,11 +253,11 @@ function HeroCard({ data }: { data: any }) {
                 </Badge>
               )}
               <Badge className="bg-white/10 text-white border-white/20 backdrop-blur">
-                <ShieldCheck className="h-3 w-3 mr-1 text-emerald-300" /> KYC Tier {user.kycTier}
+                <ShieldCheck className="h-3 w-3 mr-1 text-violet-violet-300" /> KYC Tier {user.kycTier}
               </Badge>
             </div>
 
-            <p className="text-xs font-medium uppercase tracking-wider text-emerald-300/80">
+            <p className="text-xs font-medium uppercase tracking-wider text-violet-violet-300/80">
               Your GaexPay tag
             </p>
             <h2 className="mt-1 text-4xl sm:text-5xl font-bold tracking-tight break-all">
@@ -269,7 +269,7 @@ function HeroCard({ data }: { data: any }) {
 
             <div className="mt-5 flex flex-wrap items-center gap-2">
               <div className="flex flex-1 min-w-[200px] items-center gap-2 rounded-xl bg-white/10 px-4 py-3 backdrop-blur ring-1 ring-white/15">
-                <LinkIcon className="h-4 w-4 text-emerald-300 shrink-0" />
+                <LinkIcon className="h-4 w-4 text-violet-violet-300 shrink-0" />
                 <span className="font-mono text-xs sm:text-sm truncate">{shareableLink}</span>
               </div>
               <Button
@@ -283,7 +283,7 @@ function HeroCard({ data }: { data: any }) {
               </Button>
               <Button
                 variant="secondary"
-                className="bg-emerald-500 text-white hover:bg-emerald-600 shrink-0 border-0"
+                className="bg-violet-500 text-white hover:bg-violet-600 shrink-0 border-0"
                 onClick={share}
               >
                 <Share2 className="h-4 w-4 mr-1.5" /> Share
@@ -291,16 +291,16 @@ function HeroCard({ data }: { data: any }) {
             </div>
 
             <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-white/60">
-              <span className="inline-flex items-center gap-1.5"><Zap className="h-3.5 w-3.5 text-emerald-300" /> Instant · Free between GaexPay wallets</span>
-              <span className="inline-flex items-center gap-1.5"><Globe2 className="h-3.5 w-3.5 text-teal-300" /> 40 countries · 32 currencies</span>
+              <span className="inline-flex items-center gap-1.5"><Zap className="h-3.5 w-3.5 text-violet-violet-300" /> Instant · Free between GaexPay wallets</span>
+              <span className="inline-flex items-center gap-1.5"><Globe2 className="h-3.5 w-3.5 text-purple-300" /> 40 countries · 32 currencies</span>
               <span className="inline-flex items-center gap-1.5"><Bitcoin className="h-3.5 w-3.5 text-amber-300" /> 8 cryptos supported</span>
             </div>
           </div>
 
           {/* Avatar + at-handle visual */}
           <div className="flex lg:flex-col items-center gap-4 lg:gap-3 lg:pl-6">
-            <Avatar className="h-20 w-20 ring-4 ring-emerald-500/40 shadow-xl">
-              <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-2xl font-bold">
+            <Avatar className="h-20 w-20 ring-4 ring-violet-500/40 shadow-xl">
+              <AvatarFallback className="bg-gradient-to-br from-violet-500 to-purple-600 text-white text-2xl font-bold">
                 {user.initials}
               </AvatarFallback>
             </Avatar>
@@ -319,7 +319,7 @@ function HeroCard({ data }: { data: any }) {
 
 function AddressCardsGrid({ addresses }: { addresses: Record<string, AddressItem> }) {
   const cards = [
-    { key: "atHandle", icon: AtSign, accent: "emerald" as const, label: "@username" },
+    { key: "atHandle", icon: AtSign, accent: "violet" as const, label: "@username" },
     { key: "email", icon: Mail, accent: "sky" as const, label: "Email" },
     { key: "phone", icon: Phone, accent: "amber" as const, label: "Phone" },
     { key: "gaexPayId", icon: Hash, accent: "violet" as const, label: "GaexPay ID" },
@@ -383,7 +383,7 @@ function AddressCard({
           aria-label={`Copy ${label}`}
         >
           {copied
-            ? <Check className="h-3.5 w-3.5 text-emerald-500" />
+            ? <Check className="h-3.5 w-3.5 text-violet-500" />
             : <Copy className="h-3.5 w-3.5" />}
         </Button>
       </div>
@@ -442,7 +442,7 @@ function QrCodeSection({ data }: { data: any }) {
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h3 className="font-semibold flex items-center gap-2">
-            <QrCode className="h-4 w-4 text-emerald-500" /> Payment QR Code
+            <QrCode className="h-4 w-4 text-violet-500" /> Payment QR Code
           </h3>
           <p className="text-xs text-muted-foreground">Scan to pay — works for any payment type</p>
         </div>
@@ -474,7 +474,7 @@ function QrCodeSection({ data }: { data: any }) {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.2 }}
-          className="rounded-2xl bg-white p-4 shadow-lg ring-1 ring-emerald-500/20"
+          className="rounded-2xl bg-white p-4 shadow-lg ring-1 ring-violet-500/20"
         >
           {/* qrcode library returns a data URL — no Next/Image optimization needed */}
           <img
@@ -506,7 +506,7 @@ function QrCodeSection({ data }: { data: any }) {
           </Button>
         </div>
 
-        <div className="flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
+        <div className="flex items-center gap-1.5 rounded-lg bg-violet-500/10 px-3 py-2 text-xs text-violet-violet-700 dark:text-violet-violet-300">
           <Lock className="h-3.5 w-3.5" />
           <span>QR is encoded with your GaexPay payment link — scanning opens a secure payment screen.</span>
         </div>
@@ -575,7 +575,7 @@ function RecipientLookup({ addressData }: { addressData?: any }) {
     <Card className="p-6 h-full flex flex-col">
       <div className="mb-4">
         <h3 className="font-semibold flex items-center gap-2">
-          <Search className="h-4 w-4 text-emerald-500" /> Look up a recipient
+          <Search className="h-4 w-4 text-violet-500" /> Look up a recipient
         </h3>
         <p className="text-xs text-muted-foreground">Resolve any GaexPay address to a profile</p>
       </div>
@@ -629,7 +629,7 @@ function RecipientLookup({ addressData }: { addressData?: any }) {
             >
               <div className="flex items-center gap-3 rounded-xl bg-muted/40 p-3">
                 <Avatar className="h-12 w-12">
-                  <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-semibold">
+                  <AvatarFallback className="bg-gradient-to-br from-violet-500 to-purple-600 text-white font-semibold">
                     {result.profile.initials}
                   </AvatarFallback>
                 </Avatar>
@@ -637,7 +637,7 @@ function RecipientLookup({ addressData }: { addressData?: any }) {
                   <div className="flex items-center gap-1.5">
                     <p className="font-semibold truncate">{result.profile.fullName}</p>
                     {result.profile.verified && (
-                      <BadgeCheck className="h-4 w-4 text-cyan-500 shrink-0" />
+                      <BadgeCheck className="h-4 w-4 text-purple-500 shrink-0" />
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground font-mono truncate">
@@ -657,15 +657,15 @@ function RecipientLookup({ addressData }: { addressData?: any }) {
                 <Row label="Status" value={
                   <span className={cn(
                     "font-medium",
-                    result.profile.status === "active" ? "text-emerald-600" : "text-amber-600",
+                    result.profile.status === "active" ? "text-violet-600" : "text-amber-600",
                   )}>
                     {result.profile.status}
                   </span>
                 } />
               </div>
 
-              <div className="rounded-lg bg-emerald-500/10 p-2.5">
-                <p className="text-[11px] font-medium text-emerald-700 dark:text-emerald-300 mb-1.5">
+              <div className="rounded-lg bg-violet-500/10 p-2.5">
+                <p className="text-[11px] font-medium text-violet-violet-700 dark:text-violet-violet-300 mb-1.5">
                   Supports receiving
                 </p>
                 <div className="flex flex-wrap gap-1">
@@ -784,7 +784,7 @@ function CryptoAddressesSection({ addresses }: { addresses: CryptoAddress[] }) {
                 aria-label={`Copy ${addr.code} address`}
               >
                 {copiedCode === addr.code
-                  ? <Check className="h-3 w-3 text-emerald-500" />
+                  ? <Check className="h-3 w-3 text-violet-500" />
                   : <Copy className="h-3 w-3" />}
               </Button>
             </div>
@@ -812,7 +812,7 @@ function PaymentMethodsGrid({ methods }: { methods: PaymentMethod[] }) {
           <h3 className="font-semibold">Supported Payment Methods</h3>
           <p className="text-xs text-muted-foreground">Every method pays into your unified address</p>
         </div>
-        <Badge variant="outline" className="text-emerald-600 border-emerald-500/30">
+        <Badge variant="outline" className="text-violet-600 border-violet-500/30">
           <Sparkles className="h-3 w-3 mr-1" /> {methods.length} methods
         </Badge>
       </div>
@@ -861,7 +861,7 @@ function PaymentMethodsGrid({ methods }: { methods: PaymentMethod[] }) {
 
                 <div className="mt-3 pt-3 border-t flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Fee</span>
-                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{m.fee}</span>
+                  <span className="text-xs font-medium text-violet-600 dark:text-violet-400">{m.fee}</span>
                 </div>
               </Card>
             </motion.div>
@@ -881,7 +881,7 @@ function HowItWorks() {
       icon: AtSign,
       title: "Share your address",
       body: "Send your @handle, email, phone or GaexPay ID — any of them works. Or share your payment link / QR.",
-      accent: "emerald" as const,
+      accent: "violet" as const,
     },
     {
       n: 2,
@@ -950,14 +950,14 @@ function RecentIncoming({ incoming, stats }: { incoming: IncomingTx[]; stats: an
       <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
         <div>
           <h3 className="font-semibold flex items-center gap-2">
-            <ArrowDownToLine className="h-4 w-4 text-emerald-500" /> Recent Incoming Payments
+            <ArrowDownToLine className="h-4 w-4 text-violet-500" /> Recent Incoming Payments
           </h3>
           <p className="text-xs text-muted-foreground">
             {stats.totalIncoming} payments received via your unified address
           </p>
         </div>
         {total > 0 && (
-          <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-0">
+          <Badge className="bg-violet-500/15 text-violet-600 dark:text-violet-400 border-0">
             <TrendingUp className="h-3 w-3 mr-1" /> {fmt(total)} in NGN
           </Badge>
         )}
@@ -980,7 +980,7 @@ function RecentIncoming({ incoming, stats }: { incoming: IncomingTx[]; stats: an
                 transition={{ delay: Math.min(0.04 * i, 0.3) }}
                 className="flex items-center gap-3 rounded-lg p-2.5 hover:bg-muted/40 transition"
               >
-                <div className="grid h-9 w-9 place-items-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0">
+                <div className="grid h-9 w-9 place-items-center rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-400 shrink-0">
                   <ArrowDownToLine className="h-4 w-4" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -992,7 +992,7 @@ function RecentIncoming({ incoming, stats }: { incoming: IncomingTx[]; stats: an
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                  <p className="text-sm font-semibold text-violet-600 dark:text-violet-400 tabular-nums">
                     +{formatMoney(t.amount, t.currency)}
                   </p>
                   <p className="text-[10px] text-muted-foreground capitalize">{t.status}</p>

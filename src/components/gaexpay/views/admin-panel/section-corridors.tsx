@@ -54,8 +54,8 @@ export function CorridorsSection() {
 
       {/* Stats */}
       <div className="grid gap-3 grid-cols-3">
-        <StatTile icon={Globe} label="Total Corridors" value={stats.total} color="bg-cyan-500/15 text-cyan-600" />
-        <StatTile icon={CheckCircle2} label="Active Corridors" value={stats.active} color="bg-emerald-500/15 text-emerald-600" />
+        <StatTile icon={Globe} label="Total Corridors" value={stats.total} color="bg-purple-500/15 text-purple-600" />
+        <StatTile icon={CheckCircle2} label="Active Corridors" value={stats.active} color="bg-violet-500/15 text-violet-600" />
         <StatTile icon={Activity} label="30d Volume" value={formatCompact(stats.totalVolume30d || 0, "NGN")} color="bg-amber-500/15 text-amber-600" />
       </div>
 

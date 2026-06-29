@@ -9,11 +9,11 @@ import { LucideIcon } from "lucide-react";
 
 // ---------------- Status helpers ----------------
 const STATUS_CLASSES: Record<string, string> = {
-  active: "bg-emerald-500/15 text-emerald-600 border-emerald-500/20",
-  verified: "bg-emerald-500/15 text-emerald-600 border-emerald-500/20",
-  completed: "bg-emerald-500/15 text-emerald-600 border-emerald-500/20",
-  resolved: "bg-emerald-500/15 text-emerald-600 border-emerald-500/20",
-  approved: "bg-emerald-500/15 text-emerald-600 border-emerald-500/20",
+  active: "bg-violet-500/15 text-violet-600 border-violet-500/20",
+  verified: "bg-violet-500/15 text-violet-600 border-violet-500/20",
+  completed: "bg-violet-500/15 text-violet-600 border-violet-500/20",
+  resolved: "bg-violet-500/15 text-violet-600 border-violet-500/20",
+  approved: "bg-violet-500/15 text-violet-600 border-violet-500/20",
   open: "bg-sky-500/15 text-sky-600 border-sky-500/20",
   pending: "bg-amber-500/15 text-amber-600 border-amber-500/20",
   unverified: "bg-muted/40 text-muted-foreground border-border",
@@ -73,7 +73,7 @@ export function KpiCard({
         {trend && (
           <span className={cn(
             "text-[10px] font-semibold px-1.5 py-0.5 rounded-md",
-            trendUp ? "bg-emerald-500/15 text-emerald-600" : "bg-rose-500/15 text-rose-600",
+            trendUp ? "bg-violet-500/15 text-violet-600" : "bg-rose-500/15 text-rose-600",
           )}>
             {trendUp ? "↑" : "↓"} {trend}
           </span>
@@ -174,6 +174,6 @@ export function showError(error: string) {
 
 // ---------------- Small color-coded indicator ----------------
 export function HealthDot({ status }: { status: "operational" | "degraded" | "down" }) {
-  const cls = status === "operational" ? "bg-emerald-500" : status === "degraded" ? "bg-amber-500" : "bg-rose-500";
+  const cls = status === "operational" ? "bg-violet-500" : status === "degraded" ? "bg-amber-500" : "bg-rose-500";
   return <span className={cn("inline-block h-2 w-2 rounded-full animate-pulse", cls)} />;
 }

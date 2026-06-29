@@ -28,12 +28,12 @@ import { useTranslation } from "@/hooks/use-translation";
 
 const GOAL_ICONS = ["🎯", "✈️", "💻", "🏠", "🚗", "💍", "🎓", "🛡️", "📱", "🎁", "🏖️", "💼"];
 const GOAL_COLORS = [
-  { id: "emerald", class: "from-emerald-500 to-teal-600" },
+  { id: "violet", class: "from-violet-500 to-purple-600" },
   { id: "sky", class: "from-sky-500 to-blue-600" },
   { id: "violet", class: "from-violet-500 to-purple-600" },
   { id: "rose", class: "from-rose-500 to-pink-600" },
   { id: "amber", class: "from-amber-500 to-orange-600" },
-  { id: "teal", class: "from-teal-500 to-cyan-600" },
+  { id: "teal", class: "from-purple-500 to-purple-600" },
 ];
 
 export function SavingsView() {
@@ -98,7 +98,7 @@ export function SavingsView() {
           initial={{ opacity: 0, scale: 0.8, y: -20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0 }}
-          className="fixed top-1/2 left-1/2 z-[101] -translate-x-1/2 -translate-y-1/2 rounded-2xl border-0 bg-gradient-to-br from-emerald-600 to-teal-700 p-8 text-center text-white shadow-2xl"
+          className="fixed top-1/2 left-1/2 z-[101] -translate-x-1/2 -translate-y-1/2 rounded-2xl border-0 bg-gradient-to-br from-violet-600 to-purple-700 p-8 text-center text-white shadow-2xl"
         >
           <div className="text-5xl mb-3">🎉</div>
           <h2 className="text-2xl font-bold">{t("savings.goalCompleted")}</h2>
@@ -185,7 +185,7 @@ export function SavingsView() {
                 )}
                 {g.status === "completed" && (
                   <div className="absolute right-3 top-3 z-10">
-                    <Badge className="bg-emerald-500/15 text-emerald-600 border-0">
+                    <Badge className="bg-violet-500/15 text-violet-600 border-0">
                       <Award className="h-3 w-3 mr-1" /> {t("savings.completedBadge")}
                     </Badge>
                   </div>
@@ -271,7 +271,7 @@ export function SavingsView() {
                     <p className="text-sm font-medium">{g.name}</p>
                     <p className="text-xs text-muted-foreground">{c.note || c.type} · {timeAgo(c.createdAt)}</p>
                   </div>
-                  <span className={cn("text-sm font-semibold tabular-nums", c.type === "deposit" ? "text-emerald-600" : "text-rose-600")}>
+                  <span className={cn("text-sm font-semibold tabular-nums", c.type === "deposit" ? "text-violet-600" : "text-rose-600")}>
                     {c.type === "deposit" ? "+" : "-"}{fmt(c.amount)}
                   </span>
                 </div>
@@ -290,7 +290,7 @@ export function SavingsView() {
 }
 
 const SAVINGS_TEMPLATES = [
-  { name: "Emergency Fund", targetAmount: 5000000, icon: "🛡️", color: "emerald", desc: "3-6 months of expenses", deadlineMonths: 12 },
+  { name: "Emergency Fund", targetAmount: 5000000, icon: "🛡️", color: "violet", desc: "3-6 months of expenses", deadlineMonths: 12 },
   { name: "Dream Vacation", targetAmount: 2500000, icon: "✈️", color: "sky", desc: "That trip you've been planning", deadlineMonths: 6 },
   { name: "New Laptop", targetAmount: 1800000, icon: "💻", color: "violet", desc: "Upgrade your tech", deadlineMonths: 4 },
   { name: "Wedding Fund", targetAmount: 8000000, icon: "💍", color: "rose", desc: "Your special day", deadlineMonths: 18 },
@@ -307,7 +307,7 @@ function NewGoalDialog({ onSubmit }: { onSubmit: (f: any) => void }) {
   const [currency, setCurrency] = useState("NGN");
   const [deadline, setDeadline] = useState("");
   const [icon, setIcon] = useState("🎯");
-  const [color, setColor] = useState("emerald");
+  const [color, setColor] = useState("violet");
   const [autoSave, setAutoSave] = useState(false);
   const [autoSaveAmount, setAutoSaveAmount] = useState("");
   const [autoSaveDay, setAutoSaveDay] = useState("1");

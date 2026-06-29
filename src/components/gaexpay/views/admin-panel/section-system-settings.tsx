@@ -140,7 +140,7 @@ export function SystemSettingsSection() {
         {/* Registration */}
         <Card className="p-5">
           <header className="flex items-center gap-2 mb-4">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-emerald-500/15 text-emerald-600"><UserPlus className="h-4 w-4" /></div>
+            <div className="grid h-9 w-9 place-items-center rounded-lg bg-violet-500/15 text-violet-600"><UserPlus className="h-4 w-4" /></div>
             <div>
               <h3 className="font-semibold">Registration</h3>
               <p className="text-xs text-muted-foreground">Signups & verification</p>

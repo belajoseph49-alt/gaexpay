@@ -82,8 +82,8 @@ export function ExchangeRatesSection() {
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard icon={TrendingUp} label="Total Pairs" value={totalPairs} color="bg-cyan-500/15 text-cyan-500" />
-        <KpiCard icon={Zap} label="Auto (CoinGecko)" value={autoPairs} color="bg-emerald-500/15 text-emerald-500" />
+        <KpiCard icon={TrendingUp} label="Total Pairs" value={totalPairs} color="bg-purple-500/15 text-purple-500" />
+        <KpiCard icon={Zap} label="Auto (CoinGecko)" value={autoPairs} color="bg-violet-500/15 text-violet-500" />
         <KpiCard icon={Edit3} label="Manual" value={manualPairs} color="bg-amber-500/15 text-amber-500" />
         <KpiCard icon={RefreshCw} label="Stale (>5% drift)" value={stalePairs} color="bg-rose-500/15 text-rose-500" />
       </div>
@@ -134,7 +134,7 @@ export function ExchangeRatesSection() {
                     dev == null ? "text-muted-foreground"
                     : Math.abs(dev) > 5 ? "text-rose-600 font-semibold"
                     : Math.abs(dev) > 1 ? "text-amber-600"
-                    : "text-emerald-600";
+                    : "text-violet-600";
                   return (
                     <TableRow key={r.id} className="hover:bg-muted/30">
                       <TableCell>
@@ -151,7 +151,7 @@ export function ExchangeRatesSection() {
                         {isManual ? (
                           <Badge className="text-[10px] bg-amber-500/15 text-amber-600 border-0">Manual</Badge>
                         ) : (
-                          <Badge className="text-[10px] bg-emerald-500/15 text-emerald-600 border-0">Auto</Badge>
+                          <Badge className="text-[10px] bg-violet-500/15 text-violet-600 border-0">Auto</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-right text-xs tabular-nums text-muted-foreground">

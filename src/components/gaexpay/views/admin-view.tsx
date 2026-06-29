@@ -66,7 +66,7 @@ function Overview() {
 
   const kpis = [
     { icon: Users, label: "Total Users", value: data.totalUsers.toLocaleString(), trend: "+1,240", up: true, color: "bg-sky-500/15 text-sky-500" },
-    { icon: DollarSign, label: "Volume (14d)", value: formatCompact(data.volume, "NGN"), trend: "+8.4%", up: true, color: "bg-emerald-500/15 text-emerald-500" },
+    { icon: DollarSign, label: "Volume (14d)", value: formatCompact(data.volume, "NGN"), trend: "+8.4%", up: true, color: "bg-violet-500/15 text-violet-500" },
     { icon: TrendingUp, label: "Fee Revenue", value: formatCompact(data.feeRevenue, "NGN"), trend: "+12.1%", up: true, color: "bg-amber-500/15 text-amber-500" },
     { icon: AlertTriangle, label: "Flagged Tx", value: String(data.flagged), trend: "-4", up: false, color: "bg-rose-500/15 text-rose-500" },
   ];
@@ -82,7 +82,7 @@ function Overview() {
                 <div className={cn("grid h-10 w-10 place-items-center rounded-lg", k.color)}>
                   <Icon className="h-5 w-5" />
                 </div>
-                <Badge variant="outline" className={k.up ? "text-emerald-600 border-emerald-500/30" : "text-rose-600 border-rose-500/30"}>
+                <Badge variant="outline" className={k.up ? "text-violet-600 border-violet-500/30" : "text-rose-600 border-rose-500/30"}>
                   {k.up ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}{k.trend}
                 </Badge>
               </div>
@@ -135,7 +135,7 @@ function Overview() {
       {/* Quick metrics grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "Active Users (30d)", value: data.activeUsers.toLocaleString(), icon: UserCheck, color: "text-emerald-600" },
+          { label: "Active Users (30d)", value: data.activeUsers.toLocaleString(), icon: UserCheck, color: "text-violet-600" },
           { label: "Pending KYC", value: data.pendingKyc.toLocaleString(), icon: ShieldCheck, color: "text-amber-600" },
           { label: "Open Tickets", value: String(data.openTickets), icon: Ticket, color: "text-sky-600" },
           { label: "Suspended Accounts", value: String(data.suspendedUsers), icon: Ban, color: "text-rose-600" },
@@ -204,13 +204,13 @@ function UsersTab() {
                 <td className="py-2.5 text-xs">{u.country}</td>
                 <td className="py-2.5">
                   <Badge variant="outline" className={cn("text-[10px]",
-                    u.kycStatus === "verified" ? "text-emerald-600" : u.kycStatus === "pending" ? "text-amber-600" : "text-muted-foreground")}>
+                    u.kycStatus === "verified" ? "text-violet-600" : u.kycStatus === "pending" ? "text-amber-600" : "text-muted-foreground")}>
                     Tier {u.kycTier}
                   </Badge>
                 </td>
                 <td className="py-2.5">
                   <Badge variant="outline" className={cn("text-[10px]",
-                    u.status === "active" ? "text-emerald-600" : u.status === "suspended" ? "text-rose-600" : "text-muted-foreground")}>
+                    u.status === "active" ? "text-violet-600" : u.status === "suspended" ? "text-rose-600" : "text-muted-foreground")}>
                     {u.status}
                   </Badge>
                 </td>
@@ -260,7 +260,7 @@ function TxTab() {
                 <td className="py-2.5 font-medium tabular-nums">{formatMoney(t.amount, t.currency)}</td>
                 <td className="py-2.5">
                   <Badge variant="outline" className={cn("text-[10px]",
-                    t.status === "completed" ? "text-emerald-600" : t.status === "flagged" ? "text-orange-600" : t.status === "failed" ? "text-rose-600" : "text-amber-600")}>
+                    t.status === "completed" ? "text-violet-600" : t.status === "flagged" ? "text-orange-600" : t.status === "failed" ? "text-rose-600" : "text-amber-600")}>
                     {t.status}
                   </Badge>
                 </td>
@@ -307,7 +307,7 @@ function FraudTab() {
               <p className="text-xs text-muted-foreground mt-0.5">{t.description}</p>
             </div>
             <div className="flex gap-1">
-              <Button size="sm" variant="outline" className="h-7 text-xs text-emerald-600" onClick={() => toast.success("Transaction approved")}>
+              <Button size="sm" variant="outline" className="h-7 text-xs text-violet-600" onClick={() => toast.success("Transaction approved")}>
                 <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Approve
               </Button>
               <Button size="sm" variant="outline" className="h-7 text-xs text-rose-600" onClick={() => toast.success("Transaction blocked & account frozen")}>

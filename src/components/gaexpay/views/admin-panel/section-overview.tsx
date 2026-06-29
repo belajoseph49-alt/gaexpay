@@ -33,9 +33,9 @@ export function OverviewSection() {
   const kpis = [
     { icon: Users, label: "Total Users", value: data.totalUsers?.toLocaleString() ?? "0", trend: "+8.4%", trendUp: true, color: "bg-sky-500/15 text-sky-500" },
     { icon: Building2, label: "Total Businesses", value: data.totalBusinesses?.toLocaleString() ?? "0", color: "bg-violet-500/15 text-violet-500" },
-    { icon: DollarSign, label: "Platform Volume", value: formatCompact(data.volume || 0, "NGN"), trend: "+12%", trendUp: true, color: "bg-emerald-500/15 text-emerald-500" },
+    { icon: DollarSign, label: "Platform Volume", value: formatCompact(data.volume || 0, "NGN"), trend: "+12%", trendUp: true, color: "bg-violet-500/15 text-violet-500" },
     { icon: TrendingUp, label: "Revenue (Fees)", value: formatCompact(data.feeRevenue || 0, "NGN"), trend: "+5.1%", trendUp: true, color: "bg-amber-500/15 text-amber-500" },
-    { icon: Activity, label: "Active Users", value: data.activeUsers?.toLocaleString() ?? "0", color: "bg-teal-500/15 text-teal-500" },
+    { icon: Activity, label: "Active Users", value: data.activeUsers?.toLocaleString() ?? "0", color: "bg-purple-500/15 text-purple-500" },
     { icon: ShieldCheck, label: "Pending KYC", value: String(data.pendingKyc ?? 0), color: "bg-orange-500/15 text-orange-500" },
     { icon: Building2, label: "Pending KYB", value: String(data.pendingKyb ?? 0), color: "bg-pink-500/15 text-pink-500" },
     { icon: AlertTriangle, label: "Open Disputes", value: String(data.openDisputes ?? 0), color: "bg-rose-500/15 text-rose-500" },
@@ -48,7 +48,7 @@ export function OverviewSection() {
         description="Platform KPIs, charts & activity feed"
         icon={Activity}
         actions={
-          <Badge className="bg-emerald-500/15 text-emerald-600 border-0">
+          <Badge className="bg-violet-500/15 text-violet-600 border-0">
             <HealthDot status="operational" /> All systems operational
           </Badge>
         }

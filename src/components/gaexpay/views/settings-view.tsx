@@ -71,7 +71,7 @@ export function SettingsView() {
                 <p className="text-sm text-muted-foreground">{user?.email}</p>
                 <div className="mt-2 flex gap-2">
                   <Button size="sm" variant="outline">Change Photo</Button>
-                  <Badge className="bg-emerald-500/15 text-emerald-600 border-0">
+                  <Badge className="bg-violet-500/15 text-violet-600 border-0">
                     <Check className="h-3 w-3 mr-1" /> Verified
                   </Badge>
                 </div>
@@ -311,7 +311,7 @@ export function SettingsView() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium">{d.name}</p>
-                      {d.trusted && <Badge variant="outline" className="text-[10px] text-emerald-600">Trusted</Badge>}
+                      {d.trusted && <Badge variant="outline" className="text-[10px] text-violet-600">Trusted</Badge>}
                     </div>
                     <p className="text-xs text-muted-foreground">{d.os} · {d.browser} · {d.location}</p>
                     <p className="text-[10px] text-muted-foreground">Last active {timeAgo(d.lastActive)} · {d.ip}</p>

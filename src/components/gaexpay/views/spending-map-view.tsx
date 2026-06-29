@@ -49,7 +49,7 @@ export function SpendingMapView() {
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-4">
         <Card className="p-5 card-lift">
-          <div className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-500/15 text-emerald-500 mb-3">
+          <div className="grid h-10 w-10 place-items-center rounded-lg bg-violet-500/15 text-violet-500 mb-3">
             <TrendingUp className="h-5 w-5" />
           </div>
           <p className="text-xs text-muted-foreground">Total Spent</p>
@@ -96,12 +96,12 @@ export function SpendingMapView() {
               {locations.slice(0, 10).map((loc: any, i: number) => {
                 const pct = (loc.totalSpent / maxSpent) * 100;
                 const colors = [
-                  "from-emerald-500 to-teal-600",
+                  "from-violet-500 to-purple-600",
                   "from-amber-500 to-orange-600",
                   "from-violet-500 to-purple-600",
                   "from-sky-500 to-blue-600",
                   "from-rose-500 to-pink-600",
-                  "from-teal-500 to-cyan-600",
+                  "from-purple-500 to-purple-600",
                 ];
                 const gradient = colors[i % colors.length];
                 return (
@@ -165,7 +165,7 @@ export function SpendingMapView() {
                       transition={{ delay: i * 0.1 + 0.3, duration: 0.5 }}
                       className={cn(
                         "h-full rounded-full",
-                        i === 0 ? "bg-emerald-500" : i === 1 ? "bg-amber-500" : "bg-sky-500",
+                        i === 0 ? "bg-violet-500" : i === 1 ? "bg-amber-500" : "bg-sky-500",
                       )}
                     />
                   </div>

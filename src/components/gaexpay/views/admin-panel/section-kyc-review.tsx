@@ -75,9 +75,9 @@ export function KycReviewSection() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground">Verified</p>
-              <p className={`text-2xl font-bold ${statusFilter === "verified" ? "text-emerald-600" : ""}`}>{counts.verified ?? 0}</p>
+              <p className={`text-2xl font-bold ${statusFilter === "verified" ? "text-violet-600" : ""}`}>{counts.verified ?? 0}</p>
             </div>
-            <div className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-500/15 text-emerald-600"><CheckCircle2 className="h-5 w-5" /></div>
+            <div className="grid h-10 w-10 place-items-center rounded-lg bg-violet-500/15 text-violet-600"><CheckCircle2 className="h-5 w-5" /></div>
           </div>
         </Card>
         <Card className="p-4 cursor-pointer hover:bg-muted/30" onClick={() => setStatusFilter("rejected")}>

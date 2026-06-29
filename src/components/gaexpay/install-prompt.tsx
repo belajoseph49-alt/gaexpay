@@ -235,19 +235,19 @@ export function InstallPrompt() {
             <div
               className={cn(
                 "pointer-events-auto mx-auto w-full max-w-md overflow-hidden rounded-2xl border border-primary/30 shadow-2xl backdrop-blur-xl",
-                "bg-gradient-to-br from-emerald-950/95 via-emerald-900/95 to-slate-950/95",
+                "bg-gradient-to-br from-violet-950/95 via-violet-violet-900/95 to-slate-950/95",
               )}
             >
               {/* top accent strip */}
-              <div className="h-1 w-full bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600" />
+              <div className="h-1 w-full bg-gradient-to-r from-violet-400 via-violet-500 to-violet-600" />
 
               <div className="flex items-start gap-3 p-4">
                 {/* icon */}
                 <div className="relative mt-0.5 shrink-0">
-                  <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-lg shadow-emerald-500/30">
+                  <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-violet-400 to-violet-600 shadow-lg shadow-violet-500/30">
                     <Download className="h-5 w-5 text-white" strokeWidth={2.4} />
                   </div>
-                  <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-amber-400 ring-2 ring-emerald-950">
+                  <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-amber-400 ring-2 ring-violet-950">
                     <Sparkles className="h-2.5 w-2.5 text-amber-950" />
                   </span>
                 </div>
@@ -259,13 +259,13 @@ export function InstallPrompt() {
                     className="text-sm font-semibold text-white flex items-center gap-2"
                   >
                     Install GaexPay
-                    <span className="rounded-full bg-emerald-400/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-300">
+                    <span className="rounded-full bg-violet-400/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-violet-violet-300">
                       {platformLabel}
                     </span>
                   </h3>
                   <p
                     id="install-banner-desc"
-                    className="mt-0.5 text-xs leading-relaxed text-emerald-100/80"
+                    className="mt-0.5 text-xs leading-relaxed text-violet-violet-100/80"
                   >
                     Add GaexPay to your {isIOS ? "Home Screen" : platform === "desktop-chrome" ? "desktop" : "device"} for a
                     faster, full-screen, offline-ready wallet experience.
@@ -278,7 +278,7 @@ export function InstallPrompt() {
                         size="sm"
                         onClick={handleInstallClick}
                         disabled={installing}
-                        className="h-8 gap-1.5 bg-emerald-400 text-emerald-950 hover:bg-emerald-300"
+                        className="h-8 gap-1.5 bg-violet-400 text-violet-950 hover:bg-violet-violet-300"
                       >
                         <Download className="h-3.5 w-3.5" />
                         {installing ? "Installing…" : "Install now"}
@@ -287,7 +287,7 @@ export function InstallPrompt() {
                       <Button
                         size="sm"
                         onClick={handleOpenInstructions}
-                        className="h-8 gap-1.5 bg-emerald-400 text-emerald-950 hover:bg-emerald-300"
+                        className="h-8 gap-1.5 bg-violet-400 text-violet-950 hover:bg-violet-violet-300"
                       >
                         <PlusSquare className="h-3.5 w-3.5" />
                         Add to Home Screen
@@ -296,7 +296,7 @@ export function InstallPrompt() {
                       <Button
                         size="sm"
                         onClick={handleOpenInstructions}
-                        className="h-8 gap-1.5 bg-emerald-400 text-emerald-950 hover:bg-emerald-300"
+                        className="h-8 gap-1.5 bg-violet-400 text-violet-950 hover:bg-violet-violet-300"
                       >
                         <Download className="h-3.5 w-3.5" />
                         Show me how
@@ -305,7 +305,7 @@ export function InstallPrompt() {
 
                     <button
                       onClick={handleDismiss}
-                      className="ml-auto inline-flex h-8 items-center gap-1 rounded-md px-2 text-[11px] font-medium text-emerald-100/70 transition hover:bg-white/5 hover:text-white"
+                      className="ml-auto inline-flex h-8 items-center gap-1 rounded-md px-2 text-[11px] font-medium text-violet-violet-100/70 transition hover:bg-white/5 hover:text-white"
                       aria-label="Dismiss install prompt"
                     >
                       <X className="h-3.5 w-3.5" />
@@ -316,15 +316,15 @@ export function InstallPrompt() {
               </div>
 
               {/* feature strip */}
-              <div className="flex items-center justify-around border-t border-white/5 bg-black/20 px-4 py-2 text-[10px] font-medium text-emerald-100/70">
+              <div className="flex items-center justify-around border-t border-white/5 bg-black/20 px-4 py-2 text-[10px] font-medium text-violet-violet-100/70">
                 <span className="flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Offline-ready
+                  <CheckCircle2 className="h-3 w-3 text-violet-400" /> Offline-ready
                 </span>
                 <span className="flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3 text-emerald-400" /> No app store
+                  <CheckCircle2 className="h-3 w-3 text-violet-400" /> No app store
                 </span>
                 <span className="flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Push notifications
+                  <CheckCircle2 className="h-3 w-3 text-violet-400" /> Push notifications
                 </span>
               </div>
             </div>
@@ -335,10 +335,10 @@ export function InstallPrompt() {
       {/* Instructions dialog (iOS / unsupported browsers) */}
       <Dialog open={mode === "ios-instructions" && !open} onOpenChange={(o) => !o && handleDismiss()}>
         <DialogContent className="max-w-md gap-0 overflow-hidden p-0">
-          <div className="h-1.5 w-full bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600" />
+          <div className="h-1.5 w-full bg-gradient-to-r from-violet-400 via-violet-500 to-violet-600" />
 
           <DialogHeader className="px-6 pt-6 pb-2">
-            <div className="mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-lg shadow-emerald-500/30">
+            <div className="mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-violet-400 to-violet-600 shadow-lg shadow-violet-500/30">
               {isIOS ? (
                 <Apple className="h-6 w-6 text-white" />
               ) : platform === "desktop-chrome" ? (
@@ -423,7 +423,7 @@ export function InstallPrompt() {
               </>
             )}
 
-            <div className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-300">
+            <div className="mt-4 flex items-center gap-2 rounded-lg border border-violet-500/20 bg-violet-500/5 px-3 py-2 text-xs text-violet-violet-300">
               <Sparkles className="h-3.5 w-3.5 shrink-0" />
               <span>Installed apps run full-screen, support offline mode, and can receive push notifications.</span>
             </div>
@@ -438,7 +438,7 @@ export function InstallPrompt() {
                   setMode(null);
                   setOpen(false);
                 }}
-                className="bg-emerald-500 text-white hover:bg-emerald-600"
+                className="bg-violet-500 text-white hover:bg-violet-600"
               >
                 Got it
               </Button>
@@ -463,9 +463,9 @@ function InstructionStep({
 }) {
   return (
     <div className="flex items-start gap-3 rounded-lg border border-border/60 bg-muted/30 p-3">
-      <div className="relative grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-500/15 text-emerald-400">
+      <div className="relative grid h-8 w-8 shrink-0 place-items-center rounded-full bg-violet-500/15 text-violet-400">
         {icon}
-        <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-emerald-500 text-[10px] font-bold text-white">
+        <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-violet-500 text-[10px] font-bold text-white">
           {n}
         </span>
       </div>

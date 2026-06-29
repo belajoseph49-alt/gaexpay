@@ -28,7 +28,7 @@ import { SectionHeader, LoadingGrid, LoadingTable, EmptyState, StatusBadge, apiA
 const WALLET_TYPES = [
   { value: "operating", label: "Operating", color: "bg-sky-500/15 text-sky-600" },
   { value: "reserve", label: "Reserve", color: "bg-violet-500/15 text-violet-600" },
-  { value: "liquidity", label: "Liquidity Pool", color: "bg-teal-500/15 text-teal-600" },
+  { value: "liquidity", label: "Liquidity Pool", color: "bg-purple-500/15 text-purple-600" },
 ];
 
 export function TreasurySection() {
@@ -84,7 +84,7 @@ export function TreasurySection() {
           icon={Wallet}
           label="NGN Reserve"
           value={formatCompact(data.reserves?.ngn ?? 0, "NGN")}
-          color="bg-emerald-500/15 text-emerald-600"
+          color="bg-violet-500/15 text-violet-600"
         />
         <ReserveCard
           icon={Wallet}
@@ -181,12 +181,12 @@ export function TreasurySection() {
         </Card>
 
         <Card className="p-5">
-          <h3 className="font-semibold mb-3 flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-600" /> Reconciliation</h3>
+          <h3 className="font-semibold mb-3 flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-violet-600" /> Reconciliation</h3>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between"><span className="text-muted-foreground">Status</span><StatusBadge status={data.reconciliation?.status ?? "balanced"} /></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Last Reconciled</span><span className="text-xs">{data.reconciliation?.lastReconciledAt ? new Date(data.reconciliation.lastReconciledAt).toLocaleString() : "—"}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Wallets Checked</span><span className="font-medium">{data.reconciliation?.checkedWallets ?? 0}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Matched</span><span className="font-medium text-emerald-600">{data.reconciliation?.matchedWallets ?? 0}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Matched</span><span className="font-medium text-violet-600">{data.reconciliation?.matchedWallets ?? 0}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Drift Amount</span><span className="font-medium">{formatMoney(data.reconciliation?.driftAmount ?? 0, "NGN")}</span></div>
             <div className="pt-2 border-t">
               <div className="grid grid-cols-3 gap-2 text-center">

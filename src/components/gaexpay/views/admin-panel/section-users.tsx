@@ -238,7 +238,7 @@ export function UsersSection() {
                             <Ban className="h-3.5 w-3.5" />
                           </Button>
                         ) : (
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-emerald-600" onClick={async () => {
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-violet-600" onClick={async () => {
                             const r = await apiAction(`/api/admin/users?action=activate`, "PATCH", { userId: u.id }, "User activated");
                             if (!r.ok) showError(r.error || "Failed"); else setReloadKey((k) => k + 1);
                           }} title="Activate">

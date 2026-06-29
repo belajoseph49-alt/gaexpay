@@ -101,7 +101,7 @@ export function MerchantsSection() {
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <KpiCard icon={Store} label="Total Merchants" value={stats?.total ?? 0} color="bg-violet-500/15 text-violet-500" />
         <KpiCard icon={Clock} label="Pending Approval" value={stats?.pending ?? 0} color="bg-amber-500/15 text-amber-500" />
-        <KpiCard icon={TrendingUp} label="Total Volume" value={stats ? formatMoney(stats.totalVolume, "NGN") : "—"} color="bg-emerald-500/15 text-emerald-500" />
+        <KpiCard icon={TrendingUp} label="Total Volume" value={stats ? formatMoney(stats.totalVolume, "NGN") : "—"} color="bg-violet-500/15 text-violet-500" />
         <KpiCard icon={Star} label="Avg Rating" value={stats ? stats.avgRating.toFixed(2) : "—"} color="bg-yellow-500/15 text-yellow-500" />
       </div>
 
@@ -186,7 +186,7 @@ export function MerchantsSection() {
                       <div className="flex gap-1 justify-end">
                         <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setDetail(m)} title="View details"><Eye className="h-3.5 w-3.5" /></Button>
                         {(m.status !== "approved" && m.status !== "active") && (
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-emerald-600" onClick={async () => {
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-violet-600" onClick={async () => {
                             const r = await apiAction(`/api/admin/merchants?action=approve`, "PATCH", { merchantId: m.id }, "Merchant approved");
                             if (!r.ok) showError(r.error || "Failed"); else refresh();
                           }} title="Approve"><CheckCircle2 className="h-3.5 w-3.5" /></Button>

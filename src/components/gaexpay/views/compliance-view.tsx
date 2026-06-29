@@ -153,10 +153,10 @@ const STATUS_CONFIG: Record<string, { color: string; bg: string; dot: string; la
   escalated: { color: "text-rose-600", bg: "bg-rose-500/15 border-rose-500/30", dot: "bg-rose-500", label: "Escalated" },
   closed: { color: "text-slate-500", bg: "bg-slate-500/15 border-slate-500/30", dot: "bg-slate-400", label: "Closed" },
   sar_filed: { color: "text-violet-600", bg: "bg-violet-500/15 border-violet-500/30", dot: "bg-violet-500", label: "SAR Filed" },
-  cleared: { color: "text-emerald-600", bg: "bg-emerald-500/15 border-emerald-500/30", dot: "bg-emerald-500", label: "Cleared" },
+  cleared: { color: "text-violet-600", bg: "bg-violet-500/15 border-violet-500/30", dot: "bg-violet-500", label: "Cleared" },
   hit: { color: "text-amber-600", bg: "bg-amber-500/15 border-amber-500/30", dot: "bg-amber-500", label: "Hit" },
   blocked: { color: "text-rose-600", bg: "bg-rose-500/15 border-rose-500/30", dot: "bg-rose-500", label: "Blocked" },
-  filed: { color: "text-emerald-600", bg: "bg-emerald-500/15 border-emerald-500/30", dot: "bg-emerald-500", label: "Filed" },
+  filed: { color: "text-violet-600", bg: "bg-violet-500/15 border-violet-500/30", dot: "bg-violet-500", label: "Filed" },
   draft: { color: "text-slate-500", bg: "bg-slate-500/15 border-slate-500/30", dot: "bg-slate-400", label: "Draft" },
 };
 
@@ -189,7 +189,7 @@ export function ComplianceView() {
         className="flex flex-wrap items-end justify-between gap-3"
       >
         <div className="flex items-center gap-2.5">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/20">
             <ShieldCheck className="h-5 w-5" />
           </div>
           <div>
@@ -200,8 +200,8 @@ export function ComplianceView() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge className="bg-emerald-500/15 text-emerald-600 border-0">
-            <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <Badge className="bg-violet-500/15 text-violet-600 border-0">
+            <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse" />
             Live
           </Badge>
           <Badge variant="outline" className="border-rose-500/30 text-rose-600">
@@ -433,7 +433,7 @@ function AmlDashboardTab({ data }: { data: ComplianceData }) {
           <div className="mb-3 flex items-center justify-between">
             <div>
               <h3 className="font-semibold flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-emerald-500" /> Alert Trend (14 days)
+                <TrendingUp className="h-4 w-4 text-violet-500" /> Alert Trend (14 days)
               </h3>
               <p className="text-xs text-muted-foreground">Daily count of AML alerts triggered</p>
             </div>
@@ -583,14 +583,14 @@ function SanctionsTab({ data }: { data: ComplianceData }) {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 p-6 ring-1 ring-emerald-500/20"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-violet-950 to-slate-900 p-6 ring-1 ring-violet-500/20"
       >
-        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-emerald-500/20 blur-3xl" />
-        <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-teal-500/15 blur-3xl" />
+        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-violet-500/20 blur-3xl" />
+        <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-purple-500/15 blur-3xl" />
         <div className="relative">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-emerald-300/80">
+              <p className="text-xs font-medium uppercase tracking-wider text-violet-violet-300/80">
                 Sanctions Screening · Last 30 days
               </p>
               <h2 className="mt-1 text-xl font-bold text-white">Real-time Watchlist Screening</h2>
@@ -601,13 +601,13 @@ function SanctionsTab({ data }: { data: ComplianceData }) {
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="rounded-xl bg-white/5 p-4 backdrop-blur ring-1 ring-white/10">
-              <div className="flex items-center gap-2 text-emerald-300/80">
+              <div className="flex items-center gap-2 text-violet-violet-300/80">
                 <span className="grid h-7 w-7 place-items-center rounded-lg bg-white/10">
                   <ScanSearch className="h-4 w-4" />
                 </span>
                 <span className="text-[10px] font-medium uppercase tracking-wider">Total Screened</span>
               </div>
-              <p className="mt-2 text-2xl font-bold tabular-nums text-emerald-300">
+              <p className="mt-2 text-2xl font-bold tabular-nums text-violet-violet-300">
                 <AnimatedNumber value={s.totalScreened} duration={1400} />
               </p>
               <p className="mt-1 text-[11px] text-slate-400">Transactions screened against all lists</p>
@@ -645,7 +645,7 @@ function SanctionsTab({ data }: { data: ComplianceData }) {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="font-semibold flex items-center gap-2">
-              <Globe className="h-4 w-4 text-emerald-500" /> Screening Lists Status
+              <Globe className="h-4 w-4 text-violet-500" /> Screening Lists Status
             </h3>
             <p className="text-xs text-muted-foreground">Active watchlists monitored in real-time</p>
           </div>
@@ -663,11 +663,11 @@ function SanctionsTab({ data }: { data: ComplianceData }) {
               className="rounded-xl border p-4 hover:bg-muted/30 card-lift"
             >
               <div className="mb-2 flex items-start justify-between">
-                <div className="grid h-9 w-9 place-items-center rounded-lg bg-emerald-500/15 text-emerald-600">
+                <div className="grid h-9 w-9 place-items-center rounded-lg bg-violet-500/15 text-violet-600">
                   <Landmark className="h-4 w-4" />
                 </div>
-                <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-500/30 bg-emerald-500/10">
-                  <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <Badge variant="outline" className="text-[10px] text-violet-600 border-violet-500/30 bg-violet-500/10">
+                  <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse" />
                   Active
                 </Badge>
               </div>
@@ -737,7 +737,7 @@ function SanctionsTab({ data }: { data: ComplianceData }) {
                       </td>
                       <td className="py-3 pr-3">
                         <div className="flex items-center gap-1.5">
-                          <div className={cn("h-2 w-2 rounded-full", t.riskScore >= 0.8 ? "bg-rose-500" : t.riskScore >= 0.6 ? "bg-amber-500" : "bg-emerald-500")} />
+                          <div className={cn("h-2 w-2 rounded-full", t.riskScore >= 0.8 ? "bg-rose-500" : t.riskScore >= 0.6 ? "bg-amber-500" : "bg-violet-500")} />
                           <span className="text-xs tabular-nums">{Math.round(t.riskScore * 100)}</span>
                         </div>
                       </td>
@@ -824,17 +824,17 @@ function KycQueueTab({ data }: { data: ComplianceData }) {
           </Card>
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-          <Card className="p-5 card-lift ring-1 ring-emerald-500/20 h-full">
+          <Card className="p-5 card-lift ring-1 ring-violet-500/20 h-full">
             <div className="mb-3 flex items-center justify-between">
-              <div className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-500/15 text-emerald-600">
+              <div className="grid h-10 w-10 place-items-center rounded-lg bg-violet-500/15 text-violet-600">
                 <CheckCircle2 className="h-5 w-5" />
               </div>
-              <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 text-[10px]">
+              <Badge variant="outline" className="text-violet-600 border-violet-500/30 text-[10px]">
                 Today
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground">Approved Today</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-600">
+            <p className="mt-1 text-2xl font-bold tabular-nums text-violet-600">
               <AnimatedNumber value={k.approvedToday} duration={1400} />
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground">Tier upgrades processed</p>
@@ -923,7 +923,7 @@ function KycQueueTab({ data }: { data: ComplianceData }) {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="font-semibold flex items-center gap-2">
-              <UserCheck className="h-4 w-4 text-emerald-500" /> Pending KYC Reviews
+              <UserCheck className="h-4 w-4 text-violet-500" /> Pending KYC Reviews
             </h3>
             <p className="text-xs text-muted-foreground">{k.pendingList.length} submissions awaiting analyst review</p>
           </div>
@@ -934,7 +934,7 @@ function KycQueueTab({ data }: { data: ComplianceData }) {
         <div className="max-h-[480px] space-y-2 overflow-y-auto no-scrollbar">
           {k.pendingList.length === 0 && (
             <div className="py-12 text-center">
-              <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-500 mb-2" />
+              <CheckCircle2 className="mx-auto h-10 w-10 text-violet-500 mb-2" />
               <p className="text-sm font-medium">KYC queue is clear</p>
               <p className="text-xs text-muted-foreground">All submissions have been reviewed</p>
             </div>
@@ -983,7 +983,7 @@ function KycQueueTab({ data }: { data: ComplianceData }) {
                     onClick={() => toast.info(`Opening KYC submission ${r.id.slice(-6)}`)}>
                     <Eye className="h-3.5 w-3.5 mr-1" /> View Docs
                   </Button>
-                  <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700"
+                  <Button size="sm" className="h-8 bg-violet-600 hover:bg-violet-violet-700"
                     onClick={() => toast.success(`KYC approved for ${r.userName} · Tier ${r.tier + 1}`)}>
                     <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Approve
                   </Button>
@@ -1026,19 +1026,19 @@ function RulesTab({ data }: { data: ComplianceData }) {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-teal-950/40 to-slate-900 p-6 ring-1 ring-teal-500/20"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-teal-950/40 to-slate-900 p-6 ring-1 ring-purple-500/20"
       >
-        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-teal-500/20 blur-3xl" />
-        <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-emerald-500/15 blur-3xl" />
+        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-purple-500/20 blur-3xl" />
+        <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-violet-500/15 blur-3xl" />
         <div className="relative grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl bg-white/5 p-4 backdrop-blur ring-1 ring-white/10">
-            <div className="flex items-center gap-2 text-teal-300/80">
+            <div className="flex items-center gap-2 text-purple-300/80">
               <span className="grid h-7 w-7 place-items-center rounded-lg bg-white/10">
                 <Crosshair className="h-4 w-4" />
               </span>
               <span className="text-[10px] font-medium uppercase tracking-wider">Active Rules</span>
             </div>
-            <p className="mt-2 text-2xl font-bold tabular-nums text-teal-300">
+            <p className="mt-2 text-2xl font-bold tabular-nums text-purple-300">
               <AnimatedNumber value={enabledCount} duration={1400} />
               <span className="text-base text-slate-400"> / {rules.length}</span>
             </p>
@@ -1057,13 +1057,13 @@ function RulesTab({ data }: { data: ComplianceData }) {
             <p className="mt-1 text-[11px] text-slate-400">Across all enabled rules</p>
           </div>
           <div className="rounded-xl bg-white/5 p-4 backdrop-blur ring-1 ring-white/10">
-            <div className="flex items-center gap-2 text-emerald-300/80">
+            <div className="flex items-center gap-2 text-violet-violet-300/80">
               <span className="grid h-7 w-7 place-items-center rounded-lg bg-white/10">
                 <Gauge className="h-4 w-4" />
               </span>
               <span className="text-[10px] font-medium uppercase tracking-wider">Risk Threshold</span>
             </div>
-            <p className="mt-2 text-2xl font-bold tabular-nums text-emerald-300">
+            <p className="mt-2 text-2xl font-bold tabular-nums text-violet-violet-300">
               {riskThreshold}<span className="text-base text-slate-400"> / 100</span>
             </p>
             <p className="mt-1 text-[11px] text-slate-400">Auto-escalation cutoff</p>
@@ -1076,11 +1076,11 @@ function RulesTab({ data }: { data: ComplianceData }) {
         <div className="mb-3 flex items-center justify-between">
           <div>
             <h3 className="font-semibold flex items-center gap-2">
-              <Gauge className="h-4 w-4 text-emerald-500" /> Risk Score Threshold
+              <Gauge className="h-4 w-4 text-violet-500" /> Risk Score Threshold
             </h3>
             <p className="text-xs text-muted-foreground">Transactions scoring above this threshold are auto-escalated to senior analysts</p>
           </div>
-          <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 text-base font-bold tabular-nums">
+          <Badge variant="outline" className="text-violet-600 border-violet-500/30 text-base font-bold tabular-nums">
             {riskThreshold}/100
           </Badge>
         </div>
@@ -1190,15 +1190,15 @@ function ReportsTab({ data }: { data: ComplianceData }) {
       {/* Compliance metrics cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="p-5 card-lift ring-1 ring-emerald-500/20 h-full">
+          <Card className="p-5 card-lift ring-1 ring-violet-500/20 h-full">
             <div className="mb-3 flex items-center justify-between">
-              <div className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-500/15 text-emerald-600">
+              <div className="grid h-10 w-10 place-items-center rounded-lg bg-violet-500/15 text-violet-600">
                 <FileBarChart className="h-5 w-5" />
               </div>
-              <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 text-[10px]">NFIU</Badge>
+              <Badge variant="outline" className="text-violet-600 border-violet-500/30 text-[10px]">NFIU</Badge>
             </div>
             <p className="text-xs text-muted-foreground">CTR Filed</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-600">
+            <p className="mt-1 text-2xl font-bold tabular-nums text-violet-600">
               <AnimatedNumber value={m.ctrFiled} duration={1400} />
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground">Currency Transaction Reports (30d)</p>
@@ -1227,7 +1227,7 @@ function ReportsTab({ data }: { data: ComplianceData }) {
               </div>
               <Badge variant="outline" className={cn(
                 "text-[10px]",
-                m.complianceRate >= 80 ? "text-emerald-600 border-emerald-500/30"
+                m.complianceRate >= 80 ? "text-violet-600 border-violet-500/30"
                   : m.complianceRate >= 50 ? "text-amber-600 border-amber-500/30"
                   : "text-rose-600 border-rose-500/30",
               )}>
@@ -1265,7 +1265,7 @@ function ReportsTab({ data }: { data: ComplianceData }) {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-semibold flex items-center gap-2">
-              <FileText className="h-4 w-4 text-emerald-500" /> Regulatory Reports
+              <FileText className="h-4 w-4 text-violet-500" /> Regulatory Reports
             </h3>
             <p className="text-xs text-muted-foreground">{data.reports.length} reports on file · CTR, SAR, audit & compliance summaries</p>
           </div>
@@ -1478,7 +1478,7 @@ function ReportsTab({ data }: { data: ComplianceData }) {
         <Card className="p-5">
           <div className="mb-3">
             <h3 className="font-semibold flex items-center gap-2">
-              <Activity className="h-4 w-4 text-emerald-500" /> Transactions by Risk Score
+              <Activity className="h-4 w-4 text-violet-500" /> Transactions by Risk Score
             </h3>
             <p className="text-xs text-muted-foreground">Distribution across 5 risk buckets (30d)</p>
           </div>
@@ -1500,12 +1500,12 @@ function ReportsTab({ data }: { data: ComplianceData }) {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-          <div className="mt-3 flex items-center justify-between rounded-lg bg-emerald-500/5 p-3 ring-1 ring-emerald-500/20">
+          <div className="mt-3 flex items-center justify-between rounded-lg bg-violet-500/5 p-3 ring-1 ring-violet-500/20">
             <div className="flex items-center gap-2">
-              <BadgeCheck className="h-4 w-4 text-emerald-600" />
+              <BadgeCheck className="h-4 w-4 text-violet-600" />
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Sanctions Pass Rate</p>
-                <p className="text-sm font-bold tabular-nums text-emerald-600">
+                <p className="text-sm font-bold tabular-nums text-violet-600">
                   <AnimatedNumber value={m.passRate} duration={1400} decimals={1} suffix="%" />
                 </p>
               </div>

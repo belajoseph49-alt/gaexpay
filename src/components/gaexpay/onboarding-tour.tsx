@@ -15,7 +15,7 @@ const TOUR_STEPS = [
     icon: Wallet,
     title: "Welcome to GaexPay!",
     description: "Your borderless digital wallet for Africa and the world. Let's take a quick tour of the key features.",
-    color: "from-emerald-500 to-teal-600",
+    color: "from-violet-500 to-purple-600",
     action: null as any,
   },
   {

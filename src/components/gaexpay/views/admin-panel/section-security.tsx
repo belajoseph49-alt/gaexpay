@@ -48,7 +48,7 @@ export function SecuritySection() {
         <StatCard icon={LogIn} label="Total Logins" value={data.stats.totalLogins} color="bg-sky-500/15 text-sky-600" />
         <StatCard icon={AlertTriangle} label="Suspicious" value={data.stats.totalSuspicious} color="bg-amber-500/15 text-amber-600" />
         <StatCard icon={Ban} label="Blocked" value={data.stats.totalBlocked} color="bg-rose-500/15 text-rose-600" />
-        <StatCard icon={Lock} label="2FA Users" value={data.stats.twoFAUsers} color="bg-emerald-500/15 text-emerald-600" />
+        <StatCard icon={Lock} label="2FA Users" value={data.stats.twoFAUsers} color="bg-violet-500/15 text-violet-600" />
         <StatCard icon={Activity} label="2FA Coverage" value={`${data.stats.twoFAPercent}%`} color="bg-violet-500/15 text-violet-600" />
       </div>
 
@@ -204,7 +204,7 @@ export function SecuritySection() {
                       <TableCell className="text-xs text-muted-foreground">{u.lastLoginAt ? timeAgo(u.lastLoginAt) : "Never"}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{timeAgo(u.updatedAt)}</TableCell>
                       <TableCell className="text-right">
-                        <Button size="sm" variant="ghost" className="h-7 text-xs text-emerald-600" onClick={async () => {
+                        <Button size="sm" variant="ghost" className="h-7 text-xs text-violet-600" onClick={async () => {
                           const r = await apiAction(`/api/admin/users?action=activate`, "PATCH", { userId: u.id }, "User reactivated");
                           if (!r.ok) showError(r.error || "Failed"); else reload();
                         }}>Reactivate</Button>

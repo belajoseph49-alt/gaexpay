@@ -132,7 +132,7 @@ export function BusinessDashboardView() {
 
   const kybStatusBadge = (s?: string) => {
     const map: Record<string, { label: string; class: string }> = {
-      verified: { label: "Verified", class: "bg-emerald-500/15 text-emerald-600 border-0" },
+      verified: { label: "Verified", class: "bg-violet-500/15 text-violet-600 border-0" },
       pending: { label: "Pending", class: "bg-amber-500/15 text-amber-600 border-0" },
       rejected: { label: "Rejected", class: "bg-rose-500/15 text-rose-600 border-0" },
       unverified: { label: "Unverified", class: "bg-muted text-muted-foreground border-0" },
@@ -142,7 +142,7 @@ export function BusinessDashboardView() {
   };
 
   const quickActions = [
-    { id: "invoices", label: "Invoice", icon: FileText, color: "from-emerald-500 to-teal-600" },
+    { id: "invoices", label: "Invoice", icon: FileText, color: "from-violet-500 to-purple-600" },
     { id: "send", label: "Pay Vendors", icon: Send, color: "from-amber-500 to-orange-600" },
     { id: "payroll", label: "Payroll", icon: Banknote, color: "from-violet-500 to-purple-600" },
     { id: "merchant-qr", label: "Receive", icon: CreditCard, color: "from-sky-500 to-blue-600" },
@@ -181,8 +181,8 @@ export function BusinessDashboardView() {
           icon={<DollarSign className="h-4 w-4" />}
           delta={`+${(totalRevenue / Math.max(1, totalExpenses) * 100 - 100).toFixed(1)}%`}
           positive={totalRevenue >= totalExpenses}
-          accent="from-emerald-500/15 to-emerald-500/5"
-          iconBg="bg-emerald-500/15 text-emerald-600"
+          accent="from-violet-500/15 to-violet-violet-500/5"
+          iconBg="bg-violet-500/15 text-violet-600"
         />
         <KpiCard
           title="Total Transactions"
@@ -433,7 +433,7 @@ export function BusinessDashboardView() {
                     <div
                       className={cn(
                         "grid h-8 w-8 shrink-0 place-items-center rounded-full",
-                        isCredit ? "bg-emerald-500/15 text-emerald-600" : "bg-rose-500/15 text-rose-600",
+                        isCredit ? "bg-violet-500/15 text-violet-600" : "bg-rose-500/15 text-rose-600",
                       )}
                     >
                       {isCredit ? (
@@ -454,7 +454,7 @@ export function BusinessDashboardView() {
                       <p
                         className={cn(
                           "text-xs font-bold tabular-nums",
-                          isCredit ? "text-emerald-600" : "text-rose-600",
+                          isCredit ? "text-violet-600" : "text-rose-600",
                         )}
                       >
                         {isCredit ? "+" : "-"}{fmtRawSafe(tx.amount, tx.currency)}
@@ -573,11 +573,11 @@ function KpiCard({
       <p className="text-2xl font-bold tabular-nums">{value}</p>
       <div className="mt-2 flex items-center gap-1 text-xs">
         {positive ? (
-          <TrendingUp className="h-3 w-3 text-emerald-500" />
+          <TrendingUp className="h-3 w-3 text-violet-500" />
         ) : (
           <TrendingDown className="h-3 w-3 text-rose-500" />
         )}
-        <span className={positive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
+        <span className={positive ? "text-violet-600 dark:text-violet-400" : "text-rose-600 dark:text-rose-400"}>
           {delta}
         </span>
         <span className="text-muted-foreground">vs last period</span>

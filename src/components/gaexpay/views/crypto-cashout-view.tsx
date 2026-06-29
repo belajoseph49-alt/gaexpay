@@ -34,7 +34,7 @@ const CRYPTO_MAP: Record<string, (typeof CRYPTOCURRENCIES)[number]> = Object.fro
 
 // Tailwind gradient classes per crypto (visual flourish on the icon tile)
 const CRYPTO_GRADIENT: Record<string, string> = {
-  USDT: "from-emerald-500 to-teal-600",
+  USDT: "from-violet-500 to-purple-600",
   USDC: "from-sky-500 to-blue-600",
   BUSD: "from-yellow-500 to-amber-600",
   DAI: "from-amber-400 to-yellow-600",
@@ -237,8 +237,8 @@ export function CryptoCashoutView() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Badge variant="outline" className="border-emerald-500/30 text-emerald-600">
-            <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+          <Badge variant="outline" className="border-violet-500/30 text-violet-600">
+            <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-violet-500" />
             Live · CoinGecko
           </Badge>
           <Badge variant="outline" className="border-amber-500/30 text-amber-600">
@@ -251,9 +251,9 @@ export function CryptoCashoutView() {
       <LiveTicker rates={rates} loading={!ratesData} onPick={(code) => setCrypto(code)} activeCode={crypto} />
 
       {/* ---------- Hero card ---------- */}
-      <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950 p-5 text-white shadow-2xl sm:p-6">
-        <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-emerald-500/20 blur-3xl" />
-        <div className="pointer-events-none absolute -left-16 bottom-0 h-56 w-56 rounded-full bg-teal-400/15 blur-3xl" />
+      <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-slate-900 to-violet-950 p-5 text-white shadow-2xl sm:p-6">
+        <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-violet-500/20 blur-3xl" />
+        <div className="pointer-events-none absolute -left-16 bottom-0 h-56 w-56 rounded-full bg-purple-400/15 blur-3xl" />
 
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-3">
@@ -261,7 +261,7 @@ export function CryptoCashoutView() {
               initial={{ scale: 0.85, rotate: -8 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: "spring", stiffness: 220, damping: 18 }}
-              className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 shadow-lg shadow-emerald-900/40"
+              className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-500 shadow-lg shadow-violet-900/40"
             >
               <Banknote className="h-6 w-6 text-white" />
             </motion.div>
@@ -286,7 +286,7 @@ export function CryptoCashoutView() {
             </p>
             <p className="mt-0.5 text-[11px] text-white/50">
               ≈ <AnimatedNumber value={priceUSD} prefix="$" decimals={priceUSD < 1 ? 4 : 2} /> USD · 24h{" "}
-              <span className={cn(change24h >= 0 ? "text-emerald-400" : "text-rose-400")}>
+              <span className={cn(change24h >= 0 ? "text-violet-400" : "text-rose-400")}>
                 {change24h >= 0 ? "+" : ""}{change24h.toFixed(2)}%
               </span>
             </p>
@@ -297,9 +297,9 @@ export function CryptoCashoutView() {
       {/* ---------- Main grid: form + summary ---------- */}
       <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
         {/* ===== Conversion form ===== */}
-        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950 p-5 text-white shadow-2xl sm:p-6">
-          <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-emerald-500/20 blur-3xl" />
-          <div className="pointer-events-none absolute -left-12 bottom-0 h-40 w-40 rounded-full bg-teal-400/15 blur-3xl" />
+        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-slate-900 to-violet-950 p-5 text-white shadow-2xl sm:p-6">
+          <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-violet-500/20 blur-3xl" />
+          <div className="pointer-events-none absolute -left-12 bottom-0 h-40 w-40 rounded-full bg-purple-400/15 blur-3xl" />
 
           <div className="relative space-y-4">
             {/* ---- From section ---- */}
@@ -330,7 +330,7 @@ export function CryptoCashoutView() {
                   <span className="text-xs text-white/50">≈ {formatPrice(numericAmount * priceUSD)} USD</span>
                   <button
                     onClick={() => setAmount(String(walletBalance))}
-                    className="inline-flex items-center gap-1 rounded-md border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300 transition hover:bg-emerald-500/20"
+                    className="inline-flex items-center gap-1 rounded-md border border-violet-violet-400/30 bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-violet-300 transition hover:bg-violet-500/20"
                   >
                     <Wallet className="h-3 w-3" />
                     MAX
@@ -352,7 +352,7 @@ export function CryptoCashoutView() {
                 whileTap={{ scale: 0.95 }}
                 animate={{ rotate: submitting ? 360 : 0 }}
                 transition={submitting ? { duration: 1, repeat: Infinity, ease: "linear" } : { duration: 0.2 }}
-                className="grid h-10 w-10 place-items-center rounded-full border-2 border-emerald-400/40 bg-emerald-500/15 text-emerald-300 shadow-lg shadow-emerald-900/40 transition hover:bg-emerald-500/25"
+                className="grid h-10 w-10 place-items-center rounded-full border-2 border-violet-violet-400/40 bg-violet-500/15 text-violet-violet-300 shadow-lg shadow-violet-900/40 transition hover:bg-violet-500/25"
               >
                 <ArrowDown className="h-4 w-4" />
               </motion.button>
@@ -452,7 +452,7 @@ export function CryptoCashoutView() {
             <Button
               onClick={executeCashout}
               disabled={!canSubmit}
-              className="group relative w-full overflow-hidden bg-gradient-to-r from-emerald-500 to-teal-500 text-base font-semibold text-white shadow-lg shadow-emerald-900/40 hover:from-emerald-400 hover:to-teal-400 disabled:opacity-50"
+              className="group relative w-full overflow-hidden bg-gradient-to-r from-violet-500 to-purple-500 text-base font-semibold text-white shadow-lg shadow-violet-900/40 hover:from-violet-400 hover:to-purple-400 disabled:opacity-50"
               size="lg"
             >
               <AnimatePresence mode="wait" initial={false}>
@@ -487,8 +487,8 @@ export function CryptoCashoutView() {
             </Button>
 
             {/* ---- Security note ---- */}
-            <div className="flex items-start gap-2 rounded-lg border border-emerald-400/20 bg-emerald-500/5 px-3 py-2 text-[11px] text-white/70">
-              <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
+            <div className="flex items-start gap-2 rounded-lg border border-violet-violet-400/20 bg-violet-500/5 px-3 py-2 text-[11px] text-white/70">
+              <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-400" />
               <span>
                 Cashouts settle instantly at locked CoinGecko rates. Funds arrive in your fiat wallet within seconds, secured by AES-256 encryption and 2FA.
               </span>
@@ -502,7 +502,7 @@ export function CryptoCashoutView() {
           <Card className="relative overflow-hidden p-5">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Banknote className="h-4 w-4 text-emerald-600" />
+                <Banknote className="h-4 w-4 text-violet-600" />
                 <h3 className="text-sm font-semibold">Cashout summary</h3>
               </div>
               <Badge variant="outline" className="text-[10px]">
@@ -543,7 +543,7 @@ export function CryptoCashoutView() {
               <SummaryRow
                 label="You receive"
                 value={
-                  <span className="text-base font-bold tabular-nums text-emerald-600">
+                  <span className="text-base font-bold tabular-nums text-violet-600">
                     {formatFiat(fiatCredited, fiat)}
                   </span>
                 }
@@ -553,14 +553,14 @@ export function CryptoCashoutView() {
                 <p className="mt-1 text-sm font-bold tabular-nums">
                   <span className="text-amber-600">{formatCrypto(numericAmount, crypto)} {crypto}</span>
                   <span className="mx-2 text-muted-foreground">→</span>
-                  <span className="text-emerald-600">{formatFiat(fiatCredited, fiat)}</span>
+                  <span className="text-violet-600">{formatFiat(fiatCredited, fiat)}</span>
                 </p>
               </div>
 
               {/* Net rate */}
-              <div className="flex items-center justify-between rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-xs">
+              <div className="flex items-center justify-between rounded-lg border border-violet-500/20 bg-violet-500/5 px-3 py-2 text-xs">
                 <span className="text-muted-foreground">Net rate (after fee)</span>
-                <span className="font-semibold tabular-nums text-emerald-600">
+                <span className="font-semibold tabular-nums text-violet-600">
                   1 {crypto} = {formatRate(netRate)} {fiat}
                 </span>
               </div>
@@ -587,7 +587,7 @@ export function CryptoCashoutView() {
                   <p className="text-xs text-muted-foreground">{cryptoMeta?.name}</p>
                 </div>
               </div>
-              <Badge variant="outline" className={cn("text-[10px]", change24h >= 0 ? "text-emerald-600" : "text-rose-600")}>
+              <Badge variant="outline" className={cn("text-[10px]", change24h >= 0 ? "text-violet-600" : "text-rose-600")}>
                 {change24h >= 0 ? <TrendingUp className="mr-1 h-3 w-3" /> : <TrendingDown className="mr-1 h-3 w-3" />}
                 {change24h >= 0 ? "+" : ""}{change24h.toFixed(2)}%
               </Badge>
@@ -680,7 +680,7 @@ export function CryptoCashoutView() {
                       }}
                       className={cn(
                         "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition hover:bg-muted/60",
-                        crypto === w.code && "bg-emerald-500/10 ring-1 ring-emerald-500/30",
+                        crypto === w.code && "bg-violet-500/10 ring-1 ring-violet-500/30",
                       )}
                     >
                       <div className="flex items-center gap-2.5">
@@ -697,7 +697,7 @@ export function CryptoCashoutView() {
                           {r ? formatPrice(r.priceUSD) : "—"}
                         </p>
                         {r && (
-                          <p className={cn("text-[10px] tabular-nums", r.change24h >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                          <p className={cn("text-[10px] tabular-nums", r.change24h >= 0 ? "text-violet-600" : "text-rose-600")}>
                             {r.change24h >= 0 ? "+" : ""}{r.change24h.toFixed(2)}%
                           </p>
                         )}
@@ -714,7 +714,7 @@ export function CryptoCashoutView() {
                     }}
                     className={cn(
                       "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition hover:bg-muted/60",
-                      fiat === f.code && "bg-emerald-500/10 ring-1 ring-emerald-500/30",
+                      fiat === f.code && "bg-violet-500/10 ring-1 ring-violet-500/30",
                     )}
                   >
                     <div className="flex items-center gap-2.5">
@@ -741,7 +741,7 @@ export function CryptoCashoutView() {
               initial={{ scale: 0, rotate: -30 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: "spring", stiffness: 220, damping: 18 }}
-              className="mx-auto mb-2 grid h-14 w-14 place-items-center rounded-full bg-emerald-500/15 text-emerald-500"
+              className="mx-auto mb-2 grid h-14 w-14 place-items-center rounded-full bg-violet-500/15 text-violet-500"
             >
               <CheckCircle2 className="h-8 w-8" />
             </motion.div>
@@ -757,7 +757,7 @@ export function CryptoCashoutView() {
                 <div className="mb-2 flex items-center justify-center gap-2 text-sm">
                   <span className="font-semibold">{formatCrypto(success.cryptoDebited, success.crypto)} {success.crypto}</span>
                   <ArrowDown className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-semibold text-emerald-600">{formatFiat(success.fiatCredited, success.fiatCurrency)}</span>
+                  <span className="font-semibold text-violet-600">{formatFiat(success.fiatCredited, success.fiatCurrency)}</span>
                 </div>
                 <p className="text-center text-xs text-muted-foreground">
                   1 {success.crypto} = {formatRate(success.rate)} {success.fiatCurrency} (live CoinGecko)
@@ -835,11 +835,11 @@ function LiveTicker({
     <Card className="p-3">
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Sparkles className="h-3 w-3 text-emerald-500" />
+          <Sparkles className="h-3 w-3 text-violet-500" />
           Live prices · CoinGecko
         </div>
         <Badge variant="outline" className="text-[10px]">
-          <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+          <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-violet-500" />
           Real-time
         </Badge>
       </div>
@@ -855,7 +855,7 @@ function LiveTicker({
               className={cn(
                 "flex min-w-[150px] flex-col gap-1 rounded-lg border px-3 py-2 text-left transition",
                 isActive
-                  ? "border-emerald-500/40 bg-emerald-500/10 ring-1 ring-emerald-500/20"
+                  ? "border-violet-500/40 bg-violet-500/10 ring-1 ring-violet-500/20"
                   : "border-border bg-muted/20 hover:bg-muted/40",
               )}
             >
@@ -864,10 +864,10 @@ function LiveTicker({
                   <span className="text-base">{meta?.icon}</span>
                   <span className="text-xs font-semibold">{r.code}</span>
                 </div>
-                {isActive && <span className="text-[9px] font-semibold text-emerald-600">SELECTED</span>}
+                {isActive && <span className="text-[9px] font-semibold text-violet-600">SELECTED</span>}
               </div>
               <p className="text-xs font-bold tabular-nums">{formatPrice(r.priceUSD)}</p>
-              <p className={cn("text-[10px] tabular-nums", up ? "text-emerald-600" : "text-rose-600")}>
+              <p className={cn("text-[10px] tabular-nums", up ? "text-violet-600" : "text-rose-600")}>
                 {up ? "+" : ""}{(r.change24h || 0).toFixed(2)}% · 24h
               </p>
             </button>
@@ -941,7 +941,7 @@ function RecentCashouts() {
                   className="flex items-center justify-between rounded-lg border bg-muted/20 px-3 py-2"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="grid h-8 w-8 place-items-center rounded-full bg-emerald-500/15 text-emerald-600">
+                    <div className="grid h-8 w-8 place-items-center rounded-full bg-violet-500/15 text-violet-600">
                       <ArrowDownToLine className="h-4 w-4" />
                     </div>
                     <div>
@@ -957,7 +957,7 @@ function RecentCashouts() {
                     <p className="text-xs font-semibold tabular-nums text-rose-600">
                       − {formatCrypto(meta.amount || t.amount, meta.crypto)} {meta.crypto}
                     </p>
-                    <p className="text-[10px] font-semibold tabular-nums text-emerald-600">
+                    <p className="text-[10px] font-semibold tabular-nums text-violet-600">
                       + {formatFiat(meta.fiatCredited || 0, meta.fiatCurrency)}
                     </p>
                   </div>
@@ -983,7 +983,7 @@ function Row({
       <span className="text-white/60">{label}</span>
       <span className={cn(
         "font-semibold tabular-nums",
-        tone === "ok" ? "text-emerald-300" : tone === "warn" ? "text-amber-300" : tone === "strong" ? "text-white text-sm" : tone === "bad" ? "text-rose-300" : "text-white",
+        tone === "ok" ? "text-violet-violet-300" : tone === "warn" ? "text-amber-300" : tone === "strong" ? "text-white text-sm" : tone === "bad" ? "text-rose-300" : "text-white",
       )}>
         {value}
       </span>
@@ -1017,7 +1017,7 @@ function Stat({
       <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={cn(
         "text-sm font-semibold tabular-nums",
-        tone === "ok" ? "text-emerald-600" : tone === "bad" ? "text-rose-600" : "",
+        tone === "ok" ? "text-violet-600" : tone === "bad" ? "text-rose-600" : "",
       )}>
         {value}
       </p>
@@ -1039,7 +1039,7 @@ function SuccessRow({
       <span className={cn(
         "text-right font-medium",
         mono && "font-mono text-[11px]",
-        tone === "ok" && "text-emerald-600",
+        tone === "ok" && "text-violet-600",
       )}>
         {value}
       </span>

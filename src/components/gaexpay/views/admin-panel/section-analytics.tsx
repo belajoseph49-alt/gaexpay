@@ -61,7 +61,7 @@ export function AnalyticsSection() {
       {/* KPI strip */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <KpiCard icon={Users} label="DAU (today)" value={data.dauToday ?? 0} color="bg-sky-500/15 text-sky-600" />
-        <KpiCard icon={Users} label="MAU (30d)" value={data.mau ?? 0} color="bg-emerald-500/15 text-emerald-600" />
+        <KpiCard icon={Users} label="MAU (30d)" value={data.mau ?? 0} color="bg-violet-500/15 text-violet-600" />
         <KpiCard icon={TrendingUp} label="DAU/MAU Ratio" value={`${data.dauMauRatio ?? 0}%`} color="bg-violet-500/15 text-violet-600" />
         <KpiCard icon={Clock} label="Avg Session" value={`${Math.round((data.sessions?.avgDurationSec ?? 0) / 60)}m ${((data.sessions?.avgDurationSec ?? 0) % 60)}s`} color="bg-amber-500/15 text-amber-600" />
       </div>

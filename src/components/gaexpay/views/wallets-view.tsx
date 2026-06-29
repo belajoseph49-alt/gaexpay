@@ -25,7 +25,7 @@ import { useFormatMoney } from "@/hooks/use-format-money";
 import { useTranslation } from "@/hooks/use-translation";
 
 const WALLET_GRADIENTS: Record<string, string> = {
-  NGN: "from-emerald-600 to-teal-700",
+  NGN: "from-violet-600 to-purple-700",
   USD: "from-slate-700 to-slate-900",
   EUR: "from-blue-600 to-indigo-800",
   GBP: "from-purple-700 to-fuchsia-900",
@@ -84,7 +84,7 @@ export function WalletsView() {
       </div>
 
       {/* Total balance banner */}
-      <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-emerald-600 to-teal-700 p-6 text-white">
+      <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-violet-600 to-purple-700 p-6 text-white">
         <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
         <div className="relative flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -114,7 +114,7 @@ export function WalletsView() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {wallets.length === 0 && [1, 2, 3].map((i) => <Skeleton key={i} className="h-48" />)}
         {wallets.map((w, i) => {
-          const gradient = WALLET_GRADIENTS[w.currency] || "from-emerald-600 to-teal-700";
+          const gradient = WALLET_GRADIENTS[w.currency] || "from-violet-600 to-purple-700";
           const flag = CURRENCIES.find((c) => c.code === w.currency)?.flag || "🌍";
           return (
             <motion.div
@@ -168,8 +168,8 @@ export function WalletsView() {
             <h3 className="font-semibold">Live Exchange Rates</h3>
             <p className="text-xs text-muted-foreground">Updated in real time</p>
           </div>
-          <Badge variant="outline" className="text-emerald-600 border-emerald-500/30">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse mr-1.5" /> Live
+          <Badge variant="outline" className="text-violet-600 border-violet-500/30">
+            <span className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse mr-1.5" /> Live
           </Badge>
         </div>
         <div className="overflow-x-auto">
@@ -187,7 +187,7 @@ export function WalletsView() {
               {ratesData?.rates?.slice(0, 8).map((r) => (
                 <tr key={r.id} className="border-b last:border-0">
                   <td className="py-2.5 font-medium">{r.base}/{r.quote}</td>
-                  <td className="py-2.5 text-right tabular-nums text-emerald-600">{r.buy.toFixed(4)}</td>
+                  <td className="py-2.5 text-right tabular-nums text-violet-600">{r.buy.toFixed(4)}</td>
                   <td className="py-2.5 text-right tabular-nums text-rose-600">{r.sell.toFixed(4)}</td>
                   <td className="py-2.5 text-right tabular-nums">{r.rate.toFixed(4)}</td>
                   <td className="py-2.5 text-right">

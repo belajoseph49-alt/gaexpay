@@ -41,7 +41,7 @@ export function MerchantView() {
   const { merchant, stats, recentPayments, series, topCustomers, methodBreakdown } = data;
 
   const kpis = [
-    { icon: TrendingUp, label: "Today's Sales", value: fmt(stats.todayVolume), sub: `${stats.todayCount} orders`, color: "bg-emerald-500/15 text-emerald-500" },
+    { icon: TrendingUp, label: "Today's Sales", value: fmt(stats.todayVolume), sub: `${stats.todayCount} orders`, color: "bg-violet-500/15 text-violet-500" },
     { icon: ShoppingBag, label: "This Week", value: fmt(stats.weekVolume), sub: `${stats.weekCount} orders`, color: "bg-sky-500/15 text-sky-500" },
     { icon: Wallet, label: "This Month", value: fmt(stats.monthVolume), sub: `${stats.monthCount} orders`, color: "bg-violet-500/15 text-violet-500" },
     { icon: Receipt, label: "Avg Order Value", value: fmt(stats.avgOrderValue), sub: `${stats.totalCount} total`, color: "bg-amber-500/15 text-amber-500" },
@@ -120,7 +120,7 @@ export function MerchantView() {
               <h3 className="font-semibold">Sales Trend</h3>
               <p className="text-xs text-muted-foreground">Last 14 days</p>
             </div>
-            <Badge variant="outline" className="text-emerald-600 border-emerald-500/30">
+            <Badge variant="outline" className="text-violet-600 border-violet-500/30">
               <TrendingUp className="h-3 w-3 mr-1" /> +18.2%
             </Badge>
           </div>
@@ -184,7 +184,7 @@ export function MerchantView() {
             <div className="space-y-1">
               {recentPayments.map((p: any) => (
                 <div key={p.id} className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-muted/50 transition">
-                  <div className="grid h-9 w-9 place-items-center rounded-full bg-emerald-500/15 text-emerald-500">
+                  <div className="grid h-9 w-9 place-items-center rounded-full bg-violet-500/15 text-violet-500">
                     <ArrowUpRight className="h-4 w-4" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -192,7 +192,7 @@ export function MerchantView() {
                     <p className="text-xs text-muted-foreground capitalize">{p.method} · {timeAgo(p.createdAt)}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-emerald-600 tabular-nums">+{formatMoney(p.amount, p.currency)}</p>
+                    <p className="text-sm font-semibold text-violet-600 tabular-nums">+{formatMoney(p.amount, p.currency)}</p>
                     <p className="text-[10px] text-muted-foreground uppercase">{p.status}</p>
                   </div>
                 </div>
@@ -240,7 +240,7 @@ export function MerchantView() {
       {/* Quick actions */}
       <div className="grid gap-3 sm:grid-cols-3">
         {[
-          { icon: QrCode, label: "Generate QR", desc: "Create payment QR code", color: "from-emerald-500 to-teal-600", action: () => setView("merchant-qr") },
+          { icon: QrCode, label: "Generate QR", desc: "Create payment QR code", color: "from-violet-500 to-purple-600", action: () => setView("merchant-qr") },
           { icon: Receipt, label: "Send Invoice", desc: "Email invoice to customer", color: "from-amber-500 to-orange-600", action: () => {} },
           { icon: Zap, label: "Settle to Bank", desc: "Withdraw to bank account", color: "from-violet-500 to-purple-600", action: () => {} },
         ].map((a) => {

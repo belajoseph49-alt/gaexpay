@@ -115,7 +115,7 @@ export function AchievementsSection() {
 
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <KpiCard icon={Trophy} label="Total Achievements" value={data.stats.total} color="bg-yellow-500/15 text-yellow-500" />
-        <KpiCard icon={Award} label="Total Unlocked" value={data.stats.totalUnlocks} color="bg-emerald-500/15 text-emerald-500" />
+        <KpiCard icon={Award} label="Total Unlocked" value={data.stats.totalUnlocks} color="bg-violet-500/15 text-violet-500" />
         <KpiCard icon={Sparkles} label="Enabled" value={data.stats.enabled} color="bg-sky-500/15 text-sky-500" />
         <KpiCard icon={Crown} label="Most Popular" value={data.mostPopular[0]?.unlockedCount ?? 0} color="bg-violet-500/15 text-violet-500" />
       </div>
@@ -192,7 +192,7 @@ export function AchievementsSection() {
           {/* Most popular */}
           <Card className="p-4">
             <h3 className="font-semibold mb-3 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-emerald-600" /> Most Popular
+              <TrendingUp className="h-4 w-4 text-violet-600" /> Most Popular
             </h3>
             <div className="space-y-2">
               {data.mostPopular.length === 0 && <EmptyState message="No unlocks yet" icon={Award} />}

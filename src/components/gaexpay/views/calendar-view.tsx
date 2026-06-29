@@ -79,7 +79,7 @@ export function CalendarView() {
           <p className="text-xs text-muted-foreground mt-0.5">{t("calendar.transactionsCount", { count: summary.txCount })}</p>
         </Card>
         <Card className="p-5 card-lift">
-          <div className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-500/15 text-emerald-500 mb-3">
+          <div className="grid h-10 w-10 place-items-center rounded-lg bg-violet-500/15 text-violet-500 mb-3">
             <ArrowDownRight className="h-5 w-5" />
           </div>
           <p className="text-xs text-muted-foreground">{t("calendar.totalReceived")}</p>
@@ -146,7 +146,7 @@ export function CalendarView() {
                 {/* Transaction indicators */}
                 {day.transactions.length > 0 && (
                   <div className="absolute bottom-1 left-1 flex gap-0.5">
-                    {day.totalInflow > 0 && <div className="h-1 w-1 rounded-full bg-emerald-500" />}
+                    {day.totalInflow > 0 && <div className="h-1 w-1 rounded-full bg-violet-500" />}
                     {day.totalOutflow > 0 && <div className="h-1 w-1 rounded-full bg-rose-500" />}
                   </div>
                 )}
@@ -165,7 +165,7 @@ export function CalendarView() {
           {/* Legend */}
           <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-sky-500" /> {t("calendar.scheduled")}</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" /> {t("calendar.inflow")}</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-violet-500" /> {t("calendar.inflow")}</span>
             <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-500" /> {t("calendar.outflow")}</span>
             <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full border border-primary" /> {t("calendar.today")}</span>
           </div>
@@ -218,14 +218,14 @@ export function CalendarView() {
                     <div key={t.id} className="flex items-start gap-2 p-2">
                       <div className={cn(
                         "grid h-8 w-8 shrink-0 place-items-center rounded-lg",
-                        t.direction === "credit" ? "bg-emerald-500/15 text-emerald-500" : "bg-rose-500/15 text-rose-500",
+                        t.direction === "credit" ? "bg-violet-500/15 text-violet-500" : "bg-rose-500/15 text-rose-500",
                       )}>
                         {t.direction === "credit" ? <ArrowDownRight className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium truncate">{t.counterpartyName || t.description}</p>
-                          <span className={cn("text-sm font-semibold tabular-nums", t.direction === "credit" && "text-emerald-600")}>
+                          <span className={cn("text-sm font-semibold tabular-nums", t.direction === "credit" && "text-violet-600")}>
                             {t.direction === "credit" ? "+" : "-"}{formatMoney(t.amount, t.currency)}
                           </span>
                         </div>

@@ -21,7 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const WALLET_GRADIENTS: Record<string, string> = {
-  NGN: "from-emerald-600 to-teal-700",
+  NGN: "from-violet-600 to-purple-700",
   USD: "from-slate-700 to-slate-900",
   EUR: "from-blue-600 to-indigo-800",
   GBP: "from-purple-700 to-fuchsia-900",
@@ -53,7 +53,7 @@ export function WalletDetailView() {
   }
 
   const { wallet, transactions, stats, series } = data;
-  const gradient = WALLET_GRADIENTS[wallet.currency] || "from-emerald-600 to-teal-700";
+  const gradient = WALLET_GRADIENTS[wallet.currency] || "from-violet-600 to-purple-700";
   const flag = CURRENCIES.find((c) => c.code === wallet.currency)?.flag || "🌍";
 
   return (
@@ -96,13 +96,13 @@ export function WalletDetailView() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="p-5 card-lift">
           <div className="flex items-center justify-between mb-2">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-emerald-500/15 text-emerald-500">
+            <div className="grid h-9 w-9 place-items-center rounded-lg bg-violet-500/15 text-violet-500">
               <TrendingUp className="h-4 w-4" />
             </div>
             <span className="text-xs text-muted-foreground">This month</span>
           </div>
           <p className="text-xs text-muted-foreground">Money In</p>
-          <p className="text-xl font-bold tabular-nums text-emerald-600">{formatMoney(stats.monthIn, wallet.currency)}</p>
+          <p className="text-xl font-bold tabular-nums text-violet-600">{formatMoney(stats.monthIn, wallet.currency)}</p>
         </Card>
         <Card className="p-5 card-lift">
           <div className="flex items-center justify-between mb-2">
@@ -122,7 +122,7 @@ export function WalletDetailView() {
             <span className="text-xs text-muted-foreground">{stats.txCount} txns</span>
           </div>
           <p className="text-xs text-muted-foreground">Net Flow</p>
-          <p className={cn("text-xl font-bold tabular-nums", stats.net >= 0 ? "text-emerald-600" : "text-rose-600")}>
+          <p className={cn("text-xl font-bold tabular-nums", stats.net >= 0 ? "text-violet-600" : "text-rose-600")}>
             {formatMoney(stats.net, wallet.currency)}
           </p>
         </Card>
@@ -136,7 +136,7 @@ export function WalletDetailView() {
             <p className="text-xs text-muted-foreground">Inflow vs outflow</p>
           </div>
           <div className="flex items-center gap-3 text-xs">
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" /> In</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-violet-500" /> In</span>
             <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-500" /> Out</span>
           </div>
         </div>
@@ -191,7 +191,7 @@ export function WalletDetailView() {
                 >
                   <div className={cn(
                     "grid h-10 w-10 shrink-0 place-items-center rounded-full",
-                    isCredit ? "bg-emerald-500/15 text-emerald-500" : "bg-rose-500/15 text-rose-500",
+                    isCredit ? "bg-violet-500/15 text-violet-500" : "bg-rose-500/15 text-rose-500",
                   )}>
                     <Icon className="h-4 w-4" />
                   </div>
@@ -200,7 +200,7 @@ export function WalletDetailView() {
                     <p className="text-xs text-muted-foreground capitalize">{t.type} · {timeAgo(t.createdAt)}</p>
                   </div>
                   <div className="text-right">
-                    <p className={cn("text-sm font-semibold tabular-nums", isCredit ? "text-emerald-600" : "")}>
+                    <p className={cn("text-sm font-semibold tabular-nums", isCredit ? "text-violet-600" : "")}>
                       {isCredit ? "+" : "-"}{formatMoney(t.amount, t.currency)}
                     </p>
                     <p className="text-[10px] text-muted-foreground uppercase">{t.status}</p>

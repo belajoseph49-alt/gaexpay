@@ -81,7 +81,7 @@ export function ReferralSection() {
 
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <KpiCard icon={Users} label="Total Referrals" value={data.stats.totalReferrals} color="bg-pink-500/15 text-pink-500" />
-        <KpiCard icon={TrendingUp} label="Total Paid Out" value={formatMoney(data.stats.totalPaidOut, "NGN")} color="bg-emerald-500/15 text-emerald-500" />
+        <KpiCard icon={TrendingUp} label="Total Paid Out" value={formatMoney(data.stats.totalPaidOut, "NGN")} color="bg-violet-500/15 text-violet-500" />
         <KpiCard icon={Award} label="Active Referrers" value={data.stats.activeReferrers} color="bg-violet-500/15 text-violet-500" />
         <KpiCard icon={Gift} label="Conversion Rate" value={`${data.stats.conversionRate}%`} color="bg-sky-500/15 text-sky-500" />
       </div>

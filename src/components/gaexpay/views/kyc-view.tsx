@@ -214,7 +214,7 @@ export function KycView() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
         >
-          <Card className="border-0 bg-gradient-to-br from-emerald-600 to-teal-700 p-8 text-center text-white">
+          <Card className="border-0 bg-gradient-to-br from-violet-600 to-purple-700 p-8 text-center text-white">
             <div className="mx-auto mb-4 grid h-20 w-20 place-items-center rounded-full bg-white/20 backdrop-blur">
               <CheckCircle2 className="h-10 w-10" />
             </div>
@@ -258,7 +258,7 @@ export function KycView() {
         className={cn(
           "relative overflow-hidden border-0 p-6 text-white",
           status === "verified"
-            ? "bg-gradient-to-br from-emerald-600 to-teal-700"
+            ? "bg-gradient-to-br from-violet-600 to-purple-700"
             : status === "pending"
             ? "bg-gradient-to-br from-amber-500 to-orange-600"
             : status === "rejected"
@@ -341,7 +341,7 @@ export function KycView() {
                   current
                     ? "border-primary bg-primary/5 ring-2 ring-primary/20"
                     : unlocked
-                    ? "border-emerald-500/30 bg-emerald-500/5"
+                    ? "border-violet-500/30 bg-violet-500/5"
                     : "opacity-60",
                 )}
               >
@@ -358,7 +358,7 @@ export function KycView() {
                   </div>
                   {current && <Badge className="text-[10px]">Current</Badge>}
                   {unlocked && !current && (
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <CheckCircle2 className="h-4 w-4 text-violet-500" />
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mb-2">Daily limit</p>
@@ -369,7 +369,7 @@ export function KycView() {
                 <div className="mt-3 space-y-1">
                   {t.features.map((f) => (
                     <div key={f} className="flex items-start gap-1.5 text-xs">
-                      <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-emerald-500" />
+                      <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-violet-500" />
                       <span>{f}</span>
                     </div>
                   ))}
@@ -417,7 +417,7 @@ export function KycView() {
                       active
                         ? "border-primary bg-primary/5"
                         : done
-                        ? "border-emerald-500/30 bg-emerald-500/5"
+                        ? "border-violet-500/30 bg-violet-500/5"
                         : "border-border opacity-60",
                     )}
                   >
@@ -427,7 +427,7 @@ export function KycView() {
                         active
                           ? "bg-primary text-primary-foreground"
                           : done
-                          ? "bg-emerald-500 text-white"
+                          ? "bg-violet-500 text-white"
                           : "bg-muted text-muted-foreground",
                       )}
                     >
@@ -661,7 +661,7 @@ export function KycView() {
                     </div>
                   </div>
                   {form.selfieImage && (
-                    <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-400">
+                    <div className="flex items-center gap-2 rounded-lg bg-violet-500/10 p-2 text-xs text-violet-violet-700 dark:text-violet-400">
                       <CheckCircle2 className="h-3.5 w-3.5" />
                       Selfie captured. Ready to continue.
                     </div>
@@ -772,7 +772,7 @@ export function KycView() {
                 DOC_TYPES.find((t) => t.id === d.type)?.icon || FileCheck;
               const sc: Record<string, { color: string; icon: any }> = {
                 approved: {
-                  color: "text-emerald-600 bg-emerald-500/10",
+                  color: "text-violet-600 bg-violet-500/10",
                   icon: CheckCircle2,
                 },
                 pending: {
@@ -822,7 +822,7 @@ export function KycView() {
           const Icon = b.icon;
           return (
             <Card key={b.title} className="flex items-center gap-3 p-4">
-              <div className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-500/15 text-emerald-500">
+              <div className="grid h-10 w-10 place-items-center rounded-lg bg-violet-500/15 text-violet-500">
                 <Icon className="h-5 w-5" />
               </div>
               <div>

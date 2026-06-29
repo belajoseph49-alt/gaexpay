@@ -53,7 +53,7 @@ interface Invoice {
 const STATUS_STYLES: Record<Invoice["status"], string> = {
   draft: "border-muted text-muted-foreground bg-muted/30",
   sent: "border-sky-500/40 text-sky-600 bg-sky-500/10",
-  paid: "border-emerald-500/40 text-emerald-600 bg-emerald-500/10",
+  paid: "border-violet-500/40 text-violet-600 bg-violet-500/10",
   overdue: "border-rose-500/40 text-rose-600 bg-rose-500/10",
   cancelled: "border-muted text-muted-foreground line-through",
 };
@@ -265,7 +265,7 @@ export function InvoicesView() {
       <div className="grid gap-3 sm:grid-cols-3">
         <Card className="p-5">
           <p className="text-xs text-muted-foreground">Total Paid</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-600">
+          <p className="mt-1 text-2xl font-bold tabular-nums text-violet-600">
             {fmt(totalPaid)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -374,7 +374,7 @@ export function InvoicesView() {
                       </Button>
                     )}
                     {(inv.status === "sent" || inv.status === "overdue") && (
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-600" onClick={() => markAsPaid(inv.id)}>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-violet-600" onClick={() => markAsPaid(inv.id)}>
                         <CheckCircle2 className="h-3.5 w-3.5" />
                       </Button>
                     )}

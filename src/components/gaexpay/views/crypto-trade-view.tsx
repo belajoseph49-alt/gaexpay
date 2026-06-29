@@ -35,7 +35,7 @@ const CRYPTO_MAP: Record<string, (typeof CRYPTOCURRENCIES)[number]> = Object.fro
 
 // Tailwind gradient classes per crypto (visual flourish on the icon tile)
 const CRYPTO_GRADIENT: Record<string, string> = {
-  USDT: "from-emerald-500 to-teal-600",
+  USDT: "from-violet-500 to-purple-600",
   USDC: "from-sky-500 to-blue-600",
   BUSD: "from-yellow-500 to-amber-600",
   DAI: "from-amber-400 to-yellow-600",
@@ -276,8 +276,8 @@ export function CryptoTradeView() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Badge variant="outline" className="border-emerald-500/30 text-emerald-600">
-            <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+          <Badge variant="outline" className="border-violet-500/30 text-violet-600">
+            <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-violet-500" />
             Live · CoinGecko
           </Badge>
           <Badge variant="outline" className="border-amber-500/30 text-amber-600">
@@ -303,9 +303,9 @@ export function CryptoTradeView() {
 
       <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
         {/* ===== Trade form card ===== */}
-        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950 p-5 text-white shadow-2xl sm:p-6">
-          <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-emerald-500/20 blur-3xl" />
-          <div className="pointer-events-none absolute -left-12 bottom-0 h-40 w-40 rounded-full bg-teal-400/15 blur-3xl" />
+        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-slate-900 to-violet-950 p-5 text-white shadow-2xl sm:p-6">
+          <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-violet-500/20 blur-3xl" />
+          <div className="pointer-events-none absolute -left-12 bottom-0 h-40 w-40 rounded-full bg-purple-400/15 blur-3xl" />
 
           <div className="relative space-y-4">
             {/* Crypto + Fiat pickers */}
@@ -391,7 +391,7 @@ export function CryptoTradeView() {
                     </div>
                     <button
                       onClick={() => setBuyAmountType(buyAmountType === "fiat" ? "crypto" : "fiat")}
-                      className="inline-flex items-center gap-1 rounded-md border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] text-emerald-300 transition hover:bg-emerald-500/20"
+                      className="inline-flex items-center gap-1 rounded-md border border-violet-violet-400/30 bg-violet-500/10 px-2.5 py-1 text-[11px] text-violet-violet-300 transition hover:bg-violet-500/20"
                     >
                       <RefreshCw className="h-3 w-3" />
                       Switch to {buyAmountType === "fiat" ? "crypto" : "fiat"}
@@ -448,7 +448,7 @@ export function CryptoTradeView() {
             {/* 24h change pill */}
             <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs">
               <span className="text-white/60">24h change</span>
-              <span className={cn("inline-flex items-center gap-1 font-semibold", change24h >= 0 ? "text-emerald-400" : "text-rose-400")}>
+              <span className={cn("inline-flex items-center gap-1 font-semibold", change24h >= 0 ? "text-violet-400" : "text-rose-400")}>
                 {change24h >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                 {change24h >= 0 ? "+" : ""}{change24h.toFixed(2)}%
               </span>
@@ -480,7 +480,7 @@ export function CryptoTradeView() {
             <Button
               onClick={tab === "buy" ? executeBuy : executeSell}
               disabled={submitting || (tab === "buy" ? buyNumeric <= 0 : sellNumeric <= 0)}
-              className="group relative w-full overflow-hidden bg-gradient-to-r from-emerald-500 to-teal-500 text-base font-semibold text-white shadow-lg shadow-emerald-900/40 hover:from-emerald-400 hover:to-teal-400 disabled:opacity-50"
+              className="group relative w-full overflow-hidden bg-gradient-to-r from-violet-500 to-purple-500 text-base font-semibold text-white shadow-lg shadow-violet-900/40 hover:from-violet-400 hover:to-purple-400 disabled:opacity-50"
               size="lg"
             >
               <AnimatePresence mode="wait" initial={false}>
@@ -520,8 +520,8 @@ export function CryptoTradeView() {
             </Button>
 
             {/* Security note */}
-            <div className="flex items-start gap-2 rounded-lg border border-emerald-400/20 bg-emerald-500/5 px-3 py-2 text-[11px] text-white/70">
-              <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
+            <div className="flex items-start gap-2 rounded-lg border border-violet-violet-400/20 bg-violet-500/5 px-3 py-2 text-[11px] text-white/70">
+              <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-400" />
               <span>
                 Trades settle instantly at locked rates. Funds are protected by AES-256 encryption, multi-signature cold storage and 2FA.
               </span>
@@ -543,7 +543,7 @@ export function CryptoTradeView() {
                   <p className="text-xs text-muted-foreground">{cryptoMeta?.name}</p>
                 </div>
               </div>
-              <Badge variant="outline" className={cn("text-[10px]", change24h >= 0 ? "text-emerald-600" : "text-rose-600")}>
+              <Badge variant="outline" className={cn("text-[10px]", change24h >= 0 ? "text-violet-600" : "text-rose-600")}>
                 {change24h >= 0 ? <TrendingUp className="mr-1 h-3 w-3" /> : <TrendingDown className="mr-1 h-3 w-3" />}
                 {change24h >= 0 ? "+" : ""}{change24h.toFixed(2)}%
               </Badge>
@@ -634,7 +634,7 @@ export function CryptoTradeView() {
                       }}
                       className={cn(
                         "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition hover:bg-muted/60",
-                        crypto === c.code && "bg-emerald-500/10 ring-1 ring-emerald-500/30",
+                        crypto === c.code && "bg-violet-500/10 ring-1 ring-violet-500/30",
                       )}
                     >
                       <div className="flex items-center gap-2.5">
@@ -651,7 +651,7 @@ export function CryptoTradeView() {
                           {r ? formatPrice(r.priceUSD) : "—"}
                         </p>
                         {r && (
-                          <p className={cn("text-[10px] tabular-nums", r.change24h >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                          <p className={cn("text-[10px] tabular-nums", r.change24h >= 0 ? "text-violet-600" : "text-rose-600")}>
                             {r.change24h >= 0 ? "+" : ""}{r.change24h.toFixed(2)}%
                           </p>
                         )}
@@ -668,7 +668,7 @@ export function CryptoTradeView() {
                     }}
                     className={cn(
                       "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition hover:bg-muted/60",
-                      fiat === f.code && "bg-emerald-500/10 ring-1 ring-emerald-500/30",
+                      fiat === f.code && "bg-violet-500/10 ring-1 ring-violet-500/30",
                     )}
                   >
                     <div className="flex items-center gap-2.5">
@@ -695,7 +695,7 @@ export function CryptoTradeView() {
               initial={{ scale: 0, rotate: -30 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: "spring", stiffness: 220, damping: 18 }}
-              className="mx-auto mb-2 grid h-14 w-14 place-items-center rounded-full bg-emerald-500/15 text-emerald-500"
+              className="mx-auto mb-2 grid h-14 w-14 place-items-center rounded-full bg-violet-500/15 text-violet-500"
             >
               <CheckCircle2 className="h-8 w-8" />
             </motion.div>
@@ -717,13 +717,13 @@ export function CryptoTradeView() {
                     <>
                       <span className="font-semibold">{formatFiat(success.totalFiat, success.fiatCurrency)}</span>
                       <ArrowDown className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-semibold text-emerald-600">{formatCrypto(success.totalCrypto, success.crypto)} {success.crypto}</span>
+                      <span className="font-semibold text-violet-600">{formatCrypto(success.totalCrypto, success.crypto)} {success.crypto}</span>
                     </>
                   ) : (
                     <>
                       <span className="font-semibold">{formatCrypto(success.totalCrypto, success.crypto)} {success.crypto}</span>
                       <ArrowDown className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-semibold text-emerald-600">{formatFiat(success.totalFiat, success.fiatCurrency)}</span>
+                      <span className="font-semibold text-violet-600">{formatFiat(success.totalFiat, success.fiatCurrency)}</span>
                     </>
                   )}
                 </div>
@@ -817,7 +817,7 @@ function LiveTicker({ rates, loading }: { rates: any[]; loading: boolean }) {
                 <span className="text-xs font-semibold">{r.code}</span>
               </div>
               <p className="text-xs font-bold tabular-nums">{formatPrice(r.priceUSD)}</p>
-              <p className={cn("text-[10px] tabular-nums", up ? "text-emerald-600" : "text-rose-600")}>
+              <p className={cn("text-[10px] tabular-nums", up ? "text-violet-600" : "text-rose-600")}>
                 {up ? "+" : ""}{(r.change24h || 0).toFixed(2)}%
               </p>
             </button>
@@ -894,7 +894,7 @@ function RecentTrades() {
                   <div className="flex items-center gap-2.5">
                     <div className={cn(
                       "grid h-8 w-8 place-items-center rounded-full text-xs font-bold",
-                      isBuy ? "bg-emerald-500/15 text-emerald-600" : "bg-amber-500/15 text-amber-600",
+                      isBuy ? "bg-violet-500/15 text-violet-600" : "bg-amber-500/15 text-amber-600",
                     )}>
                       {isBuy ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
                     </div>
@@ -911,7 +911,7 @@ function RecentTrades() {
                     <p className="text-xs font-semibold tabular-nums">
                       {formatCrypto(meta.totalCrypto, meta.crypto)} {meta.crypto}
                     </p>
-                    <p className={cn("text-[10px] tabular-nums", isBuy ? "text-rose-600" : "text-emerald-600")}>
+                    <p className={cn("text-[10px] tabular-nums", isBuy ? "text-rose-600" : "text-violet-600")}>
                       {isBuy ? "−" : "+"}{formatFiat(meta.totalFiat, meta.fiatCurrency)}
                     </p>
                   </div>
@@ -963,7 +963,7 @@ function Row({
       <span className="text-white/60">{label}</span>
       <span className={cn(
         "font-semibold tabular-nums",
-        tone === "ok" ? "text-emerald-300" : tone === "warn" ? "text-amber-300" : tone === "strong" ? "text-white text-sm" : tone === "bad" ? "text-rose-300" : "text-white",
+        tone === "ok" ? "text-violet-violet-300" : tone === "warn" ? "text-amber-300" : tone === "strong" ? "text-white text-sm" : tone === "bad" ? "text-rose-300" : "text-white",
       )}>
         {value}
       </span>
@@ -983,7 +983,7 @@ function Stat({
       <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={cn(
         "text-sm font-semibold tabular-nums",
-        tone === "ok" ? "text-emerald-600" : tone === "bad" ? "text-rose-600" : "",
+        tone === "ok" ? "text-violet-600" : tone === "bad" ? "text-rose-600" : "",
       )}>
         {value}
       </p>
@@ -1005,7 +1005,7 @@ function SuccessRow({
       <span className={cn(
         "text-right font-medium",
         mono && "font-mono text-[11px]",
-        tone === "ok" && "text-emerald-600",
+        tone === "ok" && "text-violet-600",
       )}>
         {value}
       </span>

@@ -79,7 +79,7 @@ export const metadata: Metadata = {
     "apple-mobile-web-app-title": "GaexPay",
     "apple-mobile-web-app-status-bar-style": "black-translucent",
     "application-name": "GaexPay",
-    "msapplication-TileColor": "#10b981",
+    "msapplication-TileColor": "#7C3AED",
     "msapplication-tap-highlight": "no",
     "msapplication-starturl": "/",
     "msapplication-config": "/browserconfig.xml",
@@ -87,7 +87,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#10b981",
+  themeColor: "#7C3AED",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -105,7 +105,7 @@ export default function RootLayout({
         <meta name="google" content="notranslate" />
         <meta name="translate" content="no" />
         {/* Safari pinned-tab mask icon (not exposed via the metadata API) */}
-        <link rel="mask-icon" href="/icon.svg" color="#10b981" />
+        <link rel="mask-icon" href="/icon.svg" color="#7C3AED" />
         {/* iOS launch screen background colour while the PWA is hydrating */}
         <meta name="apple-mobile-web-app-status-bar-inset" content="#0a0f0d" />
       </head>

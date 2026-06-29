@@ -67,7 +67,7 @@ export function CardsSection() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <KpiCard icon={CreditCardIcon} label="Total Cards" value={totalCards} color="bg-indigo-500/15 text-indigo-500" />
-        <KpiCard icon={Sun} label="Active" value={totalActive} color="bg-emerald-500/15 text-emerald-500" />
+        <KpiCard icon={Sun} label="Active" value={totalActive} color="bg-violet-500/15 text-violet-500" />
         <KpiCard icon={Snowflake} label="Frozen / Blocked" value={totalFrozen + totalBlocked} color="bg-rose-500/15 text-rose-500" />
         <KpiCard icon={ArrowLeftRight} label="Total Balance" value={formatMoney(totalBalance, "NGN")} color="bg-amber-500/15 text-amber-500" />
       </div>
@@ -151,7 +151,7 @@ export function CardsSection() {
                             if (!r.ok) showError(r.error || "Failed"); else setReloadKey((k) => k + 1);
                           }} title="Freeze"><Snowflake className="h-3.5 w-3.5" /></Button>
                         ) : c.status === "frozen" ? (
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-emerald-600" onClick={async () => {
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-violet-600" onClick={async () => {
                             const r = await apiAction(`/api/admin/cards?action=unfreeze`, "PATCH", { cardId: c.id }, "Card unfrozen");
                             if (!r.ok) showError(r.error || "Failed"); else setReloadKey((k) => k + 1);
                           }} title="Unfreeze"><Sun className="h-3.5 w-3.5" /></Button>

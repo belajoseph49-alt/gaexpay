@@ -76,7 +76,7 @@ export function ApiManagementView() {
           </p>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <span className="rounded-lg bg-emerald-500/10 px-2.5 py-1 font-medium text-emerald-600">
+          <span className="rounded-lg bg-violet-500/10 px-2.5 py-1 font-medium text-violet-600">
             {configs.filter((c) => c.enabled).length} active
           </span>
           <span className="rounded-lg bg-muted px-2.5 py-1 font-medium text-muted-foreground">

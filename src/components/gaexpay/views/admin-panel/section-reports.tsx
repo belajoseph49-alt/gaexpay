@@ -64,7 +64,7 @@ export function ReportsSection() {
 
       {/* Summary */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        <SummaryCard icon={TrendingUp} label="Total Revenue" value={formatCompact(data.summary.totalRevenue, "NGN")} color="bg-emerald-500/15 text-emerald-600" />
+        <SummaryCard icon={TrendingUp} label="Total Revenue" value={formatCompact(data.summary.totalRevenue, "NGN")} color="bg-violet-500/15 text-violet-600" />
         <SummaryCard icon={BarChart3} label="Total Volume" value={formatCompact(data.summary.totalVolume, "NGN")} color="bg-sky-500/15 text-sky-600" />
         <SummaryCard icon={FileText} label="Transactions" value={data.summary.totalTx.toLocaleString()} color="bg-violet-500/15 text-violet-600" />
         <SummaryCard icon={Users} label="New Users" value={data.summary.newUsers.toLocaleString()} color="bg-amber-500/15 text-amber-600" />
@@ -120,12 +120,12 @@ export function ReportsSection() {
           <h3 className="font-semibold mb-3 flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> KYC/KYB Processing Report</h3>
           <div className="grid grid-cols-2 gap-3">
             <Kpi label="Total Users" value={data.kycStats.total} />
-            <Kpi label="KYC Verified" value={data.kycStats.verified} color="text-emerald-600" />
+            <Kpi label="KYC Verified" value={data.kycStats.verified} color="text-violet-600" />
             <Kpi label="KYC Pending" value={data.kycStats.pending} color="text-amber-600" />
             <Kpi label="KYC Rejected" value={data.kycStats.rejected} color="text-rose-600" />
             <Kpi label="KYC Unverified" value={data.kycStats.unverified} color="text-muted-foreground" />
             <Kpi label="Total Businesses" value={data.kycStats.totalBusinesses} />
-            <Kpi label="KYB Verified" value={data.kycStats.kybVerified} color="text-emerald-600" />
+            <Kpi label="KYB Verified" value={data.kycStats.kybVerified} color="text-violet-600" />
             <Kpi label="KYB Pending" value={data.kycStats.kybPending} color="text-amber-600" />
           </div>
         </Card>

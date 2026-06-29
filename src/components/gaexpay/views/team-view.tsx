@@ -50,7 +50,7 @@ interface TeamMember {
 const ROLES = [
   { id: "owner", label: "Owner", desc: "Full access · all permissions", icon: Crown, color: "amber" },
   { id: "admin", label: "Admin", desc: "Manage team, transactions, settings", icon: ShieldCheck, color: "primary" },
-  { id: "accountant", label: "Accountant", desc: "View & export transactions, invoices", icon: Briefcase, color: "emerald" },
+  { id: "accountant", label: "Accountant", desc: "View & export transactions, invoices", icon: Briefcase, color: "violet" },
   { id: "viewer", label: "Viewer", desc: "Read-only access to dashboard", icon: Eye, color: "muted" },
 ];
 
@@ -168,7 +168,7 @@ export function TeamView() {
                     "grid h-9 w-9 place-items-center rounded-lg",
                     r.color === "amber" && "bg-amber-500/15 text-amber-600",
                     r.color === "primary" && "bg-primary/10 text-primary",
-                    r.color === "emerald" && "bg-emerald-500/15 text-emerald-600",
+                    r.color === "violet" && "bg-violet-500/15 text-violet-600",
                     r.color === "muted" && "bg-muted text-muted-foreground",
                   )}
                 >
@@ -223,7 +223,7 @@ export function TeamView() {
                   variant="outline"
                   className={cn(
                     "text-[10px]",
-                    m.status === "active" && "border-emerald-500/40 text-emerald-600",
+                    m.status === "active" && "border-violet-500/40 text-violet-600",
                     m.status === "invited" && "border-amber-500/40 text-amber-600",
                     m.status === "suspended" && "border-rose-500/40 text-rose-600",
                   )}

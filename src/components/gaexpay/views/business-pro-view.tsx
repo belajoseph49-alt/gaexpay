@@ -154,7 +154,7 @@ export function BusinessProView() {
         className="flex flex-wrap items-end justify-between gap-3"
       >
         <div className="flex items-center gap-2.5">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/20">
             <Briefcase className="h-5 w-5" />
           </div>
           <div>
@@ -165,8 +165,8 @@ export function BusinessProView() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge className="bg-emerald-500/15 text-emerald-600 border-0">
-            <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <Badge className="bg-violet-500/15 text-violet-600 border-0">
+            <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse" />
             Live
           </Badge>
           <Badge variant="outline" className="border-amber-500/30 text-amber-600">
@@ -240,15 +240,15 @@ function DashboardTab({ data }: { data: BusinessProData }) {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 p-6 ring-1 ring-emerald-500/20"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-violet-950 to-slate-900 p-6 ring-1 ring-violet-500/20"
       >
-        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-emerald-500/20 blur-3xl" />
-        <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-teal-500/15 blur-3xl" />
+        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-violet-500/20 blur-3xl" />
+        <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-purple-500/15 blur-3xl" />
 
         <div className="relative">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-emerald-300/80">
+              <p className="text-xs font-medium uppercase tracking-wider text-violet-violet-300/80">
                 Revenue · Month to date
               </p>
               <h2 className="mt-1 text-xl font-bold text-white">{data.merchant.name}</h2>
@@ -265,7 +265,7 @@ function DashboardTab({ data }: { data: BusinessProData }) {
               value={k.monthRevenue}
               prefix={symbol}
               format="compact"
-              accent="emerald"
+              accent="violet"
               sub={`${k.monthOrders} orders this month`}
             />
             <HeroStat
@@ -302,7 +302,7 @@ function DashboardTab({ data }: { data: BusinessProData }) {
         <MiniStat
           icon={TrendingUp} label="Today's Revenue"
           value={fmtNGN(k.todayRevenue, true)} sub={`${k.todayOrders} orders today`}
-          trend="+5.2%" up color="bg-emerald-500/15 text-emerald-500"
+          trend="+5.2%" up color="bg-violet-500/15 text-violet-500"
         />
         <MiniStat
           icon={Activity} label="This Week"
@@ -326,11 +326,11 @@ function DashboardTab({ data }: { data: BusinessProData }) {
         <div className="mb-3 flex items-center justify-between">
           <div>
             <h3 className="font-semibold flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-emerald-500" /> Revenue Trend (14 days)
+              <TrendingUp className="h-4 w-4 text-violet-500" /> Revenue Trend (14 days)
             </h3>
             <p className="text-xs text-muted-foreground">Daily revenue from completed orders</p>
           </div>
-          <Badge variant="outline" className="text-emerald-600 border-emerald-500/30">
+          <Badge variant="outline" className="text-violet-600 border-violet-500/30">
             {fmtNGN(k.monthRevenue, true)} MTD
           </Badge>
         </div>
@@ -494,7 +494,7 @@ function DashboardTab({ data }: { data: BusinessProData }) {
                   <td className="py-3 pr-2 text-right tabular-nums text-xs">{fmtNum(p.sold)}</td>
                   <td className="py-3 pr-2 text-right font-semibold tabular-nums text-xs">{fmtNGN(p.revenue, true)}</td>
                   <td className="py-3 text-right">
-                    <Badge variant="outline" className={cn("text-[10px]", p.growth >= 0 ? "text-emerald-600 border-emerald-500/30" : "text-rose-600 border-rose-500/30")}>
+                    <Badge variant="outline" className={cn("text-[10px]", p.growth >= 0 ? "text-violet-600 border-violet-500/30" : "text-rose-600 border-rose-500/30")}>
                       {p.growth >= 0 ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
                       {Math.abs(p.growth)}%
                     </Badge>
@@ -547,7 +547,7 @@ function DashboardTab({ data }: { data: BusinessProData }) {
                     return (
                       <div
                         key={h}
-                        className="group relative aspect-square rounded-sm transition-all hover:ring-1 hover:ring-emerald-400"
+                        className="group relative aspect-square rounded-sm transition-all hover:ring-1 hover:ring-violet-violet-400"
                         style={{ backgroundColor: `rgba(16,185,129,${0.05 + intensity * 0.95})` }}
                       >
                         <div className="pointer-events-none absolute -top-9 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-popover px-2 py-1 text-[10px] shadow-md group-hover:block">
@@ -620,7 +620,7 @@ function InvoicesTab({ data }: { data: BusinessProData }) {
 
   const summary = data.invoices.summary;
   const statusConfig: Record<string, { color: string; bg: string; icon: any }> = {
-    paid: { color: "text-emerald-600", bg: "bg-emerald-500/15 border-emerald-500/30", icon: CheckCircle2 },
+    paid: { color: "text-violet-600", bg: "bg-violet-500/15 border-violet-500/30", icon: CheckCircle2 },
     pending: { color: "text-amber-600", bg: "bg-amber-500/15 border-amber-500/30", icon: Clock },
     overdue: { color: "text-rose-600", bg: "bg-rose-500/15 border-rose-500/30", icon: AlertTriangle },
   };
@@ -673,17 +673,17 @@ function InvoicesTab({ data }: { data: BusinessProData }) {
           </Card>
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Card className="p-5 card-lift ring-1 ring-emerald-500/20">
+          <Card className="p-5 card-lift ring-1 ring-violet-500/20">
             <div className="mb-2 flex items-center justify-between">
-              <div className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-500/15 text-emerald-600">
+              <div className="grid h-10 w-10 place-items-center rounded-lg bg-violet-500/15 text-violet-600">
                 <CheckCircle2 className="h-5 w-5" />
               </div>
-              <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 text-[10px]">
+              <Badge variant="outline" className="text-violet-600 border-violet-500/30 text-[10px]">
                 This month
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground">Paid</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-600">
+            <p className="mt-1 text-2xl font-bold tabular-nums text-violet-600">
               <AnimatedNumber value={summary.paidThisMonth} prefix={symbol} decimals={0} />
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground">Collected this month</p>
@@ -819,7 +819,7 @@ function StaffTab({ data }: { data: BusinessProData }) {
             </h3>
             <p className="text-xs text-muted-foreground">Revenue generated per team member this month</p>
           </div>
-          <Badge variant="outline" className="text-emerald-600 border-emerald-500/30">
+          <Badge variant="outline" className="text-violet-600 border-violet-500/30">
             {fmtNGN(totalStaffRevenue, true)} total
           </Badge>
         </div>
@@ -852,7 +852,7 @@ function StaffTab({ data }: { data: BusinessProData }) {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-semibold flex items-center gap-2">
-              <Users className="h-4 w-4 text-emerald-500" /> Team Roster
+              <Users className="h-4 w-4 text-violet-500" /> Team Roster
             </h3>
             <p className="text-xs text-muted-foreground">{data.staff.length} active staff members</p>
           </div>
@@ -936,7 +936,7 @@ function StaffTab({ data }: { data: BusinessProData }) {
                   <span className="text-muted-foreground flex items-center gap-1">
                     <Target className="h-3 w-3" /> Target attainment
                   </span>
-                  <span className={cn("font-semibold tabular-nums", s.attainment >= 100 ? "text-emerald-600" : s.attainment >= 85 ? "text-amber-600" : "text-rose-600")}>
+                  <span className={cn("font-semibold tabular-nums", s.attainment >= 100 ? "text-violet-600" : s.attainment >= 85 ? "text-amber-600" : "text-rose-600")}>
                     {s.attainment}% of {fmtNGN(s.target, true)}
                   </span>
                 </div>
@@ -961,7 +961,7 @@ function SettlementsTab({ data }: { data: BusinessProData }) {
 
   const s = data.settlements.summary;
   const statusConfig: Record<string, { color: string; bg: string; dot: string }> = {
-    completed: { color: "text-emerald-600", bg: "bg-emerald-500/15 border-emerald-500/30", dot: "bg-emerald-500" },
+    completed: { color: "text-violet-600", bg: "bg-violet-500/15 border-violet-500/30", dot: "bg-violet-500" },
     pending: { color: "text-amber-600", bg: "bg-amber-500/15 border-amber-500/30", dot: "bg-amber-500" },
     processing: { color: "text-sky-600", bg: "bg-sky-500/15 border-sky-500/30", dot: "bg-sky-500" },
     failed: { color: "text-rose-600", bg: "bg-rose-500/15 border-rose-500/30", dot: "bg-rose-500" },
@@ -985,7 +985,7 @@ function SettlementsTab({ data }: { data: BusinessProData }) {
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           className="sm:col-span-1"
         >
-          <Card className="relative overflow-hidden p-6 border-0 bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-xl">
+          <Card className="relative overflow-hidden p-6 border-0 bg-gradient-to-br from-violet-600 via-purple-600 to-violet-700 text-white shadow-xl">
             <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
             <div className="relative">
               <div className="mb-3 flex items-center gap-2">
@@ -998,7 +998,7 @@ function SettlementsTab({ data }: { data: BusinessProData }) {
               <p className="mt-1 text-xs opacity-80">Ready to settle to your bank</p>
               <Button
                 size="sm"
-                className="mt-4 w-full bg-white text-emerald-700 hover:bg-white/90"
+                className="mt-4 w-full bg-white text-violet-violet-700 hover:bg-white/90"
                 onClick={() => setSettleOpen(true)}
               >
                 <Send className="h-4 w-4 mr-1.5" /> Settle Now
@@ -1025,14 +1025,14 @@ function SettlementsTab({ data }: { data: BusinessProData }) {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Card className="p-5 card-lift ring-1 ring-emerald-500/20 h-full">
+          <Card className="p-5 card-lift ring-1 ring-violet-500/20 h-full">
             <div className="mb-3 flex items-center gap-2">
-              <div className="grid h-9 w-9 place-items-center rounded-lg bg-emerald-500/15 text-emerald-600">
+              <div className="grid h-9 w-9 place-items-center rounded-lg bg-violet-500/15 text-violet-600">
                 <CheckCircle2 className="h-4 w-4" />
               </div>
               <p className="text-xs font-medium text-muted-foreground">Settled This Month</p>
             </div>
-            <p className="text-2xl font-bold tabular-nums text-emerald-600">
+            <p className="text-2xl font-bold tabular-nums text-violet-600">
               <AnimatedNumber value={s.settledThisMonth} prefix={symbol} decimals={0} />
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground">Across {data.settlements.history.filter((h) => h.status === "completed").length} settlements</p>
@@ -1045,7 +1045,7 @@ function SettlementsTab({ data }: { data: BusinessProData }) {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="font-semibold flex items-center gap-2">
-              <Landmark className="h-4 w-4 text-emerald-500" /> Settlement History
+              <Landmark className="h-4 w-4 text-violet-500" /> Settlement History
             </h3>
             <p className="text-xs text-muted-foreground">Recent bank settlements from your merchant account</p>
           </div>
@@ -1085,7 +1085,7 @@ function SettlementsTab({ data }: { data: BusinessProData }) {
                     </td>
                     <td className="py-3 pr-3 text-right font-semibold tabular-nums text-xs">{fmtNGN(h.amount, true)}</td>
                     <td className="py-3 pr-3 text-right tabular-nums text-xs text-muted-foreground">{fmtNGN(h.fee, true)}</td>
-                    <td className="py-3 pr-3 text-right tabular-nums text-xs font-semibold text-emerald-600">{fmtNGN(h.net, true)}</td>
+                    <td className="py-3 pr-3 text-right tabular-nums text-xs font-semibold text-violet-600">{fmtNGN(h.net, true)}</td>
                     <td className="py-3">
                       <Badge variant="outline" className={cn("text-[10px] capitalize", cfg.color, cfg.bg)}>
                         <span className={cn("mr-1 h-1.5 w-1.5 rounded-full", cfg.dot)} />
@@ -1110,9 +1110,9 @@ function SettlementsTab({ data }: { data: BusinessProData }) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            <div className="rounded-lg bg-emerald-500/5 p-3 ring-1 ring-emerald-500/20">
+            <div className="rounded-lg bg-violet-500/5 p-3 ring-1 ring-violet-500/20">
               <p className="text-[11px] text-muted-foreground">Available to settle</p>
-              <p className="text-xl font-bold tabular-nums text-emerald-600">{fmtNGN(s.availableBalance)}</p>
+              <p className="text-xl font-bold tabular-nums text-violet-600">{fmtNGN(s.availableBalance)}</p>
             </div>
             <div>
               <Label htmlFor="amt">Amount (₦)</Label>
@@ -1159,9 +1159,9 @@ function SettlementsTab({ data }: { data: BusinessProData }) {
 function InsightsTab({ data }: { data: BusinessProData }) {
   const insightConfig: Record<string, { color: string; bg: string; ring: string; icon: any }> = {
     positive: {
-      color: "text-emerald-600",
-      bg: "bg-emerald-500/10",
-      ring: "ring-emerald-500/20",
+      color: "text-violet-600",
+      bg: "bg-violet-500/10",
+      ring: "ring-violet-500/20",
       icon: TrendingUp,
     },
     warning: {
@@ -1194,16 +1194,16 @@ function InsightsTab({ data }: { data: BusinessProData }) {
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-900 via-slate-900 to-teal-900 p-6 ring-1 ring-emerald-500/20"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-violet-900 via-slate-900 to-purple-900 p-6 ring-1 ring-violet-500/20"
       >
-        <div className="absolute -top-20 -right-20 h-60 w-60 rounded-full bg-emerald-500/20 blur-3xl" />
+        <div className="absolute -top-20 -right-20 h-60 w-60 rounded-full bg-violet-500/20 blur-3xl" />
         <div className="relative flex items-center gap-3">
           <div className="grid h-12 w-12 place-items-center rounded-xl bg-white/10 backdrop-blur">
-            <Sparkles className="h-6 w-6 text-emerald-300" />
+            <Sparkles className="h-6 w-6 text-violet-violet-300" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-white">AI Business Insights</h2>
-            <p className="text-xs text-emerald-300/80">
+            <p className="text-xs text-violet-violet-300/80">
               Generated from your last 30 days of business activity · {data.insights.length} insights
             </p>
           </div>
@@ -1263,7 +1263,7 @@ function InsightsTab({ data }: { data: BusinessProData }) {
           <RetentionCard
             icon={RefreshCw} label="Returning Customers"
             value={fmtNum(data.retention.returningCustomers30d)}
-            color="text-emerald-600 bg-emerald-500/15"
+            color="text-violet-600 bg-violet-500/15"
             sub="2+ orders lifetime"
           />
           <RetentionCard
@@ -1287,7 +1287,7 @@ function InsightsTab({ data }: { data: BusinessProData }) {
           <RetentionCard
             icon={ShoppingCart} label="Avg Orders / Customer"
             value={data.retention.avgOrdersPerCustomer.toFixed(1)}
-            color="text-teal-600 bg-teal-500/15"
+            color="text-purple-600 bg-purple-500/15"
             sub="Lifetime order frequency"
           />
         </div>
@@ -1298,7 +1298,7 @@ function InsightsTab({ data }: { data: BusinessProData }) {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="font-semibold flex items-center gap-2">
-              <Target className="h-4 w-4 text-emerald-500" /> Growth Recommendations
+              <Target className="h-4 w-4 text-violet-500" /> Growth Recommendations
             </h3>
             <p className="text-xs text-muted-foreground">Prioritized actions to grow your business</p>
           </div>
@@ -1357,12 +1357,12 @@ function HeroStat({
   suffix?: string;
   decimals?: number;
   format?: "compact";
-  accent: "emerald" | "teal" | "cyan" | "lime" | "amber";
+  accent: "violet" | "teal" | "cyan" | "lime" | "amber";
   sub: string;
 }) {
   const accentColors: Record<string, string> = {
-    emerald: "text-emerald-300",
-    teal: "text-teal-300",
+    emerald: "text-violet-violet-300",
+    teal: "text-purple-300",
     cyan: "text-cyan-300",
     lime: "text-lime-300",
     amber: "text-amber-300",
@@ -1370,7 +1370,7 @@ function HeroStat({
   const formatted = format === "compact" ? fmtNGN(value, true) : fmtNum(value);
   return (
     <div className="rounded-xl bg-white/5 p-4 backdrop-blur ring-1 ring-white/10">
-      <div className="flex items-center gap-2 text-emerald-300/80">
+      <div className="flex items-center gap-2 text-violet-violet-300/80">
         <span className="grid h-7 w-7 place-items-center rounded-lg bg-white/10">{icon}</span>
         <span className="text-[10px] font-medium uppercase tracking-wider">{label}</span>
       </div>
@@ -1395,7 +1395,7 @@ function MiniStat({
         <div className={cn("grid h-10 w-10 place-items-center rounded-lg", color)}>
           <Icon className="h-5 w-5" />
         </div>
-        <Badge variant="outline" className={up ? "text-emerald-600 border-emerald-500/30" : "text-rose-600 border-rose-500/30"}>
+        <Badge variant="outline" className={up ? "text-violet-600 border-violet-500/30" : "text-rose-600 border-rose-500/30"}>
           {up ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
           {trend}
         </Badge>

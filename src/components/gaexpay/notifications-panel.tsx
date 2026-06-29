@@ -19,10 +19,10 @@ const ICONS: Record<string, any> = {
 };
 
 const COLORS: Record<string, string> = {
-  transaction: "bg-emerald-500/15 text-emerald-500",
+  transaction: "bg-violet-500/15 text-violet-500",
   security: "bg-orange-500/15 text-orange-500",
   promo: "bg-fuchsia-500/15 text-fuchsia-500",
-  success: "bg-emerald-500/15 text-emerald-500",
+  success: "bg-violet-500/15 text-violet-500",
   warning: "bg-amber-500/15 text-amber-500",
   info: "bg-sky-500/15 text-sky-500",
   error: "bg-red-500/15 text-red-500",

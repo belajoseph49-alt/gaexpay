@@ -162,7 +162,7 @@ export function PayrollView() {
         <Card className="p-5">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs text-muted-foreground">Active Employees</p>
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-500/15 text-emerald-600">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-violet-500/15 text-violet-600">
               <Users className="h-4 w-4" />
             </div>
           </div>
@@ -229,7 +229,7 @@ export function PayrollView() {
                 variant="outline"
                 className={cn(
                   "text-[10px]",
-                  emp.status === "paid" && "border-emerald-500/40 text-emerald-600",
+                  emp.status === "paid" && "border-violet-500/40 text-violet-600",
                   emp.status === "active" && "border-sky-500/40 text-sky-600",
                   emp.status === "pending" && "border-amber-500/40 text-amber-600",
                 )}
@@ -279,7 +279,7 @@ export function PayrollView() {
                 variant="outline"
                 className={cn(
                   "text-[10px]",
-                  run.status === "completed" && "border-emerald-500/40 text-emerald-600",
+                  run.status === "completed" && "border-violet-500/40 text-violet-600",
                   run.status === "processing" && "border-amber-500/40 text-amber-600",
                   run.status === "failed" && "border-rose-500/40 text-rose-600",
                 )}

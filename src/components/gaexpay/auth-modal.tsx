@@ -67,14 +67,14 @@ const STRENGTH_COLORS = [
   "bg-red-500",
   "bg-amber-500",
   "bg-yellow-400",
-  "bg-emerald-500",
+  "bg-violet-500",
 ];
 const STRENGTH_TEXT = [
   "text-muted-foreground",
   "text-red-500",
   "text-amber-500",
   "text-yellow-500",
-  "text-emerald-500",
+  "text-violet-500",
 ];
 
 // ---------------------------------------------------------------------------
@@ -358,10 +358,10 @@ export function AuthModal({ open, mode, onClose, onSuccess }: AuthModalProps) {
         </DialogDescription>
 
         {/* Gradient header */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 px-6 pb-5 pt-6 text-white">
+        <div className="relative overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-violet-700 px-6 pb-5 pt-6 text-white">
           <div className="absolute inset-0 opacity-30">
             <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/20 blur-2xl" />
-            <div className="absolute -left-10 bottom-0 h-24 w-24 rounded-full bg-teal-300/30 blur-2xl" />
+            <div className="absolute -left-10 bottom-0 h-24 w-24 rounded-full bg-purple-300/30 blur-2xl" />
           </div>
           <div className="relative flex items-center justify-between">
             <Logo size={28} className="text-white [&_span]:text-white" />
@@ -423,9 +423,9 @@ export function AuthModal({ open, mode, onClose, onSuccess }: AuthModalProps) {
                   </Button>
                 </>
               ) : (
-                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm">
+                <div className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-4 text-sm">
                   <div className="flex items-start gap-2">
-                    <Mail className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                    <Mail className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
                     <div>
                       <p className="font-medium text-foreground">Check your inbox</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
@@ -485,9 +485,9 @@ export function AuthModal({ open, mode, onClose, onSuccess }: AuthModalProps) {
                   </Button>
                 </>
               ) : (
-                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm">
+                <div className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-4 text-sm">
                   <div className="flex items-start gap-2">
-                    <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                    <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
                     <div>
                       <p className="font-medium text-foreground">Password reset</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">

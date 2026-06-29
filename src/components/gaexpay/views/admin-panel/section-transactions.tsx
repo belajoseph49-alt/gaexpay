@@ -144,7 +144,7 @@ export function TransactionsSection() {
                     <TableCell className="text-xs">{t.user?.firstName} {t.user?.lastName}</TableCell>
                     <TableCell><Badge variant="outline" className="text-[10px] capitalize">{t.type}</Badge></TableCell>
                     <TableCell className="text-right font-medium tabular-nums text-sm">
-                      <span className={t.direction === "credit" ? "text-emerald-600" : ""}>
+                      <span className={t.direction === "credit" ? "text-violet-600" : ""}>
                         {t.direction === "credit" ? "+" : "-"}{formatMoney(t.amount, t.currency)}
                       </span>
                     </TableCell>

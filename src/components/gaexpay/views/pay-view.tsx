@@ -451,7 +451,7 @@ function QrPay() {
                   Unverified
                 </Badge>
               ) : (
-                <span className="text-emerald-600 dark:text-emerald-400">Verified Merchant</span>
+                <span className="text-violet-600 dark:text-violet-400">Verified Merchant</span>
               )}
             </div>
             {found.account && (
@@ -507,7 +507,7 @@ function QrPay() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", delay: 0.1 }}
-              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white"
+              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-violet-500 text-white"
             >
               <Check className="h-8 w-8" strokeWidth={3} />
             </motion.div>
@@ -538,7 +538,7 @@ function QrPay() {
               <ReceiptRow
                 icon={Check}
                 label="Status"
-                value={<span className="font-semibold text-emerald-600 dark:text-emerald-400">Completed</span>}
+                value={<span className="font-semibold text-violet-600 dark:text-violet-400">Completed</span>}
               />
             </div>
           </div>
@@ -608,7 +608,7 @@ function MerchantsPay() {
                   <Badge variant="outline" className="text-[10px]">
                     ★ {m.rating.toFixed(1)}
                   </Badge>
-                  <Badge variant="outline" className="text-[10px] text-emerald-600">
+                  <Badge variant="outline" className="text-[10px] text-violet-600">
                     Verified
                   </Badge>
                 </div>
@@ -733,7 +733,7 @@ function BillsPay() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", delay: 0.1 }}
-              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white"
+              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-violet-500 text-white"
             >
               <Check className="h-8 w-8" strokeWidth={3} />
             </motion.div>
@@ -771,7 +771,7 @@ function BillsPay() {
                 icon={Check}
                 label="Status"
                 value={
-                  <span className="font-semibold capitalize text-emerald-600 dark:text-emerald-400">
+                  <span className="font-semibold capitalize text-violet-600 dark:text-violet-400">
                     {receipt.status}
                   </span>
                 }
@@ -1149,7 +1149,7 @@ function AirtimeForm() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", delay: 0.1 }}
-              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white"
+              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-violet-500 text-white"
             >
               <Check className="h-8 w-8" strokeWidth={3} />
             </motion.div>
@@ -1310,7 +1310,7 @@ function DataForm() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", delay: 0.1 }}
-              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white"
+              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-violet-500 text-white"
             >
               <Database className="h-8 w-8" strokeWidth={2.5} />
             </motion.div>

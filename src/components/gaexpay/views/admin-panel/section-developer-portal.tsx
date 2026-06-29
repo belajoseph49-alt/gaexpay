@@ -143,7 +143,7 @@ export function DeveloperPortalSection() {
 
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <KpiCard icon={Boxes} label="Total Apps" value={data.stats.totalApps} color="bg-slate-500/15 text-slate-500" />
-        <KpiCard icon={KeyRound} label="Active API Keys" value={data.stats.activeApiKeys} color="bg-emerald-500/15 text-emerald-500" />
+        <KpiCard icon={KeyRound} label="Active API Keys" value={data.stats.activeApiKeys} color="bg-violet-500/15 text-violet-500" />
         <KpiCard icon={Webhook} label="Active Webhooks" value={data.stats.activeWebhooks} color="bg-sky-500/15 text-sky-500" />
         <KpiCard icon={Activity} label="Avg Success Rate" value={`${data.stats.avgWebhookSuccessRate}%`} color="bg-violet-500/15 text-violet-500" />
       </div>
@@ -216,7 +216,7 @@ export function DeveloperPortalSection() {
                       </TableCell>
                       <TableCell>
                         {k.status === "active"
-                          ? <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[10px]">Active</Badge>
+                          ? <Badge className="bg-violet-500/15 text-violet-600 border-0 text-[10px]">Active</Badge>
                           : <Badge className="bg-rose-500/15 text-rose-600 border-0 text-[10px]">Revoked</Badge>}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{timeAgo(k.createdAt)}</TableCell>
@@ -278,14 +278,14 @@ export function DeveloperPortalSection() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {w.status === "active" && <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[10px]">Active</Badge>}
+                        {w.status === "active" && <Badge className="bg-violet-500/15 text-violet-600 border-0 text-[10px]">Active</Badge>}
                         {w.status === "failing" && <Badge className="bg-amber-500/15 text-amber-600 border-0 text-[10px]">Failing</Badge>}
                         {w.status === "disabled" && <Badge className="bg-muted text-muted-foreground border-0 text-[10px]">Disabled</Badge>}
                       </TableCell>
                       <TableCell className="text-center">
                         <span className={cn(
                           "text-sm font-semibold tabular-nums",
-                          w.successRate >= 95 ? "text-emerald-600" : w.successRate >= 80 ? "text-amber-600" : "text-rose-600",
+                          w.successRate >= 95 ? "text-violet-600" : w.successRate >= 80 ? "text-amber-600" : "text-rose-600",
                         )}>{w.successRate.toFixed(1)}%</span>
                         <p className="text-[10px] text-muted-foreground">{w.totalDelivered} sent · {w.failedDelivered} failed</p>
                       </TableCell>
@@ -294,7 +294,7 @@ export function DeveloperPortalSection() {
                         {w.lastStatusCode && (
                           <Badge variant="outline" className={cn(
                             "ml-1 text-[9px]",
-                            w.lastStatusCode >= 200 && w.lastStatusCode < 300 ? "text-emerald-600" : "text-rose-600",
+                            w.lastStatusCode >= 200 && w.lastStatusCode < 300 ? "text-violet-600" : "text-rose-600",
                           )}>{w.lastStatusCode}</Badge>
                         )}
                       </TableCell>
@@ -375,7 +375,7 @@ export function DeveloperPortalSection() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-emerald-600" /> API Key Created
+              <ShieldCheck className="h-5 w-5 text-violet-600" /> API Key Created
             </DialogTitle>
             <DialogDescription>
               Copy this key now — for security, it will not be shown again.
@@ -439,7 +439,7 @@ export function DeveloperPortalSection() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {testResult?.success
-                ? <Check className="h-5 w-5 text-emerald-600" />
+                ? <Check className="h-5 w-5 text-violet-600" />
                 : <AlertTriangle className="h-5 w-5 text-rose-600" />}
               Webhook Test {testResult?.success ? "Succeeded" : "Failed"}
             </DialogTitle>
@@ -449,7 +449,7 @@ export function DeveloperPortalSection() {
             <div className="grid grid-cols-3 gap-3">
               <div className="rounded-lg border p-3">
                 <p className="text-xs text-muted-foreground">Status</p>
-                <p className={cn("text-sm font-semibold", testResult.success ? "text-emerald-600" : "text-rose-600")}>
+                <p className={cn("text-sm font-semibold", testResult.success ? "text-violet-600" : "text-rose-600")}>
                   {testResult.success ? "PASS" : "FAIL"}
                 </p>
               </div>
@@ -518,7 +518,7 @@ function CreateKeyDialog({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5 text-emerald-600" /> Issue New API Key</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5 text-violet-600" /> Issue New API Key</DialogTitle>
           <DialogDescription>Generate a new API key for an existing or new developer application.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">

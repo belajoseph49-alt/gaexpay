@@ -244,7 +244,7 @@ export function ApiListTab({
                       <span className={cn("text-xs tabular-nums font-medium",
                         errorRate > 0.05 ? "text-rose-600"
                         : errorRate > 0.01 ? "text-amber-600"
-                        : "text-emerald-600")}>
+                        : "text-violet-600")}>
                         {c.totalRequests > 0 ? `${(errorRate * 100).toFixed(2)}%` : "—"}
                       </span>
                     </TableCell>

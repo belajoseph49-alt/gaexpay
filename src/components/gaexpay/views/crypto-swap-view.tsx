@@ -28,7 +28,7 @@ const CRYPTO_MAP: Record<string, (typeof CRYPTOCURRENCIES)[number]> = Object.fro
 
 // Tailwind gradient classes per crypto (visual flourish on the icon tile)
 const CRYPTO_GRADIENT: Record<string, string> = {
-  USDT: "from-emerald-500 to-teal-600",
+  USDT: "from-violet-500 to-purple-600",
   USDC: "from-sky-500 to-blue-600",
   BUSD: "from-yellow-500 to-amber-600",
   DAI: "from-amber-400 to-yellow-600",
@@ -226,18 +226,18 @@ export function CryptoSwapView() {
             Instantly trade between {CRYPTOCURRENCIES.length} assets at live market rates
           </p>
         </div>
-        <Badge variant="outline" className="border-emerald-500/30 text-emerald-600">
-          <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+        <Badge variant="outline" className="border-violet-500/30 text-violet-600">
+          <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-violet-500" />
           Live · 0.3% fee
         </Badge>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
         {/* ===== Swap Card (hero) ===== */}
-        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950 p-5 text-white shadow-2xl sm:p-6">
+        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-slate-900 to-violet-950 p-5 text-white shadow-2xl sm:p-6">
           {/* glow blobs */}
-          <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-emerald-500/20 blur-3xl" />
-          <div className="pointer-events-none absolute -left-12 bottom-0 h-40 w-40 rounded-full bg-teal-400/15 blur-3xl" />
+          <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-violet-500/20 blur-3xl" />
+          <div className="pointer-events-none absolute -left-12 bottom-0 h-40 w-40 rounded-full bg-purple-400/15 blur-3xl" />
 
           <div className="relative space-y-3">
             {/* FROM */}
@@ -262,7 +262,7 @@ export function CryptoSwapView() {
                 whileHover={{ scale: 1.05 }}
                 animate={{ rotate: quoteLoading ? 360 : 0 }}
                 transition={{ rotate: { duration: 0.8, ease: "linear" }, scale: { duration: 0.15 } }}
-                className="z-10 grid h-10 w-10 place-items-center rounded-xl border border-emerald-400/30 bg-slate-950 text-emerald-300 shadow-lg shadow-emerald-900/40 hover:border-emerald-400/60 hover:bg-emerald-500/10"
+                className="z-10 grid h-10 w-10 place-items-center rounded-xl border border-violet-violet-400/30 bg-slate-950 text-violet-violet-300 shadow-lg shadow-violet-900/40 hover:border-violet-violet-400/60 hover:bg-violet-500/10"
                 aria-label="Swap sides"
               >
                 <ArrowDown className="h-5 w-5" />
@@ -318,7 +318,7 @@ export function CryptoSwapView() {
             <Button
               onClick={executeSwap}
               disabled={swapping || numericAmount <= 0}
-              className="group relative w-full overflow-hidden bg-gradient-to-r from-emerald-500 to-teal-500 text-base font-semibold text-white shadow-lg shadow-emerald-900/40 hover:from-emerald-400 hover:to-teal-400 disabled:opacity-50"
+              className="group relative w-full overflow-hidden bg-gradient-to-r from-violet-500 to-purple-500 text-base font-semibold text-white shadow-lg shadow-violet-900/40 hover:from-violet-400 hover:to-purple-400 disabled:opacity-50"
               size="lg"
             >
               <AnimatePresence mode="wait" initial={false}>
@@ -374,7 +374,7 @@ export function CryptoSwapView() {
                 <p className="text-base font-bold tabular-nums">
                   ${fromPriceUSD < 1 ? fromPriceUSD.toFixed(4) : fromPriceUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
-                <Badge variant="outline" className={cn("text-[10px]", chartUp ? "text-emerald-600" : "text-rose-600")}>
+                <Badge variant="outline" className={cn("text-[10px]", chartUp ? "text-violet-600" : "text-rose-600")}>
                   {chartUp ? <TrendingUp className="mr-1 h-3 w-3" /> : <TrendingDown className="mr-1 h-3 w-3" />}
                   {chartUp ? "+" : ""}{chartChangePct.toFixed(2)}%
                 </Badge>
@@ -465,7 +465,7 @@ export function CryptoSwapView() {
                     }}
                     className={cn(
                       "flex w-full items-center justify-between rounded-lg px-2 py-2 text-left transition hover:bg-muted/50",
-                      from === w.code && "bg-emerald-500/10 ring-1 ring-emerald-500/30",
+                      from === w.code && "bg-violet-500/10 ring-1 ring-violet-500/30",
                     )}
                   >
                     <div className="flex items-center gap-2.5">
@@ -481,7 +481,7 @@ export function CryptoSwapView() {
                       <p className="text-sm font-semibold tabular-nums">
                         {w.balance.toLocaleString("en-US", { maximumFractionDigits: decimalsFor(w.code) })} {w.code}
                       </p>
-                      <p className={cn("text-xs tabular-nums", change24h >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                      <p className={cn("text-xs tabular-nums", change24h >= 0 ? "text-violet-600" : "text-rose-600")}>
                         ≈ ${w.valueUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                     </div>
@@ -492,12 +492,12 @@ export function CryptoSwapView() {
           </Card>
 
           {/* Security note */}
-          <Card className="flex items-center gap-3 border-emerald-500/30 bg-emerald-500/5 p-4">
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-emerald-500/15 text-emerald-500">
+          <Card className="flex items-center gap-3 border-violet-500/30 bg-violet-500/5 p-4">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-violet-500/15 text-violet-500">
               <Shield className="h-4 w-4" />
             </div>
             <div className="text-xs">
-              <p className="font-semibold text-emerald-700 dark:text-emerald-400">Non-custodial swap</p>
+              <p className="font-semibold text-violet-violet-700 dark:text-violet-400">Non-custodial swap</p>
               <p className="text-muted-foreground">Swaps settle instantly at locked rates. No slippage beyond your tolerance.</p>
             </div>
           </Card>
@@ -528,7 +528,7 @@ export function CryptoSwapView() {
                   }}
                   className={cn(
                     "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition hover:bg-muted/60 disabled:opacity-40",
-                    (pickerOpen === "from" ? from === c.code : to === c.code) && "bg-emerald-500/10 ring-1 ring-emerald-500/30",
+                    (pickerOpen === "from" ? from === c.code : to === c.code) && "bg-violet-500/10 ring-1 ring-violet-500/30",
                   )}
                 >
                   <div className="flex items-center gap-2.5">
@@ -557,7 +557,7 @@ export function CryptoSwapView() {
       <Dialog open={!!success} onOpenChange={(o) => !o && setSuccess(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <div className="mx-auto mb-2 grid h-14 w-14 place-items-center rounded-full bg-emerald-500/15 text-emerald-500">
+            <div className="mx-auto mb-2 grid h-14 w-14 place-items-center rounded-full bg-violet-500/15 text-violet-500">
               <CheckCircle2 className="h-8 w-8" />
             </div>
             <DialogTitle className="text-center">Swap Complete</DialogTitle>
@@ -572,7 +572,7 @@ export function CryptoSwapView() {
                 <div className="mb-2 flex items-center justify-center gap-2 text-sm">
                   <span className="font-semibold">{formatCrypto(success.amount, success.from)} {success.from}</span>
                   <Repeat className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-semibold text-emerald-600">{formatCrypto(success.convertedAmount, success.to)} {success.to}</span>
+                  <span className="font-semibold text-violet-600">{formatCrypto(success.convertedAmount, success.to)} {success.to}</span>
                 </div>
                 <p className="text-center text-xs text-muted-foreground">
                   1 {success.from} = {formatCrypto(success.rate, success.to)} {success.to}
@@ -626,7 +626,7 @@ function SwapInputCard({
         {balance !== undefined && (
           <button
             onClick={onMax}
-            className="text-[11px] text-white/50 transition hover:text-emerald-300"
+            className="text-[11px] text-white/50 transition hover:text-violet-violet-300"
           >
             Balance: {balance.toLocaleString("en-US", { maximumFractionDigits: 6 })} {meta?.code} · MAX
           </button>
@@ -651,7 +651,7 @@ function SwapInputCard({
           readOnly={!editable}
           className={cn(
             "w-full bg-transparent text-right text-xl font-bold tabular-nums outline-none placeholder:text-white/30",
-            !editable && "cursor-default text-emerald-300",
+            !editable && "cursor-default text-violet-violet-300",
           )}
         />
       </div>
@@ -675,7 +675,7 @@ function DetailTile({
       <p className="text-[10px] uppercase tracking-wide text-white/50">{label}</p>
       <p className={cn(
         "text-sm font-semibold tabular-nums",
-        tone === "warn" ? "text-amber-300" : tone === "ok" ? "text-emerald-300" : "text-white",
+        tone === "warn" ? "text-amber-300" : tone === "ok" ? "text-violet-violet-300" : "text-white",
       )}>
         {value}
       </p>

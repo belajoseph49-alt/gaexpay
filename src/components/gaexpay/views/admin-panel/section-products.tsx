@@ -77,9 +77,9 @@ export function ProductsSection() {
                     <p className="text-sm font-medium truncate">{m.name}</p>
                     <p className="text-xs text-muted-foreground capitalize">{m.category} · ⭐ {m.rating}</p>
                   </div>
-                  <Badge variant="outline" className="text-[10px] text-emerald-600">Approved</Badge>
+                  <Badge variant="outline" className="text-[10px] text-violet-600">Approved</Badge>
                   <div className="flex gap-1">
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-emerald-600" onClick={() => toast.success("Merchant re-approved")}>
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-violet-600" onClick={() => toast.success("Merchant re-approved")}>
                       <CheckCircle2 className="h-3.5 w-3.5" />
                     </Button>
                     <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-rose-600" onClick={() => toast.success("Merchant disabled")}>

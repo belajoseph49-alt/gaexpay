@@ -93,7 +93,7 @@ export function LogoMark({
         // gxp-gradient-animate keyframe (which animates background-position)
         // can shift it. The SVG inside paints the mark on top.
         backgroundImage:
-          "linear-gradient(135deg, #34d399 0%, #10b981 45%, #14b8a6 70%, #06b6d4 100%)",
+          "linear-gradient(135deg, #8B5CF6 0%, #7C3AED 45%, #6D28D9 70%, #5B21B6 100%)",
       }}
       aria-hidden="true"
     >
