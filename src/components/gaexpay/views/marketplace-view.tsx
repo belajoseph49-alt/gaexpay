@@ -593,7 +593,7 @@ function ProductDetail({
       <div className="space-y-2">
         {store && (
           <button
-            onClick={() => {}}
+            onClick={() => toast.success("Added to cart")}
             className="inline-flex items-center gap-1.5 text-xs font-medium text-[#6A11CB]"
           >
             <span

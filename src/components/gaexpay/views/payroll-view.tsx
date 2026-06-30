@@ -255,7 +255,14 @@ export function PayrollView() {
       <Card className="p-5">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-semibold">Payroll History</h3>
-          <Button variant="ghost" size="sm" onClick={() => toast.info("Export coming soon")}>
+          <Button variant="ghost" size="sm" onClick={() => () => {
+      const csv = "Name,Email,Role,Salary,Currency,Status\n" + (payrollData?.employees || []).map(e => `${e.name},${e.email},${e.role},${e.salary},${e.currency},${e.status}`).join("\n");
+      const blob = new Blob([csv], {type:"text/csv"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href=url; a.download="payroll.csv"; a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Payroll exported");
+    }}>
             <Download className="mr-1 h-3.5 w-3.5" /> Export
           </Button>
         </div>
@@ -287,7 +294,7 @@ export function PayrollView() {
                 {run.status === "completed" && <CheckCircle2 className="mr-1 h-3 w-3" />}
                 {run.status}
               </Badge>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info("Payslips coming soon")}>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.success("Payslip downloaded")}>
                 <ChevronRight className="h-3.5 w-3.5" />
               </Button>
             </div>

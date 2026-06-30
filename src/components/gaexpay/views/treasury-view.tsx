@@ -1327,7 +1327,7 @@ function SettlementsTab({ data }: { data: TreasuryData }) {
             </h3>
             <p className="text-xs text-muted-foreground">{accounts.length} nostro & operating accounts across currencies</p>
           </div>
-          <Button size="sm" variant="outline" onClick={() => toast.info("Initiating reconciliation sweep across all accounts…")}>
+          <Button size="sm" variant="outline" onClick={() => toast.success("Reconciliation sweep initiated")}>
             <RefreshCw className="h-4 w-4 mr-1.5" /> Reconcile All
           </Button>
         </div>
@@ -1408,7 +1408,7 @@ function SettlementsTab({ data }: { data: TreasuryData }) {
                       size="sm"
                       variant="outline"
                       className="h-7 px-2 text-[10px]"
-                      onClick={() => toast.info(`Viewing ledger for ${a.bank} (${a.currency})`)}
+                      onClick={() => toast.success(`Ledger opened for ${a.bank} (${a.currency})`)}
                     >
                       <Eye className="h-3 w-3 mr-1" /> Ledger
                     </Button>

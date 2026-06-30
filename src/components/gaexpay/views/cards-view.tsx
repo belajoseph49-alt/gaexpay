@@ -123,7 +123,7 @@ export function CardsView() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <ActionButton icon={reveal ? EyeOff : Eye} label={reveal ? "Hide" : "Reveal"} onClick={() => setReveal(!reveal)} />
           <ActionButton icon={Snowflake} label={card.status === "active" ? "Freeze" : "Unfreeze"} onClick={() => toggleFreeze(card)} danger={card.status === "active"} />
-          <ActionButton icon={Settings2} label="Settings" onClick={() => toast.info("Card settings coming soon")} />
+          <ActionButton icon={Settings2} label="Settings" onClick={() => { setSettingsCard(card); setSettingsOpen(true); }} />
           <ActionButton icon={Copy} label="Details" onClick={() => { navigator.clipboard?.writeText(card.maskedNumber.slice(-4)); toast.success("Card number copied"); }} />
         </div>
       )}

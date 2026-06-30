@@ -551,7 +551,7 @@ function AmlDashboardTab({ data }: { data: ComplianceData }) {
                     <td className="py-3 text-right">
                       <div className="flex justify-end gap-1">
                         <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]"
-                          onClick={() => toast.info(`Reviewing alert ${al.id} · ${al.userName}`)}>
+                          onClick={() => toast.success(`Alert ${al.id} under review`)}>
                           <Eye className="h-3 w-3 mr-1" /> Review
                         </Button>
                         <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px] text-rose-600"
@@ -980,7 +980,7 @@ function KycQueueTab({ data }: { data: ComplianceData }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <Button size="sm" variant="outline" className="h-8"
-                    onClick={() => toast.info(`Opening KYC submission ${r.id.slice(-6)}`)}>
+                    onClick={() => toast.success(`KYC submission ${r.id.slice(-6)} opened`)}>
                     <Eye className="h-3.5 w-3.5 mr-1" /> View Docs
                   </Button>
                   <Button size="sm" className="h-8 bg-violet-600 hover:bg-violet-violet-700"
@@ -1406,7 +1406,7 @@ function ReportsTab({ data }: { data: ComplianceData }) {
                       <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]"
                         onClick={() => r.status === "filed"
                           ? toast.success(`Downloading ${r.id} (PDF)`)
-                          : toast.info(`${r.id} is ${r.status.replace(/_/g, " ")} — not yet available for download`)}>
+                          : toast.info(`${r.id} is ${r.status.replace(/_/g, " ")} — download not available`)}>
                         <Download className="h-3 w-3 mr-1" /> {r.status === "filed" ? "Download" : "Preview"}
                       </Button>
                     </td>

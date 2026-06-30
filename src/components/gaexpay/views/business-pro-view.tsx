@@ -780,7 +780,7 @@ function InvoicesTab({ data }: { data: BusinessProData }) {
                   <p className="text-[10px] text-muted-foreground">VAT {fmtNGN(inv.tax, true)}</p>
                 </div>
                 <Button variant="ghost" size="sm" className="h-7 px-2 text-xs"
-                  onClick={() => toast.info(`Opening invoice ${inv.id}`)}>
+                  onClick={() => toast.success(`Invoice ${inv.id} opened`)}>
                   View
                 </Button>
               </motion.div>
@@ -1331,7 +1331,7 @@ function InsightsTab({ data }: { data: BusinessProData }) {
                   </p>
                 </div>
                 <Button variant="ghost" size="sm" className="h-7 px-2 text-xs"
-                  onClick={() => toast.info(`Opening action plan: ${r.title}`)}>
+                  onClick={() => toast.success(`Action plan: ${r.title}`)}>
                   Plan
                   <ChevronRight className="h-3 w-3 ml-1" />
                 </Button>

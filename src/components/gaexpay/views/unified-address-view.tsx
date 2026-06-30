@@ -548,7 +548,7 @@ function RecipientLookup({ addressData }: { addressData?: any }) {
       }
       setResult(data);
       if (data.found && data.profile?.isSelf) {
-        toast.info("That's you! Try another identifier.");
+        toast.warning("That's you! Try another identifier.");
       } else if (data.found) {
         toast.success(`Found ${data.profile?.fullName}`);
       } else {

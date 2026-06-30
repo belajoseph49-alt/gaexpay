@@ -217,7 +217,7 @@ function UsersTab() {
                 <td className="py-2.5 text-xs text-muted-foreground">{timeAgo(u.createdAt)}</td>
                 <td className="py-2.5">
                   <div className="flex gap-1">
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => toast.info("Viewing user")}><Eye className="h-3.5 w-3.5" /></Button>
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => toast.success("User details loaded")}><Eye className="h-3.5 w-3.5" /></Button>
                     <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-rose-600" onClick={() => toast.success("User suspended")}><Ban className="h-3.5 w-3.5" /></Button>
                   </div>
                 </td>

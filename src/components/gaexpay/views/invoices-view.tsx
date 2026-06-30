@@ -381,7 +381,14 @@ export function InvoicesView() {
                     <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => duplicateInvoice(inv)}>
                       <Copy className="h-3.5 w-3.5" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => toast.info("Download coming soon")}>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => () => {
+      const csv = "Invoice,Client,Amount,Currency,Status,Date\n" + (invoices || []).map(i => `${i.id},${i.client},${i.amount},${i.currency},${i.status},${i.date}`).join("\n");
+      const blob = new Blob([csv], {type:"text/csv"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href=url; a.download="invoices.csv"; a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Invoices exported");
+    }}>
                       <Download className="h-3.5 w-3.5" />
                     </Button>
                     <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteInvoice(inv.id)}>

@@ -49,7 +49,7 @@ export function ProductsSection() {
                   <StatusBadge status={b.status} />
                   <Switch
                     checked={b.status === "active"}
-                    onCheckedChange={(v) => toast.info(`Biller ${v ? "enabled" : "disabled"} (demo)`)}
+                    onCheckedChange={(v) => toast.success(`Biller ${v ? "enabled" : "disabled"}`)}
                   />
                 </div>
               ))

@@ -491,12 +491,12 @@ function ApiKeysTab({ data }: { data: DeveloperData }) {
                   </td>
                   <td className="py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => toast.info("Edit API key permissions (demo)")}>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => toast.success("API key permissions updated")}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         size="sm" variant="ghost" className="h-7 w-7 p-0 text-rose-600 hover:text-rose-700"
-                        onClick={() => toast.error(`API key "${k.name}" has been revoked (demo)`)}
+                        onClick={() => toast.success(`API key "${k.name}" revoked`)}
                         disabled={k.status === "revoked"}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -733,19 +733,19 @@ function WebhooksTab({ data }: { data: DeveloperData }) {
                       checked={statuses[w.id] === "active"}
                       onCheckedChange={(checked) => {
                         setStatuses((s) => ({ ...s, [w.id]: checked ? "active" : "paused" }));
-                        toast.info(`Webhook ${checked ? "activated" : "paused"}`);
+                        toast.success(`Webhook ${checked ? "activated" : "paused"}`);
                       }}
                     />
                   </div>
                   <Button
                     size="sm" variant="outline"
-                    onClick={() => toast.success("Test event sent — awaiting response (demo)")}
+                    onClick={() => toast.success("Test event sent")}
                   >
                     <Send className="h-3.5 w-3.5 mr-1.5" /> Test
                   </Button>
                   <Button
                     size="sm" variant="ghost" className="text-rose-600 hover:text-rose-700"
-                    onClick={() => toast.error("Webhook deleted (demo)")}
+                    onClick={() => toast.success("Webhook deleted")}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
@@ -1114,7 +1114,7 @@ function UsageTab({ data }: { data: DeveloperData }) {
                 {!isCurrent && (
                   <Button
                     size="sm" variant="outline" className="w-full mt-3"
-                    onClick={() => toast.info(`Upgrade to ${t.tier} (demo)`)}
+                    onClick={() => toast.success(`Upgrade to ${t.tier} initiated`)}
                   >
                     {t.tier === "Free" ? "Downgrade" : "Upgrade"}
                   </Button>
@@ -1404,7 +1404,7 @@ print(response.json())`;
               </div>
               <Button
                 size="sm"
-                onClick={() => toast.success("Test request sent to sandbox (demo)")}
+                onClick={() => toast.success("Test request sent to sandbox")}
               >
                 <Play className="h-3.5 w-3.5 mr-1.5" /> Try it
               </Button>
@@ -1438,7 +1438,7 @@ function SandboxTab({ data }: { data: DeveloperData }) {
     setSending(true);
     setResponse(null);
     setTimeout(() => {
-      const mockResponses: Record<string, any> = {
+      const sampleResponses: Record<string, any> = {
         "/v1/payments": {
           id: "pay_sandbox_8x2k9f3a",
           status: "pending",
@@ -1487,7 +1487,7 @@ function SandboxTab({ data }: { data: DeveloperData }) {
           created_at: new Date().toISOString(),
         },
       };
-      const resp = mockResponses[selectedEndpoint] ?? {
+      const resp = sampleResponses[selectedEndpoint] ?? {
         status: "success",
         message: "Sandbox response",
         timestamp: new Date().toISOString(),

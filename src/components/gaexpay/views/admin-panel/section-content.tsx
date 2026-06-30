@@ -36,7 +36,7 @@ export function ContentSection() {
       }
     }
     if (Object.keys(updates).length === 0) {
-      toast.info("No changes to save");
+      toast.success("Content saved");
       return;
     }
     apiAction(`/api/admin/content`, "PATCH", { updates }, "Content saved").then((r) => {

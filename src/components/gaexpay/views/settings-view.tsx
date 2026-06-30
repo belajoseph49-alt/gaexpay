@@ -152,7 +152,7 @@ export function SettingsView() {
             </div>
             <div className="mt-6 border-t pt-4">
               <p className="text-sm font-medium mb-3">Transaction PIN</p>
-              <Button variant="outline" onClick={() => toast.info("PIN change requires biometric verification")}>
+              <Button variant="outline" onClick={() => setPinModalOpen(true)}>
                 <KeyRound className="h-4 w-4 mr-2" /> Change Transaction PIN
               </Button>
             </div>

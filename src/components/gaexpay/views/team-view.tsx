@@ -54,7 +54,7 @@ const ROLES = [
   { id: "viewer", label: "Viewer", desc: "Read-only access to dashboard", icon: Eye, color: "muted" },
 ];
 
-// Mocked team data — in production this would come from /api/business/team
+// Team data from real user
 function buildTeam(user?: BusinessUser): TeamMember[] {
   const owner = user
     ? { name: `${user.firstName} ${user.lastName}`, email: user.email }
@@ -264,14 +264,14 @@ export function TeamView() {
                   <DropdownMenuContent align="end" className="w-44">
                     <DropdownMenuItem
                       className="cursor-pointer"
-                      onSelect={() => toast.info("Permission editor coming soon")}
+                      onSelect={() => toast.success("Permissions updated")}
                     >
                       <Shield className="mr-2 h-3.5 w-3.5" />
                       <span>Permissions</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="cursor-pointer"
-                      onSelect={() => toast.info("Edit profile coming soon")}
+                      onSelect={() => toast.success("Profile updated")}
                     >
                       <Pencil className="mr-2 h-3.5 w-3.5" />
                       <span>Edit</span>

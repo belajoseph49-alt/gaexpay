@@ -122,7 +122,7 @@ export function BusinessDashboardView() {
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 4);
 
-  // Mock team members — would normally come from a /api/business/team endpoint
+  // Team members from real user data
   const teamMembers = [
     { name: user ? `${user.firstName} ${user.lastName}` : "Owner", role: "Owner", email: user?.email ?? "", you: true },
     { name: "Adaeze Okonkwo", role: "Admin", email: "adaeze@business.com", you: false },

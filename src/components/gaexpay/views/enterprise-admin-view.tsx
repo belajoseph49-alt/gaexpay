@@ -303,7 +303,7 @@ function OverviewTab({ data }: { data: EnterpriseData }) {
             label="Suspend User"
             desc="Freeze a problematic account"
             color="rose"
-            onClick={() => toast.info("Opening user search to suspend…")}
+            onClick={() => setView("admin-panel")}
           />
           <QuickAction
             icon={CheckCircle2}
@@ -311,7 +311,7 @@ function OverviewTab({ data }: { data: EnterpriseData }) {
             desc="Review pending verifications"
             color="violet"
             badge={data.compliance.pendingKyc}
-            onClick={() => toast.info(`${data.compliance.pendingKyc} KYC applications pending`)}
+            onClick={() => setView("admin-panel")}
           />
           <QuickAction
             icon={AlertTriangle}
@@ -319,7 +319,7 @@ function OverviewTab({ data }: { data: EnterpriseData }) {
             desc="Investigate flagged transactions"
             color="amber"
             badge={k.flaggedTx}
-            onClick={() => toast.info(`${k.flaggedTx} flagged transactions to review`)}
+            onClick={() => setView("admin-panel")}
           />
           <QuickAction
             icon={FileText}
@@ -795,7 +795,7 @@ function ComplianceTab({ data }: { data: EnterpriseData }) {
           value={c.pendingKyc}
           desc="Awaiting verification review"
           color="amber"
-          onClick={() => toast.info(`${c.pendingKyc} applications pending review`)}
+          onClick={() => setView("admin-panel")}
         />
         <ComplianceCard
           icon={BadgeCheck}
@@ -811,7 +811,7 @@ function ComplianceTab({ data }: { data: EnterpriseData }) {
           value={c.rejectedKyc}
           desc="Applications declined"
           color="rose"
-          onClick={() => toast.info(`${c.rejectedKyc} rejections on file`)}
+          onClick={() => setView("admin-panel")}
         />
       </div>
 
@@ -1091,7 +1091,7 @@ function SystemTab({ data }: { data: EnterpriseData }) {
               </p>
             </div>
           </div>
-          <Button size="sm" variant="outline" onClick={() => toast.info("Opening incident management…")}>
+          <Button size="sm" variant="outline" onClick={() => setView("support")}>
             <AlertTriangle className="h-4 w-4 mr-1.5" /> Report Incident
           </Button>
         </div>
