@@ -1,0 +1,60 @@
+# ============================================================
+# GaexPay — Production Caddyfile
+#
+#   • Proxies all traffic from the public-facing domains to the
+#     internal `app:3000` container.
+#   • Automatic HTTPS via Let's Encrypt (Caddy built-in).
+#   • Gzip + JSON access logs to /data/access.log.
+# ============================================================
+
+gaexpay.com, www.gaexpay.com, admin.gaexpay.com, support.gaexpay.com, api.gaexpay.com {
+    # --- TLS ---------------------------------------------------
+    # Caddy auto-provisions Let's Encrypt certs for these domains.
+    # For staging / no-DNS testing set `tls internal` instead.
+    # tls internal
+
+    encode gzip zstd
+
+    # --- Security headers -------------------------------------
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+        # CSP is intentionally loose here — tighten per-route once the
+        # inline-script audit is complete.
+        Content-Security-Policy "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https: wss:; frame-ancestors 'none';"
+        -Server
+    }
+
+    # --- Reverse proxy to the Next.js app ---------------------
+    reverse_proxy app:3000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # --- Logging ----------------------------------------------
+    log {
+        output file /data/access.log {
+            roll_size 100mb
+            roll_keep 10
+            roll_keep_for 720h
+        }
+        format json
+        time_format rfc3339
+    }
+}
+
+# ============================================================
+# Fallback / catch-all (redirect bare IP / unknown hosts)
+# ============================================================
+:80 {
+    respond "GaexPay — use https://gaexpay.com" 200
+    log {
+        output file /data/access.log
+        format json
+    }
+}

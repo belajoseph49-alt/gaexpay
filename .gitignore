@@ -33,6 +33,13 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# keep the example template tracked
+!.env.example
+
+# sqlite dev database (production uses PostgreSQL)
+db/custom.db
+db/custom.db-journal
+
 # vercel
 .vercel
 

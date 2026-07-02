@@ -1,11 +1,25 @@
-// GaexPay - Fintech platform database schema
+// GaexPay - PostgreSQL production schema (mirror of schema.prisma)
+//
+// Differences from the SQLite dev schema:
+//   * `provider = "postgresql"` (uses `directUrl` for migrations).
+//   * All MONETARY `Float` fields are upgraded to `Decimal @db.Decimal(18, 4)`
+//     so we never lose precision on balances, amounts, fees, limits, etc.
+//   * Non-monetary floats (rates, scores, ratings, percentages) stay `Float`.
+//   * Composite indexes are added on the most common query paths
+//     (`(userId, createdAt)`, `(senderId)`, `(status, createdAt)`).
+//
+// This file is NOT consumed by the dev runtime (the SQLite `schema.prisma` is).
+// It is kept in sync so that `prisma migrate` against a real Postgres cluster
+// produces the same shape with stronger numeric guarantees.
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -72,12 +86,16 @@ model User {
   devices         Device[]
   referralCode    String?  @unique
   referredById    String?
-  referralEarnings Float   @default(0)
+  referralEarnings Decimal @default(0) @db.Decimal(18, 4)
   referralCount   Int      @default(0)
   rewardPoints    Int      @default(0)
   kycDocuments    KycDocument[]
   businessProfile BusinessProfile?
   achievements    UserAchievement[]
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([role])
 }
 
 model Wallet {
@@ -85,9 +103,9 @@ model Wallet {
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   currency     String   // NGN, USD, EUR, GBP, GHS, KES, UGX, XOF
-  balance      Float    @default(0)
-  ledgerBalance Float   @default(0)
-  type         String   @default("primary") // primary | savings | business
+  balance      Decimal  @default(0) @db.Decimal(18, 4)
+  ledgerBalance Decimal @default(0) @db.Decimal(18, 4)
+  type         String   @default("primary") // primary | savings | business | crypto
   label        String   @default("Main Wallet")
   isDefault    Boolean  @default(false)
   status       String   @default("active") // active | frozen | closed
@@ -95,6 +113,9 @@ model Wallet {
   updatedAt    DateTime @updatedAt
 
   @@unique([userId, currency, type])
+  @@index([userId, createdAt])
+  @@index([userId, status])
+  @@index([currency])
 }
 
 model Transaction {
@@ -107,8 +128,8 @@ model Transaction {
   type            String   // transfer | deposit | withdrawal | payment | bill | airtime | exchange | card | referral | fee
   direction       String   // credit | debit
   status          String   @default("pending") // pending | completed | failed | reversed | flagged
-  amount          Float
-  fee             Float    @default(0)
+  amount          Decimal  @db.Decimal(18, 4)
+  fee             Decimal  @default(0) @db.Decimal(18, 4)
   currency        String   @default("NGN")
   description     String
   category        String   @default("general") // general | p2p | bills | shopping | travel | food | income | investment
@@ -123,6 +144,13 @@ model Transaction {
   metadata        String?
   createdAt       DateTime @default(now())
   completedAt     DateTime?
+
+  @@index([userId, createdAt])
+  @@index([senderId])
+  @@index([status, createdAt])
+  @@index([type, createdAt])
+  @@index([currency, createdAt])
+  @@index([reference])
 }
 
 model Card {
@@ -139,13 +167,16 @@ model Card {
   cvvEnc        String
   holderName    String
   currency      String   @default("NGN")
-  balance       Float    @default(0)
-  limit         Float    @default(500000)
-  spending      Float    @default(0)
+  balance       Decimal  @default(0) @db.Decimal(18, 4)
+  limit         Decimal  @default(500000) @db.Decimal(18, 4)
+  spending      Decimal  @default(0) @db.Decimal(18, 4)
   status        String   @default("active") // active | frozen | blocked
   color         String   @default("emerald")
   isDefault     Boolean  @default(false)
   createdAt     DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([status])
 }
 
 model Beneficiary {
@@ -162,6 +193,8 @@ model Beneficiary {
   phone     String?
   avatar    String?
   createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model KycDocument {
@@ -178,6 +211,9 @@ model KycDocument {
   reviewNote String?
   createdAt DateTime @default(now())
   reviewedAt DateTime?
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
 }
 
 model Notification {
@@ -192,6 +228,9 @@ model Notification {
   actionUrl String?
   metadata  String?
   createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([isRead, createdAt])
 }
 
 model SupportTicket {
@@ -206,6 +245,9 @@ model SupportTicket {
   messages  SupportMessage[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
 }
 
 model SupportMessage {
@@ -218,6 +260,8 @@ model SupportMessage {
   content   String
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
 }
 
 model AuditLog {
@@ -233,6 +277,10 @@ model AuditLog {
   details   String?
   severity  String   @default("info") // info | warning | critical
   createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([entity, createdAt])
+  @@index([severity, createdAt])
 }
 
 model Device {
@@ -248,6 +296,8 @@ model Device {
   trusted    Boolean  @default(false)
   lastActive DateTime @default(now())
   createdAt  DateTime @default(now())
+
+  @@index([userId, lastActive])
 }
 
 model ExchangeRate {
@@ -262,6 +312,7 @@ model ExchangeRate {
   createdAt DateTime @default(now())
 
   @@unique([base, quote])
+  @@index([base, quote])
 }
 
 model Merchant {
@@ -277,13 +328,16 @@ model Merchant {
   rating    Float    @default(4.5)
   // Admin/Platform fields
   ownerName String?
-  volume    Float    @default(0)
+  volume    Decimal  @default(0) @db.Decimal(18, 4)
   qrCount   Int      @default(1)
   rejectionReason String?
   approvedAt DateTime?
   approvedBy String?
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([status, createdAt])
+  @@index([category])
 }
 
 model Biller {
@@ -294,6 +348,8 @@ model Biller {
   fields    String   // JSON of required fields
   status    String   @default("active")
   createdAt DateTime @default(now())
+
+  @@index([category, status])
 }
 
 model AdminMetric {
@@ -309,41 +365,48 @@ model SavingsGoal {
   id          String   @id @default(cuid())
   userId      String
   name        String
-  targetAmount Float
-  currentAmount Float @default(0)
+  targetAmount Decimal @db.Decimal(18, 4)
+  currentAmount Decimal @default(0) @db.Decimal(18, 4)
   currency    String   @default("NGN")
   deadline    DateTime?
   icon        String   @default("🎯")
   color       String   @default("emerald")
   status      String   @default("active") // active | completed | paused
-  autoSaveAmount Float?
+  autoSaveAmount Decimal? @db.Decimal(18, 4)
   autoSaveDay  Int?    // day of month for auto-save
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   contributions SavingsContribution[]
+
+  @@index([userId, createdAt])
+  @@index([status])
 }
 
 model SavingsContribution {
   id        String   @id @default(cuid())
   goalId    String
   goal      SavingsGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  amount    Float
+  amount    Decimal  @db.Decimal(18, 4)
   type      String   @default("deposit") // deposit | withdrawal
   note      String?
   createdAt DateTime @default(now())
+
+  @@index([goalId, createdAt])
 }
 
 model Budget {
   id         String   @id @default(cuid())
   userId     String
   category   String   // p2p | bills | shopping | food | transport | entertainment | general
-  limit      Float
-  spent      Float    @default(0)
+  limit      Decimal  @db.Decimal(18, 4)
+  spent      Decimal  @default(0) @db.Decimal(18, 4)
   period     String   @default("monthly") // weekly | monthly
   currency   String   @default("NGN")
   alertThreshold Float @default(80)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@index([userId, createdAt])
 }
 
 model ScheduledTransfer {
@@ -354,7 +417,7 @@ model ScheduledTransfer {
   recipientBank  String?
   method     String   @default("wallet")
   provider   String?
-  amount     Float
+  amount     Decimal  @db.Decimal(18, 4)
   currency   String   @default("NGN")
   note       String?
   frequency  String   // once | daily | weekly | monthly
@@ -364,6 +427,9 @@ model ScheduledTransfer {
   totalRuns  Int      @default(0)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@index([userId, nextRunAt])
+  @@index([status, nextRunAt])
 }
 
 model Dispute {
@@ -379,6 +445,10 @@ model Dispute {
   resolvedAt    DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([transactionId])
+  @@index([status, createdAt])
 }
 
 // ============================================================
@@ -417,6 +487,8 @@ model BusinessProfile {
 
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  @@index([kybStatus])
 }
 
 // ============================================================
@@ -462,6 +534,7 @@ model ApiConfig {
   logs        ApiLog[]
 
   @@index([service, enabled])
+  @@index([environment])
 }
 
 // API request/error logs (per ApiConfig)
@@ -503,6 +576,8 @@ model FeatureFlag {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([category, enabled])
 }
 
 // ============================================================
@@ -518,6 +593,8 @@ model SystemSetting {
   category  String   @default("general")
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
+
+  @@index([category])
 }
 
 // ============================================================
@@ -530,15 +607,15 @@ model FeeConfig {
 
   // Fee structure
   feeType     String   @default("percentage") // percentage | fixed | mixed
-  feeValue    Float    @default(0) // percentage (0-100) or fixed amount
-  fixedFee    Float    @default(0) // for mixed type
+  feeValue    Decimal  @default(0) @db.Decimal(18, 4) // percentage (0-100) or fixed amount
+  fixedFee    Decimal  @default(0) @db.Decimal(18, 4) // for mixed type
   currency    String   @default("NGN")
 
   // Limits
-  minFee      Float    @default(0)
-  maxFee      Float?
-  minAmount   Float?
-  maxAmount   Float?
+  minFee      Decimal  @default(0) @db.Decimal(18, 4)
+  maxFee      Decimal? @db.Decimal(18, 4)
+  minAmount   Decimal? @db.Decimal(18, 4)
+  maxAmount   Decimal? @db.Decimal(18, 4)
 
   // Applicability
   transactionType String? // transfer | exchange | crypto_trade | bill | card | etc.
@@ -548,6 +625,9 @@ model FeeConfig {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([transactionType, enabled])
+  @@index([accountType])
 }
 
 // ============================================================
@@ -568,6 +648,8 @@ model Achievement {
   updatedAt     DateTime @updatedAt
 
   unlocks       UserAchievement[]
+
+  @@index([category, enabled])
 }
 
 model UserAchievement {
@@ -580,6 +662,7 @@ model UserAchievement {
 
   @@unique([userId, achievementId])
   @@index([achievementId])
+  @@index([userId, unlockedAt])
 }
 
 // ============================================================
@@ -599,6 +682,9 @@ model DeveloperApp {
 
   apiKeys       DeveloperApiKey[]
   webhooks      Webhook[]
+
+  @@index([developerId])
+  @@index([status])
 }
 
 model DeveloperApiKey {
@@ -618,6 +704,7 @@ model DeveloperApiKey {
   revokedReason String?
 
   @@index([developerId])
+  @@index([appId])
 }
 
 model Webhook {
@@ -640,12 +727,12 @@ model Webhook {
   updatedAt     DateTime @updatedAt
 
   @@index([developerId])
+  @@index([appId, status])
 }
 
 // ============================================================
 // Double-Entry Ledger — accounts, entries, balances
-// (atomic, auditable money movement). Float in SQLite for dev;
-// Decimal(18,4) in PostgreSQL (see schema.postgres.prisma).
+// (used for atomic, auditable money movement)
 // ============================================================
 model LedgerAccount {
   id        String   @id @default(cuid())
@@ -669,8 +756,8 @@ model LedgerEntry {
   accountId     String
   account       LedgerAccount @relation(fields: [accountId], references: [id])
   transactionId String?
-  debit         Float    @default(0) // Decimal in PostgreSQL
-  credit        Float    @default(0) // Decimal in PostgreSQL
+  debit         Decimal  @default(0) @db.Decimal(18, 4)
+  credit        Decimal  @default(0) @db.Decimal(18, 4)
   currency      String
   createdAt     DateTime @default(now())
 
@@ -683,7 +770,7 @@ model LedgerBalance {
   accountId String   @unique
   account   LedgerAccount @relation(fields: [accountId], references: [id])
   currency  String
-  balance   Float    @default(0) // Decimal in PostgreSQL
+  balance   Decimal  @default(0) @db.Decimal(18, 4)
   updatedAt DateTime @updatedAt
 
   @@index([currency])

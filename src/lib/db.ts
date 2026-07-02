@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client'
 // Bump this when the Prisma schema changes (new models/fields). It forces the
 // dev-server cache to instantiate a fresh PrismaClient that knows about the
 // new schema, without needing a manual server restart.
-const PRISMA_CACHE_VERSION = 'v2-systemsetting-2026-06'
+const PRISMA_CACHE_VERSION = 'v3-ledger-2026-07'
 
 const globalForPrisma = globalThis as unknown as {
   __prismaCacheVersion?: string

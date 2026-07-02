@@ -3866,3 +3866,99 @@ Stage Summary:
 - Files created: `src/app/api/marketplace/products/route.ts`, `src/components/gaexpay/views/marketplace-view.tsx`.
 - Files edited: `src/lib/store.ts`, `src/lib/i18n/translations.ts`, `src/components/gaexpay/app-shell.tsx`, `src/components/gaexpay/sidebar.tsx`, `src/components/gaexpay/mobile-nav.tsx`.
 - Design highlights: white surface independent of global theme; purple `#6A11CB` for active pills/badges/hero buttons/star fills; emerald reserved for discounts + "In Stock" + "Add to Cart"; NGN-denominated prices flow through existing `useFormatMoney`; real `useFetch` + `useTranslation` + `useFormatMoney` retained; no new npm packages installed; no existing functionality removed.
+
+---
+Task ID: phaseA
+Agent: Database Foundation — PostgreSQL + Decimal + Ledger
+Task: Prepare PostgreSQL schema, add Ledger/Idempotency/RefreshToken/Session tables, create ledger engine, update .env.example.
+
+Work Log:
+- Read existing `prisma/schema.prisma` (SQLite dev) — 23 models, `Float` everywhere for monetary fields, no composite indexes on Transaction.
+- Created `prisma/schema.postgres.prisma` — full PostgreSQL mirror with:
+  * `provider = "postgresql"` + `directUrl = env("DIRECT_URL")` for migrations.
+  * All monetary `Float` fields upgraded to `Decimal @db.Decimal(18, 4)` (balance, ledgerBalance, amount, fee, targetAmount, currentAmount, autoSaveAmount, card balance/limit/spending, SavingsContribution.amount, Budget.limit/spent, ScheduledTransfer.amount, FeeConfig feeValue/fixedFee/minFee/maxFee/minAmount/maxAmount, Merchant.volume, User.referralEarnings).
+  * Non-monetary floats kept as `Float` (Transaction.riskScore, ExchangeRate.rate/buy/sell, Merchant.rating, AdminMetric.value, Budget.alertThreshold, Webhook.successRate).
+  * Added composite `@@index` on hot query paths: `Transaction(userId, createdAt)`, `Transaction(senderId)`, `Transaction(status, createdAt)`, `Transaction(type, createdAt)`, `Transaction(currency, createdAt)`, plus secondary indexes on Wallet/Card/Beneficiary/KycDocument/Notification/SupportTicket/AuditLog/Device/Merchant/Biller/SavingsGoal/SavingsContribution/Budget/ScheduledTransfer/Dispute/BusinessProfile/ApiConfig/ApiLog/FeatureFlag/SystemSetting/FeeConfig/Achievement/UserAchievement/DeveloperApp/DeveloperApiKey/Webhook/User.
+- Added 6 new models to BOTH `prisma/schema.prisma` (SQLite, `Float`) and `prisma/schema.postgres.prisma` (PostgreSQL, `Decimal @db.Decimal(18, 4)`):
+  * `LedgerAccount` — `{ id, userId?, walletId?, type, currency, code @unique, createdAt, updatedAt }` + relations to entries/balance; indexes on `userId`, `(type, currency)`, `walletId`.
+  * `LedgerEntry` — `{ id, accountId, transactionId?, debit, credit, currency, createdAt }`; indexes on `(accountId, createdAt)`, `transactionId`.
+  * `LedgerBalance` — `{ id, accountId @unique, currency, balance, updatedAt }`; index on `currency`.
+  * `IdempotencyRecord` — `{ id, key @unique, userId, endpoint, requestBody, responseHash, statusCode, createdAt, expiresAt }`; indexes on `key`, `userId`, `expiresAt`.
+  * `RefreshToken` — `{ id, userId, token @unique, rotatedFrom?, revokedAt?, createdAt, expiresAt }`; indexes on `userId`, `token`, `rotatedFrom`.
+  * `Session` — `{ id, userId, jti @unique, deviceFingerprint?, ipAddress?, userAgent?, createdAt, expiresAt, revokedAt? }`; indexes on `userId`, `jti`, `expiresAt`.
+- Bumped `PRISMA_CACHE_VERSION` in `src/lib/db.ts` (`v2-systemsetting-2026-06` → `v3-ledger-2026-07`) so the dev server's cached PrismaClient is discarded and a fresh client (which knows about the 6 new models) is created on next request.
+- Created `src/lib/ledger.ts` — the double-entry ledger engine:
+  * `ensureUserLedgerAccount(userId, currency)` — get-or-create a `user-wallet` account with deterministic code `WALLET-{userId}-{currency}`.
+  * `ensureFeeAccount(currency)` — get-or-create a `fee-revenue` account with code `FEE-{currency}`.
+  * `ensureSystemAccount(type, currency, code)` — get-or-create treasury/tax/suspense/float accounts.
+  * `postEntry(tx, params)` — append a single `LedgerEntry` row; MUST be called inside a `db.$transaction` block (the `tx` client is typed via `Parameters<Parameters<typeof db.$transaction>[0]>[0]`).
+  * `postTransfer(tx, opts)` — convenience wrapper that posts a balanced two-leg debit+credit transfer and runs `assertBalanced` on the legs.
+  * `assertBalanced(entries)` — verifies `Σ(debit) === Σ(credit)` within a 1e-4 tolerance; throws `Ledger imbalance: debit=X credit=Y` on failure.
+  * `getAccountBalance(accountId, currency)` — derived balance `Σ(credit) - Σ(debit)`; positive = account holds money.
+- Created `.env.example` — production template documenting DATABASE_URL, DIRECT_URL, GAEXPAY_JWT_SECRET, GAEXPAY_ENC_KEY, GXP_CARD_KEK, GXP_ALLOW_DEV_AUTH (default `false`), GXP_ACCESS_TOKEN_TTL (900s), GXP_REFRESH_TOKEN_TTL (604800s), SMTP (LWS Mail), REDIS_URL, GOOGLE/FACEBOOK OAuth, GXP_ALLOWED_ORIGINS, SENTRY_DSN.
+- Updated `.gitignore` — added `db/custom.db` and `db/custom.db-journal` (archive SQLite for production) plus `!.env.example` so the template stays tracked.
+- Ran `bun run db:push` — `🚀 Your database is now in sync with your Prisma schema. Done in 42ms` + regenerated Prisma Client v6.19.2.
+- Ran `bun run lint` — `0 errors, 0 warnings` (clean exit).
+- Verified new tables exist + exercised the ledger engine end-to-end against the live SQLite DB:
+  * All 6 new tables created (initial counts all 0).
+  * `ensureFeeAccount("NGN")` → created `FEE-NGN` (id `cmr2xaok40000owe0zki908k1`).
+  * `ensureUserLedgerAccount("verify-user-1", "NGN")` → created `WALLET-verify-user-1-NGN` (id `cmr2xaok70001owe0aoneltpk`).
+  * `postTransfer({from: FEE-NGN, to: WALLET-verify-user-1-NGN, amount: 250.5, currency: NGN})` inside `db.$transaction` → posted both legs atomically.
+  * `getAccountBalance` returned `250.5` (user, credit) and `-250.5` (fee, debit) — mathematically correct.
+  * `assertBalanced` correctly threw on imbalanced entries and accepted balanced ones.
+
+Stage Summary:
+- **Files created (3)**: `prisma/schema.postgres.prisma`, `src/lib/ledger.ts`, `.env.example`.
+- **Files edited (3)**: `prisma/schema.prisma` (+6 models, ~100 lines appended), `src/lib/db.ts` (cache version bump), `.gitignore` (archive SQLite + track .env.example).
+- **Database**: SQLite dev DB now has 6 new tables; no existing table touched (additive-only change). PostgreSQL mirror ready for production migration with `Decimal(18,4)` precision on all monetary fields + composite indexes on hot Transaction query paths.
+- **Lint**: `0 errors, 0 warnings`.
+- **db:push**: succeeded, Prisma Client regenerated.
+- **End-to-end verification**: ledger engine creates accounts idempotently, posts balanced transfers inside a transaction, computes correct derived balances, and rejects imbalanced entries.
+
+---
+Task ID: phaseI
+Agent: Infrastructure — Docker + Docker-Compose + Caddy + Systemd
+Task: Create Dockerfile, docker-compose.yml, Caddyfile, systemd service, deploy script, backup script, GitHub Actions CI, README.
+
+Work Log:
+- Read worklog tail (3,916 lines) to understand the project state — GaexPay is a Next.js 16 + TypeScript + Prisma (SQLite dev / Postgres prod via `prisma/schema.postgres.prisma`) fintech wallet, 30+ REST routes, double-entry ledger, 12-language i18n, admin panel, marketplace, crypto trading. Phase A already shipped `.env.example` + Postgres schema; my job is the production deployment surface. Confirmed NO existing `Dockerfile`, `docker-compose.yml`, `Caddyfile.production`, `systemd/`, `scripts/deploy-vps.sh`, `scripts/backup-postgres.sh`, `.github/`, or `README.md` — additive-only creation.
+- Inspected existing `package.json` (build script already emits `.next/standalone` + copies `static` and `public` into it), `next.config.ts` (`output: "standalone"` already set), existing sandbox gateway file (left untouched), `.env.example` (production Postgres + secrets + SMTP + Redis + OAuth + Sentry), `.gitignore` (already keeps `.env.example` tracked and ignores `db/custom.db`).
+- Created `Dockerfile` (multi-stage):
+  * Stage 1 `oven/bun:1 AS builder` — installs openssl/ca-certificates, `bun install --frozen-lockfile`, copies source, runs `bunx prisma generate` (so engines are baked into the image), then `bun run build` to produce `.next/standalone` + `.next/static`.
+  * Stage 2 `node:20-slim AS runner` — sets `NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0 NEXT_TELEMETRY_DISABLED=1`, installs openssl + `tini` (PID-1 signal handling), creates a non-root `nextjs` (uid 1001) user, copies standalone server + static assets + public/ + prisma/ + `node_modules/.prisma` + `node_modules/@prisma` (engines), `USER nextjs`, `EXPOSE 3000`, an `HEALTHCHECK` hitting `/api/health`, and `ENTRYPOINT ["/usr/bin/tini","--"] CMD ["node","server.js"]`.
+- Created `docker-compose.yml` — 4 services on a shared `gaexpay-net` bridge network:
+  * `app` builds from the local Dockerfile, `depends_on: postgres (service_healthy), redis (service_started)`, `env_file: .env`, injects `DATABASE_URL`/`DIRECT_URL`/`REDIS_URL` pointing at the in-network service names (so the app never talks to `localhost`), exposes `3000`, has a 30s-start healthcheck hitting `/api/health`.
+  * `postgres:16-alpine` — `POSTGRES_USER/PASSWORD/DB` from env (password is required via `${POSTGRES_PASSWORD:?err}`), `PGDATA=/var/lib/postgresql/data/pgdata`, named volume `gaexpay-postgres-data`, `pg_isready` healthcheck, port intentionally NOT published (commented out for local debugging only).
+  * `redis:7-alpine` — AOF on, 256mb cap with `allkeys-lru` eviction, named volume `gaexpay-redis-data`, `redis-cli ping` healthcheck.
+  * reverse-proxy container — ports `80`, `443`, `443/udp` (HTTP/3), mounts `Caddyfile.production` read-only + `caddy-data` + `caddy-config` volumes, sets `ACME_AGREE=true`, `depends_on: app`.
+  * Named volumes: `gaexpay-postgres-data`, `gaexpay-redis-data`, `gaexpay-caddy-data`, `gaexpay-caddy-config`.
+- Created `Caddyfile.production` — multi-domain block for `gaexpay.com, www.gaexpay.com, admin.gaexpay.com, support.gaexpay.com, api.gaexpay.com` reverse-proxying to `app:3000` with `Host`/`X-Real-IP`/`X-Forwarded-For`/`X-Forwarded-Proto` headers, `encode gzip zstd`, a `header` block shipping HSTS / `X-Content-Type-Options` / `X-Frame-Options: DENY` / `Referrer-Policy` / `Permissions-Policy` / a reasonable default CSP / `-Server` (server token scrub), JSON access log rolling at 100mb / 10 files / 30 days to `/data/access.log`. Includes a `:80` fallback block returning 200 with a hint to use HTTPS. (Existing sandbox gateway file left untouched.)
+- Created `systemd/gaexpay.service` — `[Unit]` with `After=network.target postgresql.service` + `Wants=postgresql.service`; `[Service]` `Type=simple`, `User=gaexpay Group=gaexpay`, `WorkingDirectory=/var/www/gaexpay`, `Environment=NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0`, `EnvironmentFile=/var/www/gaexpay/.env`, `ExecStart=/usr/bin/node server.js`, graceful `KillSignal=SIGTERM TimeoutStopSec=15s`, `Restart=always RestartSec=5`, `MemoryMax=2G`, and a comprehensive hardening block (`NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome`, `ProtectKernelTunables/Modules`, `ProtectControlGroups`, `ReadWritePaths=/var/www/gaexpay`, `RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX`, `RestrictNamespaces`, `RestrictRealtime`, `RestrictSUIDSGID`, `LockPersonality`, `SystemCallFilter=@system-service`, empty `CapabilityBoundingSet=` + `AmbientCapabilities=`); `[Install] WantedBy=multi-user.target`.
+- Created `scripts/deploy-vps.sh` (executable, `bash -n` clean) — pulls latest `main` (`git fetch --prune` + `git reset --hard`), installs deps via `bun install --frozen-lockfile` (with `npm ci` fallback), runs `bunx prisma generate --schema=prisma/schema.postgres.prisma`, `prisma db push --schema=prisma/schema.postgres.prisma`, optionally runs `prisma/seed.ts` + `prisma/seed-admin.ts` (skippable via `--skip-seed`), `bun run build`, archives the previous `standalone` to `.next/standalone.<ts>.bak` keeping the last `KEEP_BUILDS=5`, restarts via `systemd` or `pm2` (selectable with `--systemd`/`--pm2`), then performs a rolling `curl` health-check against `/api/health` for up to `HEALTH_TIMEOUT=90s`. Full `set -Eeuo pipefail` + `trap ERR` for fail-fast.
+- Created `scripts/backup-postgres.sh` (executable, `bash -n` clean) — sources `.env` from `$APP_DIR`, requires `POSTGRES_PASSWORD`, runs `pg_dump --format=plain --no-owner --no-privileges --serializable-deferrable` into `$BACKUP_DIR/${POSTGRES_DB}-${TS}.sql`, `gzip -9`s it, optionally GPG-encrypts with `--batch --recipient $GPG_RECIPIENT` (set the env var to enable), writes a `.manifest` sidecar with database/host/timestamp/size/sha256/encrypted-flag, then prunes anything beyond the last `BACKUP_KEEP=30` backups while leaving the matching `.manifest` files alone until the parent backup is pruned. Designed for `0 */4 * * *` cron.
+- Created `.github/workflows/ci.yml` — single workflow file with `concurrency: ci-${{ github.ref }} cancel-in-progress: true`, `env: NODE_VERSION=20 BUN_VERSION=1`. Two jobs:
+  * `verify` (runs on every PR + push): checks out, sets up Bun + Node, caches `~/.bun/install/cache` + `.next/cache` by `bun.lockb` hash, `bun install --frozen-lockfile`, `bunx prisma generate` (with a local `DATABASE_URL="file:./ci.db"` so SQLite client is happy), `bun run lint`, `bunx tsc --noEmit`, `bun run build` (with `NEXT_TELEMETRY_DISABLED=1`), and on push-to-main uploads the standalone artifact for 7 days.
+  * `publish` (only on push-to-main, `needs: verify`): QEMU + buildx, logs into GHCR with `GHCR_USER`/`GHCR_TOKEN` secrets, computes a lowercase `ghcr.io/<owner>/gaexpay` image name + `sha-<short7>` tag, builds multi-arch `linux/amd64,linux/arm64`, pushes `:latest` + `:sha-<tag>`, uses GHA cache `cache-from: type=gha cache-to: type=gha,mode=max`. `permissions: contents:read packages:write` so the PAT can push to GHCR.
+- Created `.dockerignore` — excludes `.git`, `node_modules`, `.next`, all `*.log`, `.env*` (except `.env.example`), `db/*.db`, IDE dirs, `tool-results/`, `upload/`, `agent-ctx/`, `download/`, `csv=p=0`, `prompt`, `test`, `skills/`, plus the docker files themselves so the build context stays small and cache-stable.
+- Created `README.md` — 8-section production guide: (1) Quick Start with Docker — `cp .env.example .env` + `docker compose up -d --build` + migrate/seed inside the container + health-check; (2) Manual VPS Setup — apt packages, Bun + Node 20 install, `useradd gaexpay`, `git clone`, build, install the systemd unit, optional PM2 path; (3) Environment Variables — full table mirroring `.env.example` with `openssl rand -hex 32` hints and a "never commit `.env`" warning; (4) SSL / HTTPS Setup — both Docker (auto via reverse-proxy volume) and manual (`apt install caddy` from the Cloudsmith repo, copy `Caddyfile.production`, `systemctl reload caddy`), plus a `tls internal` note for staging; (5) Backup & Restore — cron snippet, what the backup script does, restore commands for plain gzip and GPG-encrypted dumps, plus a Docker volume `tar` snapshot alternative; (6) CI/CD — trigger matrix table, required GHCR secrets, deploy-from-GHCR snippet; (7) Architecture — ASCII diagram (gateway → App → Postgres + Redis) with a brief description of each subsystem; (8) Troubleshooting — 7-row symptom/fix table covering lockfile drift, missing DB, ACME failures, 502s, stale Prisma client, `localhost`-vs-`postgres` host confusion, etc.
+- Verified everything:
+  * `bun run lint` → EXIT=0, 0 errors, 0 warnings.
+  * `docker-compose.yml` YAML parses via Python `yaml.safe_load`; services = `[app, postgres, redis, caddy]`, volumes = `[postgres-data, redis-data, caddy-data, caddy-config]`, networks = `[gaexpay-net]`.
+  * `.github/workflows/ci.yml` YAML parses; jobs = `[verify, publish]`; triggers = push/pull_request on `main` + `workflow_dispatch`.
+  * `systemd/gaexpay.service` has `[Unit]`, `[Service]`, `[Install]` and all required keys (`Description=`, `After=`, `Type=`, `User=`, `ExecStart=`, `Restart=`, `WantedBy=`).
+  * Both shell scripts pass `bash -n` (syntax-only) checks.
+  * `ls -la scripts/` confirms both new scripts are `chmod +x` executable.
+  * No existing files were modified or removed.
+
+Stage Summary:
+- Files created (9): `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `Caddyfile.production`, `systemd/gaexpay.service`, `scripts/deploy-vps.sh`, `scripts/backup-postgres.sh`, `.github/workflows/ci.yml`, `README.md`.
+- Files touched: none. Existing sandbox gateway file, `package.json` (`build` script already emits `standalone`), `next.config.ts` (`output: "standalone"` already set), `.env.example` (production template), `.gitignore` — all left as-is, additive-only change as required.
+- Docker image: multi-stage `oven/bun:1` builder → `node:20-slim` runner, non-root `nextjs` user, `tini` PID-1, baked-in Prisma engines, `/api/health` healthcheck.
+- Compose: 4 services (app / postgres:16-alpine / redis:7-alpine / reverse-proxy:2-alpine) on a shared bridge network with health-gated dependencies, named volumes for data persistence, ports 80/443/443-udp published on the reverse proxy only.
+- Production Caddyfile: HSTS + CSP + frame/refs/permissions hardening, gzip+zstd, JSON access log with rotation, HTTP→HTTPS fallback block.
+- systemd unit: hardened (NoNewPrivileges, ProtectSystem=strict, SystemCallFilter=@system-service, empty capability bounding set), graceful SIGTERM, MemoryMax=2G, auto-restart on failure.
+- Deploy script: pull → install → prisma generate → db push → seed → build → archive previous build → restart (systemd or pm2) → 90s rolling health-check.
+- Backup script: pg_dump + gzip + optional GPG encryption + manifest sidecar + 30-backup retention; designed for 4-hourly cron.
+- CI: lint + typecheck + build on every PR; on push-to-main also builds multi-arch Docker image and pushes to GHCR with both `:latest` and `:sha-<short>` tags using GHA cache.
+- README: 8 production sections (Quick Start, VPS, Env, SSL, Backup/Restore, CI/CD, Architecture, Troubleshooting) with copy-pasteable commands and a symptom/fix table.
+- Lint: `0 errors, 0 warnings`. No source code under `src/` was modified — infrastructure-only phase.

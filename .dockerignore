@@ -1,0 +1,56 @@
+# ============================================================
+# GaexPay — .dockerignore
+# Keeps the build context small + avoids cache-busting layers.
+# ============================================================
+
+# VCS
+.git
+.gitignore
+.github
+
+# Node / build artifacts
+node_modules
+.next
+out
+build
+dist
+coverage
+*.tsbuildinfo
+
+# Logs
+*.log
+dev.log
+dev.out.log
+server.log
+
+# Local DB & secrets
+.env
+.env.*
+!.env.example
+db/*.db
+db/*.db-journal
+
+# Tooling / IDE
+.vscode
+.idea
+.claude
+.z-ai-config
+.cursor
+.DS_Store
+
+# Project-internal scratch
+tool-results
+upload
+agent-ctx
+download
+csv=p=0
+prompt
+test
+skills
+
+# Docker files themselves (don't ship inside the image)
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
+Caddyfile*
