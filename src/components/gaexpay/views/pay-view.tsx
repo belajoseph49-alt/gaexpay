@@ -8,7 +8,7 @@ import {
   FileWarning, ScrollText, Building2, BookOpen, School, FileText, Home,
   Fuel, Car, Bus, Film, Gamepad2, HeartPulse, Dumbbell, Dice5, Gift, Key,
   Package, ShieldCheck, ArrowLeft, Camera, RefreshCw, Printer, Hash, Calendar,
-  Wallet, Database, AlertCircle,
+  Wallet, Database, AlertCircle, Globe2, Signal, Clock,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
 import { useTranslation } from "@/hooks/use-translation";
+import { QrCode as QrCodeImage } from "@/components/gaexpay/qr-code";
 
 const BILLER_ICONS: Record<string, any> = {
   electricity: Zap, water: Droplet, internet: Wifi, tv: Tv,
@@ -67,16 +68,18 @@ export function PayView() {
         </p>
       </div>
       <Tabs defaultValue="qr">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
           <TabsTrigger value="qr"><QrCode className="h-4 w-4 mr-1.5" /> {t("pay.scanPay")}</TabsTrigger>
           <TabsTrigger value="merchants"><Store className="h-4 w-4 mr-1.5" /> {t("pay.merchants")}</TabsTrigger>
           <TabsTrigger value="bills"><Receipt className="h-4 w-4 mr-1.5" /> {t("pay.bills")}</TabsTrigger>
           <TabsTrigger value="airtime"><Smartphone className="h-4 w-4 mr-1.5" /> {t("pay.airtime")}</TabsTrigger>
+          <TabsTrigger value="esim"><Wifi className="h-4 w-4 mr-1.5" /> eSim</TabsTrigger>
         </TabsList>
         <TabsContent value="qr" className="mt-4"><QrPay /></TabsContent>
         <TabsContent value="merchants" className="mt-4"><MerchantsPay /></TabsContent>
         <TabsContent value="bills" className="mt-4"><BillsPay /></TabsContent>
         <TabsContent value="airtime" className="mt-4"><AirtimePay /></TabsContent>
+        <TabsContent value="esim" className="mt-4"><ESimPay /></TabsContent>
       </Tabs>
     </div>
   );
@@ -1409,5 +1412,207 @@ function DataForm() {
         </Button>
       </div>
     </Card>
+  );
+}
+
+// ============================================================
+// ESimPay — buy an eSim data plan for any supported destination.
+// ============================================================
+function ESimPay() {
+  const { fmtRaw } = useFormatMoney();
+  const { data, reload, loading } = useFetch<{ countries: any[]; purchases: any[] }>("/api/esim");
+  const [selectedCountry, setSelectedCountry] = useState<any>(null);
+  const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [buying, setBuying] = useState(false);
+  const [purchased, setPurchased] = useState<any>(null);
+  const [showPurchases, setShowPurchases] = useState(false);
+
+  const countries = data?.countries ?? [];
+  const purchases = data?.purchases ?? [];
+
+  const buy = async () => {
+    if (!selectedCountry || !selectedPlan) return;
+    setBuying(true);
+    try {
+      const res = await fetch("/api/esim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ countryCode: selectedCountry.code, planId: selectedPlan.id }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(json.error || "Failed to purchase eSim");
+        return;
+      }
+      setPurchased(json.purchase);
+      setSelectedCountry(null);
+      setSelectedPlan(null);
+      toast.success("eSim activated! Scan the QR to install.");
+      reload();
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setBuying(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-700 p-5 text-white shadow-lg">
+        <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-xl" />
+        <div className="relative flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="grid h-12 w-12 place-items-center rounded-xl bg-white/20 text-3xl backdrop-blur">📶</div>
+            <div>
+              <h3 className="font-bold">Travel data, instantly</h3>
+              <p className="text-xs text-white/70">
+                Buy an eSim data plan for 190+ countries. No SIM swap, no roaming fees.
+              </p>
+            </div>
+          </div>
+          {purchases.length > 0 && (
+            <Button size="sm" variant="secondary" className="bg-white/20 text-white border-0 hover:bg-white/30" onClick={() => setShowPurchases(!showPurchases)}>
+              My eSims ({purchases.length})
+            </Button>
+          )}
+        </div>
+      </Card>
+
+      {showPurchases && purchases.length > 0 && (
+        <Card className="p-4 space-y-3">
+          <h4 className="font-semibold text-sm">Your eSims</h4>
+          {purchases.map((p) => (
+            <div key={p.id} className="flex items-center justify-between rounded-lg border p-3">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{p.flag}</span>
+                <div>
+                  <p className="text-sm font-medium">{p.planLabel}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {p.countryName} · {fmtRaw(p.price, p.currency)} · Activated {new Date(p.activatedAt).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+              <Badge className={cn(
+                "border-0",
+                p.status === "active" ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground",
+              )}>
+                {p.status}
+              </Badge>
+            </div>
+          ))}
+        </Card>
+      )}
+
+      {!purchased ? (
+        <Card className="p-5">
+          <div className="grid gap-5 md:grid-cols-2">
+            <div>
+              <h4 className="font-semibold text-sm mb-3">1. Pick destination</h4>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-72 overflow-y-auto pr-1">
+                {loading ? (
+                  Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-16" />)
+                ) : (
+                  countries.map((c) => (
+                    <button
+                      key={c.code}
+                      onClick={() => { setSelectedCountry(c); setSelectedPlan(null); }}
+                      className={cn(
+                        "flex flex-col items-center gap-1 rounded-lg border p-2 transition",
+                        selectedCountry?.code === c.code
+                          ? "border-violet-500 bg-violet-500/10"
+                          : "hover:bg-muted/50",
+                      )}
+                    >
+                      <span className="text-2xl">{c.flag}</span>
+                      <span className="text-[10px] font-medium leading-tight text-center">{c.name}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-sm mb-3">2. Choose a plan</h4>
+              {!selectedCountry ? (
+                <div className="flex h-48 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
+                  <Globe2 className="h-6 w-6 mr-2" /> Select a country
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {selectedCountry.plans.map((p: any) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setSelectedPlan(p)}
+                      className={cn(
+                        "w-full text-left rounded-lg border p-3 transition",
+                        selectedPlan?.id === p.id
+                          ? "border-violet-500 bg-violet-500/10"
+                          : "hover:bg-muted/50",
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-semibold text-sm">{p.label}</p>
+                          <p className="text-xs text-muted-foreground">{p.coverage}</p>
+                        </div>
+                        <p className="font-bold tabular-nums">{fmtRaw(p.price, "USD")}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {selectedPlan && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-5 rounded-xl bg-violet-500/10 p-4 flex items-center justify-between"
+            >
+              <div>
+                <p className="text-xs text-muted-foreground">Selected plan</p>
+                <p className="font-semibold">
+                  {selectedCountry.flag} {selectedCountry.name} · {selectedPlan.label}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  <Signal className="inline h-3 w-3 mr-1" />
+                  {selectedPlan.coverage} · <Clock className="inline h-3 w-3 mx-1" />
+                  Valid {selectedPlan.durationDays} days
+                </p>
+              </div>
+              <Button onClick={buy} disabled={buying}>
+                {buying ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
+                Buy · {fmtRaw(selectedPlan.price, "USD")}
+              </Button>
+            </motion.div>
+          )}
+        </Card>
+      ) : (
+        <Card className="p-5">
+          <div className="flex flex-col items-center text-center py-4">
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="rounded-2xl bg-emerald-500/15 p-3 mb-3"
+            >
+              <Check className="h-8 w-8 text-emerald-600" />
+            </motion.div>
+            <h3 className="font-bold text-lg">eSim Activated!</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Scan this QR with your phone's camera to install the eSim profile.
+            </p>
+            <div className="rounded-2xl bg-white p-3 shadow-lg ring-1 ring-violet-500/20 mb-4">
+              <QrCode value={purchased.activationQr} size={200} />
+            </div>
+            <div className="rounded-lg border bg-muted/40 p-3 w-full max-w-md">
+              <p className="text-xs text-muted-foreground">Activation code</p>
+              <code className="text-xs font-mono break-all">{purchased.activationQr}</code>
+            </div>
+            <Button className="mt-4" onClick={() => setPurchased(null)}>Buy another</Button>
+          </div>
+        </Card>
+      )}
+    </div>
   );
 }

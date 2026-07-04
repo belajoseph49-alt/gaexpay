@@ -64,6 +64,9 @@ import { GaexTokenView } from "./views/gaex-token-view";
 import { SellerDashboardView } from "./views/seller-dashboard-view";
 import { NotificationsView } from "./views/notifications-view";
 import { AccountingView } from "./views/accounting-view";
+import { CashLinksView } from "./views/cash-links-view";
+import { VirtualAccountsView } from "./views/virtual-accounts-view";
+import { HoldEarnView } from "./views/hold-earn-view";
 
 export function AppShell() {
   const { view, userCurrency, setUserCurrency, currencyPickerOpen, setCurrencyPickerOpen } = useApp();
@@ -133,6 +136,9 @@ export function AppShell() {
     "seller-dashboard": <SellerDashboardView />,
     notifications: <NotificationsView />,
     accounting: <AccountingView />,
+    "cash-links": <CashLinksView />,
+    "virtual-accounts": <VirtualAccountsView />,
+    "hold-earn": <HoldEarnView />,
   };
 
   return (

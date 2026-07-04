@@ -78,6 +78,15 @@ model User {
   kycDocuments    KycDocument[]
   businessProfile BusinessProfile?
   achievements    UserAchievement[]
+
+  // MiniPay feature gap — reverse relations
+  cashLinksCreated   CashLink[] @relation("CashLinkCreator")
+  cashLinksClaimed   CashLink[] @relation("CashLinkClaimant")
+  virtualAccounts    VirtualAccount[]
+  holdEarnRecords    HoldEarnRecord[]
+  travelDestinations TravelWalletDestination[]
+  esimPurchases      ESimPurchase[]
+  pockets            Pocket[]
 }
 
 model Wallet {
@@ -742,4 +751,138 @@ model Session {
   @@index([userId])
   @@index([jti])
   @@index([expiresAt])
+}
+
+// ============================================================
+// MiniPay Feature Gap Models — Task minipay-1
+// Cash Links, Virtual Accounts, Hold & Earn, Travel Wallet,
+// Mini Apps, eSim, Pockets
+// ============================================================
+
+model CashLink {
+  id           String   @id @default(cuid())
+  token        String   @unique
+  userId       String   // creator
+  user         User     @relation("CashLinkCreator", fields: [userId], references: [id], onDelete: Cascade)
+  claimantId   String?  // who claimed
+  claimant     User?    @relation("CashLinkClaimant", fields: [claimantId], references: [id])
+  amount       Float
+  currency     String   @default("USD")
+  note         String?
+  status       String   @default("pending") // pending | claimed | expired | cancelled
+  expiresAt    DateTime
+  claimedAt    DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([status])
+}
+
+model VirtualAccount {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currency      String   // USD | EUR | GBP
+  accountType   String   // checking | freelancer | business
+  accountNumber String
+  routingNumber String?  // for USD (ACH)
+  iban          String?  // for EUR
+  bic           String?  // SWIFT/BIC for EUR
+  bankName      String
+  bankAddress   String?
+  holderName    String
+  status        String   @default("active")
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@unique([userId, currency])
+}
+
+model HoldEarnRecord {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date            DateTime @default(now())
+  eligibleBalance Float
+  dailyReward     Float
+  weeklyRate      Float    // e.g. 0.02 = 2%
+  autoCompound    Boolean  @default(false)
+
+  @@index([userId, date])
+}
+
+model TravelWalletDestination {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  countryCode     String
+  countryName     String
+  flag            String
+  currency        String
+  exchangeRate    Float
+  lockedRate      Float?   // when locked, this is the frozen rate
+  rateLockedUntil DateTime?
+  budget          Float?
+  spent           Float    @default(0)
+  status          String   @default("active") // active | completed | archived
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@unique([userId, countryCode])
+}
+
+model MiniApp {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  name          String
+  description   String
+  category      String   // finance | utilities | games | shopping | social
+  icon          String   // emoji
+  color         String   // tailwind gradient class suffix
+  developer     String
+  rating        Float    @default(4.5)
+  installs      Int      @default(0)
+  featured      Boolean  @default(false)
+  enabled       Boolean  @default(true)
+  url           String?  // external link / launch URL
+  createdAt     DateTime @default(now())
+
+  @@index([category])
+}
+
+model ESimPurchase {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  countryCode  String
+  countryName  String
+  flag         String
+  planId       String
+  planLabel    String
+  dataAmount   String   // "1GB" | "5GB" | "10GB" | "Unlimited"
+  durationDays Int
+  price        Float
+  currency     String   @default("USD")
+  activationQr String?  // base64-encoded QR payload for eSim activation
+  status       String   @default("pending") // pending | active | expired
+  activatedAt  DateTime?
+  expiresAt    DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Pocket {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String   // USDT | USDC | cUSD
+  name      String
+  balance   Float    @default(0)
+  color     String   @default("violet")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, code])
+  @@index([userId])
 }

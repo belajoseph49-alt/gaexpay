@@ -7,7 +7,7 @@ import {
   PiggyBank, Wallet2, CalendarClock, Store, FileText, Trophy, Calendar,
   MapPin, Bitcoin, Repeat, Globe, DollarSign, AtSign, Banknote, Building2,
   Briefcase, Landmark, Code2, UserCheck, Crown, Network, ShoppingBag,
-  MessageSquare, Lock, Coins, Radio, Bell,
+  MessageSquare, Lock, Coins, Radio, Bell, Link2, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp, type View } from "@/lib/store";
@@ -100,6 +100,9 @@ const NAV: NavGroup[] = [
     items: [
       { id: "seller-dashboard", label: "Seller Dashboard", icon: Store, featureFlag: "seller_dashboard" },
       { id: "notifications", label: "Notifications", icon: Bell },
+      { id: "cash-links", label: "Cash Links", icon: Link2, featureFlag: "cash_links" },
+      { id: "virtual-accounts", label: "Virtual Accounts", icon: Building2, featureFlag: "virtual_accounts" },
+      { id: "hold-earn", label: "Hold & Earn", icon: Sparkles, badge: "2%", featureFlag: "hold_earn" },
     ],
   },
   {

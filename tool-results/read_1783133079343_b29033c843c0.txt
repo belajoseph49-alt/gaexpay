@@ -1,0 +1,746 @@
+     1→// GaexPay - Fintech platform database schema
+     2→generator client {
+     3→  provider = "prisma-client-js"
+     4→}
+     5→
+     6→datasource db {
+     7→  provider = "sqlite"
+     8→  url      = env("DATABASE_URL")
+     9→}
+    10→
+    11→model User {
+    12→  id              String   @id @default(cuid())
+    13→  email           String   @unique
+    14→  phone           String   @unique
+    15→  passwordHash    String
+    16→  firstName       String
+    17→  lastName        String
+    18→  username        String?  @unique
+    19→  avatar          String?
+    20→  country         String   @default("Nigeria")
+    21→  city            String?
+    22→  address         String?
+    23→  dob             String?
+    24→  gender          String?
+    25→
+    26→  // KYC
+    27→  kycStatus       String   @default("unverified") // unverified | pending | verified | rejected
+    28→  kycTier         Int      @default(0) // 0, 1, 2, 3
+    29→  kycSubmittedAt  DateTime?
+    30→  kycVerifiedAt   DateTime?
+    31→  kycRejectionReason String?
+    32→
+    33→  // Security
+    34→  mfaEnabled      Boolean  @default(false)
+    35→  mfaSecret       String?
+    36→  biometricEnabled Boolean @default(false)
+    37→  twoFactorMethod String?  // authenticator | sms | email
+    38→  pinHash         String?
+    39→
+    40→  // Preferences
+    41→  language        String   @default("en")
+    42→  currency        String   @default("NGN")
+    43→  themePreference String   @default("system") // light | dark | system
+    44→  emailNotif      Boolean  @default(true)
+    45→  pushNotif       Boolean  @default(true)
+    46→  smsNotif        Boolean  @default(false)
+    47→
+    48→  // Status
+    49→  status          String   @default("active") // active | suspended | frozen | closed
+    50→  role            String   @default("user") // user | admin | agent | support | super_admin | moderator | financial_manager | kyc_manager | marketplace_manager | content_manager
+    51→  lastLoginAt     DateTime?
+    52→  createdAt       DateTime @default(now())
+    53→  updatedAt       DateTime @updatedAt
+    54→
+    55→  // Account type & RBAC
+    56→  accountType     String   @default("personal") // personal | business
+    57→  permissions     String   @default("[]") // JSON array of permission strings (granular RBAC)
+    58→
+    59→  // Password reset
+    60→  resetToken      String?
+    61→  resetTokenExpiry DateTime?
+    62→
+    63→  wallets         Wallet[]
+    64→  transactions    Transaction[] @relation("TxUser")
+    65→  transactionsOut Transaction[] @relation("TxSender")
+    66→  cards           Card[]
+    67→  beneficiaries   Beneficiary[]
+    68→  notifications   Notification[]
+    69→  supportTickets  SupportTicket[]
+    70→  supportMessages SupportMessage[]
+    71→  auditLogs       AuditLog[]
+    72→  devices         Device[]
+    73→  referralCode    String?  @unique
+    74→  referredById    String?
+    75→  referralEarnings Float   @default(0)
+    76→  referralCount   Int      @default(0)
+    77→  rewardPoints    Int      @default(0)
+    78→  kycDocuments    KycDocument[]
+    79→  businessProfile BusinessProfile?
+    80→  achievements    UserAchievement[]
+    81→}
+    82→
+    83→model Wallet {
+    84→  id           String   @id @default(cuid())
+    85→  userId       String
+    86→  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    87→  currency     String   // NGN, USD, EUR, GBP, GHS, KES, UGX, XOF
+    88→  balance      Float    @default(0)
+    89→  ledgerBalance Float   @default(0)
+    90→  type         String   @default("primary") // primary | savings | business
+    91→  label        String   @default("Main Wallet")
+    92→  isDefault    Boolean  @default(false)
+    93→  status       String   @default("active") // active | frozen | closed
+    94→  createdAt    DateTime @default(now())
+    95→  updatedAt    DateTime @updatedAt
+    96→
+    97→  @@unique([userId, currency, type])
+    98→}
+    99→
+   100→model Transaction {
+   101→  id              String   @id @default(cuid())
+   102→  reference       String   @unique
+   103→  userId          String
+   104→  user            User     @relation("TxUser", fields: [userId], references: [id], onDelete: Cascade)
+   105→  senderId        String?
+   106→  sender          User?    @relation("TxSender", fields: [senderId], references: [id])
+   107→  type            String   // transfer | deposit | withdrawal | payment | bill | airtime | exchange | card | referral | fee
+   108→  direction       String   // credit | debit
+   109→  status          String   @default("pending") // pending | completed | failed | reversed | flagged
+   110→  amount          Float
+   111→  fee             Float    @default(0)
+   112→  currency        String   @default("NGN")
+   113→  description     String
+   114→  category        String   @default("general") // general | p2p | bills | shopping | travel | food | income | investment
+   115→  counterpartyName String?
+   116→  counterpartyAccount String?
+   117→  counterpartyBank String?
+   118→  method          String?  // wallet | momo | bank | card | qr | airtime
+   119→  provider        String?  // mtn | orange | airtel | moov | access | gtbank
+   120→  walletId        String?
+   121→  riskScore       Float    @default(0)
+   122→  fraudFlag       Boolean  @default(false)
+   123→  metadata        String?
+   124→  createdAt       DateTime @default(now())
+   125→  completedAt     DateTime?
+   126→}
+   127→
+   128→model Card {
+   129→  id            String   @id @default(cuid())
+   130→  userId        String
+   131→  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+   132→  type          String   // virtual | physical
+   133→  brand         String   // visa | mastercard | verve
+   134→  nickname      String   @default("GaexPay Card")
+   135→  maskedNumber  String
+   136→  fullNumberEnc String
+   137→  expiryMonth   String
+   138→  expiryYear    String
+   139→  cvvEnc        String
+   140→  holderName    String
+   141→  currency      String   @default("NGN")
+   142→  balance       Float    @default(0)
+   143→  limit         Float    @default(500000)
+   144→  spending      Float    @default(0)
+   145→  status        String   @default("active") // active | frozen | blocked
+   146→  color         String   @default("emerald")
+   147→  isDefault     Boolean  @default(false)
+   148→  createdAt     DateTime @default(now())
+   149→}
+   150→
+   151→model Beneficiary {
+   152→  id        String   @id @default(cuid())
+   153→  userId    String
+   154→  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+   155→  name      String
+   156→  account   String
+   157→  bank      String?
+   158→  type      String   @default("bank") // bank | momo | wallet | gaexpay
+   159→  provider  String?
+   160→  currency  String   @default("NGN")
+   161→  email     String?
+   162→  phone     String?
+   163→  avatar    String?
+   164→  createdAt DateTime @default(now())
+   165→}
+   166→
+   167→model KycDocument {
+   168→  id        String   @id @default(cuid())
+   169→  userId    String
+   170→  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+   171→  type      String   // national_id | passport | drivers_license | voters_card | utility_bill | selfie
+   172→  documentNumber String?
+   173→  frontImage String?
+   174→  backImage  String?
+   175→  selfieImage String?
+   176→  status    String   @default("pending") // pending | approved | rejected
+   177→  reviewedBy String?
+   178→  reviewNote String?
+   179→  createdAt DateTime @default(now())
+   180→  reviewedAt DateTime?
+   181→}
+   182→
+   183→model Notification {
+   184→  id        String   @id @default(cuid())
+   185→  userId    String
+   186→  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+   187→  title     String
+   188→  message   String
+   189→  type      String   @default("info") // info | success | warning | error | transaction | security | promo
+   190→  channel   String   @default("push") // push | email | sms | in_app
+   191→  isRead    Boolean  @default(false)
+   192→  actionUrl String?
+   193→  metadata  String?
+   194→  createdAt DateTime @default(now())
+   195→}
+   196→
+   197→model SupportTicket {
+   198→  id        String   @id @default(cuid())
+   199→  userId    String
+   200→  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+   201→  subject   String
+   202→  category  String   @default("general") // general | transaction | card | kyc | security | account
+   203→  priority  String   @default("medium") // low | medium | high | urgent
+   204→  status    String   @default("open") // open | in_progress | resolved | closed
+   205→  assignedTo String?
+   206→  messages  SupportMessage[]
+   207→  createdAt DateTime @default(now())
+   208→  updatedAt DateTime @updatedAt
+   209→}
+   210→
+   211→model SupportMessage {
+   212→  id        String   @id @default(cuid())
+   213→  ticketId  String
+   214→  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+   215→  userId    String?
+   216→  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+   217→  senderType String  @default("user") // user | agent | ai | system
+   218→  content   String
+   219→  isRead    Boolean  @default(false)
+   220→  createdAt DateTime @default(now())
+   221→}
+   222→
+   223→model AuditLog {
+   224→  id        String   @id @default(cuid())
+   225→  userId    String?
+   226→  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+   227→  actor     String   @default("system")
+   228→  action    String
+   229→  entity    String
+   230→  entityId  String?
+   231→  ip        String?
+   232→  userAgent String?
+   233→  details   String?
+   234→  severity  String   @default("info") // info | warning | critical
+   235→  createdAt DateTime @default(now())
+   236→}
+   237→
+   238→model Device {
+   239→  id         String   @id @default(cuid())
+   240→  userId     String
+   241→  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+   242→  name       String
+   243→  type       String   // mobile | desktop | tablet | web
+   244→  os         String?
+   245→  browser    String?
+   246→  location   String?
+   247→  ip         String?
+   248→  trusted    Boolean  @default(false)
+   249→  lastActive DateTime @default(now())
+   250→  createdAt  DateTime @default(now())
+   251→}
+   252→
+   253→model ExchangeRate {
+   254→  id        String   @id @default(cuid())
+   255→  base      String
+   256→  quote     String
+   257→  rate      Float
+   258→  buy       Float
+   259→  sell      Float
+   260→  source    String   @default("internal")
+   261→  updatedAt DateTime @updatedAt
+   262→  createdAt DateTime @default(now())
+   263→
+   264→  @@unique([base, quote])
+   265→}
+   266→
+   267→model Merchant {
+   268→  id        String   @id @default(cuid())
+   269→  name      String
+   270→  category  String   @default("retail") // retail | food | transport | utilities | entertainment | health
+   271→  logo      String?
+   272→  qrCode    String   @unique
+   273→  account   String
+   274→  phone     String?
+   275→  email     String?
+   276→  status    String   @default("active") // pending | approved | active | suspended | rejected
+   277→  rating    Float    @default(4.5)
+   278→  // Admin/Platform fields
+   279→  ownerName String?
+   280→  volume    Float    @default(0)
+   281→  qrCount   Int      @default(1)
+   282→  rejectionReason String?
+   283→  approvedAt DateTime?
+   284→  approvedBy String?
+   285→  createdAt DateTime @default(now())
+   286→  updatedAt DateTime @default(now()) @updatedAt
+   287→}
+   288→
+   289→model Biller {
+   290→  id        String   @id @default(cuid())
+   291→  name      String
+   292→  category  String   // electricity | water | internet | tv | education | betting | government
+   293→  logo      String?
+   294→  fields    String   // JSON of required fields
+   295→  status    String   @default("active")
+   296→  createdAt DateTime @default(now())
+   297→}
+   298→
+   299→model AdminMetric {
+   300→  id        String   @id @default(cuid())
+   301→  key       String   @unique
+   302→  value     Float
+   303→  label     String
+   304→  category  String   @default("general")
+   305→  updatedAt DateTime @updatedAt
+   306→}
+   307→
+   308→model SavingsGoal {
+   309→  id          String   @id @default(cuid())
+   310→  userId      String
+   311→  name        String
+   312→  targetAmount Float
+   313→  currentAmount Float @default(0)
+   314→  currency    String   @default("NGN")
+   315→  deadline    DateTime?
+   316→  icon        String   @default("🎯")
+   317→  color       String   @default("emerald")
+   318→  status      String   @default("active") // active | completed | paused
+   319→  autoSaveAmount Float?
+   320→  autoSaveDay  Int?    // day of month for auto-save
+   321→  createdAt   DateTime @default(now())
+   322→  updatedAt   DateTime @updatedAt
+   323→  contributions SavingsContribution[]
+   324→}
+   325→
+   326→model SavingsContribution {
+   327→  id        String   @id @default(cuid())
+   328→  goalId    String
+   329→  goal      SavingsGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+   330→  amount    Float
+   331→  type      String   @default("deposit") // deposit | withdrawal
+   332→  note      String?
+   333→  createdAt DateTime @default(now())
+   334→}
+   335→
+   336→model Budget {
+   337→  id         String   @id @default(cuid())
+   338→  userId     String
+   339→  category   String   // p2p | bills | shopping | food | transport | entertainment | general
+   340→  limit      Float
+   341→  spent      Float    @default(0)
+   342→  period     String   @default("monthly") // weekly | monthly
+   343→  currency   String   @default("NGN")
+   344→  alertThreshold Float @default(80)
+   345→  createdAt  DateTime @default(now())
+   346→  updatedAt  DateTime @updatedAt
+   347→}
+   348→
+   349→model ScheduledTransfer {
+   350→  id         String   @id @default(cuid())
+   351→  userId     String
+   352→  recipientName String
+   353→  recipientAccount String?
+   354→  recipientBank  String?
+   355→  method     String   @default("wallet")
+   356→  provider   String?
+   357→  amount     Float
+   358→  currency   String   @default("NGN")
+   359→  note       String?
+   360→  frequency  String   // once | daily | weekly | monthly
+   361→  nextRunAt  DateTime
+   362→  lastRunAt  DateTime?
+   363→  status     String   @default("active") // active | paused | completed | failed
+   364→  totalRuns  Int      @default(0)
+   365→  createdAt  DateTime @default(now())
+   366→  updatedAt  DateTime @updatedAt
+   367→}
+   368→
+   369→model Dispute {
+   370→  id            String   @id @default(cuid())
+   371→  userId        String
+   372→  transactionId String
+   373→  transactionRef String
+   374→  reason        String   // unauthorized | failed_not_received | wrong_amount | duplicate | merchant_issue | other
+   375→  description   String
+   376→  status        String   @default("open") // open | under_review | resolved | rejected | refunded
+   377→  priority      String   @default("medium") // low | medium | high
+   378→  resolution    String?
+   379→  resolvedAt    DateTime?
+   380→  createdAt     DateTime @default(now())
+   381→  updatedAt     DateTime @updatedAt
+   382→}
+   383→
+   384→// ============================================================
+   385→// Business Profile (KYB — Know Your Business)
+   386→// ============================================================
+   387→model BusinessProfile {
+   388→  id                String   @id @default(cuid())
+   389→  userId            String   @unique
+   390→  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+   391→
+   392→  // Company info
+   393→  companyName       String
+   394→  companyType       String?  // LLC | corporation | partnership | sole_proprietor | other
+   395→  registrationNumber String?
+   396→  taxId             String?
+   397→  commercialRegistry String?
+   398→  legalAddress      String?
+   399→  legalCity         String?
+   400→  legalCountry      String?
+   401→  website           String?
+   402→  industry          String?
+   403→
+   404→  // Directors & beneficial owners (JSON)
+   405→  directors         String   @default("[]") // JSON array of {name, idNumber, role, dob}
+   406→  beneficialOwners  String   @default("[]") // JSON array of {name, idNumber, ownershipPercent, dob}
+   407→
+   408→  // Documents (JSON array of {type, url, uploadedAt, verified})
+   409→  documents         String   @default("[]")
+   410→
+   411→  // KYB status
+   412→  kybStatus         String   @default("unverified") // unverified | pending | verified | rejected
+   413→  kybSubmittedAt    DateTime?
+   414→  kybVerifiedAt     DateTime?
+   415→  kybRejectionReason String?
+   416→  kybTier           Int      @default(0)
+   417→
+   418→  createdAt         DateTime @default(now())
+   419→  updatedAt         DateTime @updatedAt
+   420→}
+   421→
+   422→// ============================================================
+   423→// Centralized API configuration management
+   424→// ============================================================
+   425→model ApiConfig {
+   426→  id          String   @id @default(cuid())
+   427→  service     String   // payment | blockchain | kyc | kyb | sms | email | push | geolocation | ai | exchange_rate | cloud_storage | auth | other
+   428→  name        String   // human-readable name e.g. "Stripe", "CoinGecko", "Twilio SMS"
+   429→  provider    String?  // e.g. "stripe", "coingecko", "twilio"
+   430→
+   431→  // Credentials (JSON — stores apiKey, secret, endpoint, etc.)
+   432→  credentials String   @default("{}") // JSON object
+   433→
+   434→  // Configuration
+   435→  baseUrl     String?
+   436→  webhookUrl  String?
+   437→  environment String   @default("sandbox") // sandbox | production
+   438→
+   439→  // Status
+   440→  enabled     Boolean  @default(false)
+   441→  isDefault   Boolean  @default(false)
+   442→
+   443→  // Rate limits
+   444→  rateLimitPerMin Int?
+   445→  rateLimitPerDay Int?
+   446→
+   447→  // Metadata
+   448→  description String?
+   449→  category    String?  // grouping for UI
+   450→  icon        String?
+   451→
+   452→  // Monitoring
+   453→  lastUsedAt  DateTime?
+   454→  lastErrorAt DateTime?
+   455→  lastError   String?
+   456→  totalRequests Int    @default(0)
+   457→  failedRequests Int   @default(0)
+   458→
+   459→  createdAt   DateTime @default(now())
+   460→  updatedAt   DateTime @updatedAt
+   461→
+   462→  logs        ApiLog[]
+   463→
+   464→  @@index([service, enabled])
+   465→}
+   466→
+   467→// API request/error logs (per ApiConfig)
+   468→model ApiLog {
+   469→  id          String   @id @default(cuid())
+   470→  apiConfigId String
+   471→  apiConfig   ApiConfig @relation(fields: [apiConfigId], references: [id], onDelete: Cascade)
+   472→
+   473→  level       String   // info | warn | error
+   474→  message     String
+   475→  endpoint    String?
+   476→  statusCode  Int?
+   477→  responseTimeMs Int?
+   478→  requestBody String?  // JSON (sanitized — no secrets)
+   479→  responseBody String? // JSON (truncated)
+   480→
+   481→  createdAt   DateTime @default(now())
+   482→
+   483→  @@index([apiConfigId, createdAt])
+   484→  @@index([level, createdAt])
+   485→}
+   486→
+   487→// ============================================================
+   488→// Feature flags — toggle platform modules/features on/off
+   489→// ============================================================
+   490→model FeatureFlag {
+   491→  id          String   @id @default(cuid())
+   492→  key         String   @unique // e.g. "crypto_trading", "pi_network", "international_transfer"
+   493→  name        String
+   494→  description String?
+   495→  enabled     Boolean  @default(true)
+   496→
+   497→  // Visibility — which account types/roles see this feature
+   498→  accountTypes String  @default("[\"personal\",\"business\"]") // JSON array
+   499→  roles       String   @default("[\"user\",\"admin\"]") // JSON array
+   500→
+   501→  // Category for grouping in admin UI
+   502→  category    String   @default("general") // payments | crypto | security | communication | analytics | other
+   503→
+   504→  createdAt   DateTime @default(now())
+   505→  updatedAt   DateTime @updatedAt
+   506→}
+   507→
+   508→// ============================================================
+   509→// System settings — platform-wide key/value configuration
+   510→// (general settings, AML rules, templates, KYC tier configs,
+   511→// transfer corridors, treasury wallets, compliance reports, etc.)
+   512→// Complex values are stored as JSON strings.
+   513→// ============================================================
+   514→model SystemSetting {
+   515→  id        String   @id @default(cuid())
+   516→  key       String   @unique
+   517→  value     String   @default("")
+   518→  category  String   @default("general")
+   519→  updatedAt DateTime @updatedAt
+   520→  createdAt DateTime @default(now())
+   521→}
+   522→
+   523→// ============================================================
+   524→// Fee configuration (configurable fees/commissions)
+   525→// ============================================================
+   526→model FeeConfig {
+   527→  id          String   @id @default(cuid())
+   528→  name        String   @unique // e.g. "transfer_fee", "crypto_swap_fee", "bill_payment_fee"
+   529→  description String?
+   530→
+   531→  // Fee structure
+   532→  feeType     String   @default("percentage") // percentage | fixed | mixed
+   533→  feeValue    Float    @default(0) // percentage (0-100) or fixed amount
+   534→  fixedFee    Float    @default(0) // for mixed type
+   535→  currency    String   @default("NGN")
+   536→
+   537→  // Limits
+   538→  minFee      Float    @default(0)
+   539→  maxFee      Float?
+   540→  minAmount   Float?
+   541→  maxAmount   Float?
+   542→
+   543→  // Applicability
+   544→  transactionType String? // transfer | exchange | crypto_trade | bill | card | etc.
+   545→  accountType String  @default("all") // all | personal | business
+   546→
+   547→  enabled     Boolean  @default(true)
+   548→
+   549→  createdAt   DateTime @default(now())
+   550→  updatedAt   DateTime @updatedAt
+   551→}
+   552→
+   553→// ============================================================
+   554→// Achievement definitions & user unlocks (gamification)
+   555→// ============================================================
+   556→model Achievement {
+   557→  id            String   @id @default(cuid())
+   558→  code          String   @unique // e.g. "first_send", "tx_100", "referral_10"
+   559→  name          String
+   560→  description   String
+   561→  icon          String   @default("🏆")
+   562→  category      String   @default("general") // onboarding | transactions | volume | social | savings | wallets | security | milestone
+   563→  rewardPoints  Int      @default(0)
+   564→  targetCount   Int      @default(1)
+   565→  enabled       Boolean  @default(true)
+   566→  rarity        String   @default("common") // common | rare | epic | legendary
+   567→  createdAt     DateTime @default(now())
+   568→  updatedAt     DateTime @updatedAt
+   569→
+   570→  unlocks       UserAchievement[]
+   571→}
+   572→
+   573→model UserAchievement {
+   574→  id            String   @id @default(cuid())
+   575→  userId        String
+   576→  achievementId String
+   577→  unlockedAt    DateTime @default(now())
+   578→  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+   579→  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+   580→
+   581→  @@unique([userId, achievementId])
+   582→  @@index([achievementId])
+   583→}
+   584→
+   585→// ============================================================
+   586→// Developer Portal — apps, API keys, webhooks
+   587→// ============================================================
+   588→model DeveloperApp {
+   589→  id            String   @id @default(cuid())
+   590→  name          String
+   591→  description   String?
+   592→  developerId   String
+   593→  developerName String
+   594→  developerEmail String?
+   595→  type          String   @default("web") // web | mobile | backend | integration | plugin
+   596→  status        String   @default("active") // active | suspended | deleted
+   597→  createdAt     DateTime @default(now())
+   598→  updatedAt     DateTime @updatedAt
+   599→
+   600→  apiKeys       DeveloperApiKey[]
+   601→  webhooks      Webhook[]
+   602→}
+   603→
+   604→model DeveloperApiKey {
+   605→  id            String   @id @default(cuid())
+   606→  appId         String
+   607→  app           DeveloperApp @relation(fields: [appId], references: [id], onDelete: Cascade)
+   608→  developerId   String
+   609→  developerName String
+   610→  keyPrefix     String   // first 8 chars (e.g. "gxp_live_")
+   611→  keyMasked     String   // e.g. gxp_live_abcd••••••wxyz
+   612→  keyHash       String   @unique // sha256 hash of full key for lookup
+   613→  scopes        String   @default("[]") // JSON array of scope strings
+   614→  status        String   @default("active") // active | revoked
+   615→  lastUsedAt    DateTime?
+   616→  createdAt     DateTime @default(now())
+   617→  revokedAt     DateTime?
+   618→  revokedReason String?
+   619→
+   620→  @@index([developerId])
+   621→}
+   622→
+   623→model Webhook {
+   624→  id            String   @id @default(cuid())
+   625→  appId         String
+   626→  app           DeveloperApp @relation(fields: [appId], references: [id], onDelete: Cascade)
+   627→  developerId   String
+   628→  developerName String
+   629→  url           String
+   630→  events        String   @default("[]") // JSON array of event types
+   631→  secretMasked  String?
+   632→  status        String   @default("active") // active | disabled | failing
+   633→  lastDeliveryAt DateTime?
+   634→  lastStatus    String? // success | failed | pending
+   635→  lastStatusCode Int?
+   636→  successRate   Float    @default(100)
+   637→  totalDelivered Int     @default(0)
+   638→  failedDelivered Int    @default(0)
+   639→  createdAt     DateTime @default(now())
+   640→  updatedAt     DateTime @updatedAt
+   641→
+   642→  @@index([developerId])
+   643→}
+   644→
+   645→// ============================================================
+   646→// Double-Entry Ledger — accounts, entries, balances
+   647→// (atomic, auditable money movement). Float in SQLite for dev;
+   648→// Decimal(18,4) in PostgreSQL (see schema.postgres.prisma).
+   649→// ============================================================
+   650→model LedgerAccount {
+   651→  id        String   @id @default(cuid())
+   652→  userId    String?
+   653→  walletId  String?
+   654→  type      String   // user-wallet | fee-revenue | float | tax | suspense | treasury
+   655→  currency  String
+   656→  code      String   @unique // e.g., "WALLET-{userId}-{currency}" or "FEE-NGN"
+   657→  createdAt DateTime @default(now())
+   658→  updatedAt DateTime @updatedAt
+   659→  entries   LedgerEntry[]
+   660→  balance   LedgerBalance?
+   661→
+   662→  @@index([userId])
+   663→  @@index([type, currency])
+   664→  @@index([walletId])
+   665→}
+   666→
+   667→model LedgerEntry {
+   668→  id            String   @id @default(cuid())
+   669→  accountId     String
+   670→  account       LedgerAccount @relation(fields: [accountId], references: [id])
+   671→  transactionId String?
+   672→  debit         Float    @default(0) // Decimal in PostgreSQL
+   673→  credit        Float    @default(0) // Decimal in PostgreSQL
+   674→  currency      String
+   675→  createdAt     DateTime @default(now())
+   676→
+   677→  @@index([accountId, createdAt])
+   678→  @@index([transactionId])
+   679→}
+   680→
+   681→model LedgerBalance {
+   682→  id        String   @id @default(cuid())
+   683→  accountId String   @unique
+   684→  account   LedgerAccount @relation(fields: [accountId], references: [id])
+   685→  currency  String
+   686→  balance   Float    @default(0) // Decimal in PostgreSQL
+   687→  updatedAt DateTime @updatedAt
+   688→
+   689→  @@index([currency])
+   690→}
+   691→
+   692→// ============================================================
+   693→// Idempotency — replay-safe API request cache
+   694→// ============================================================
+   695→model IdempotencyRecord {
+   696→  id           String   @id @default(cuid())
+   697→  key          String   @unique
+   698→  userId       String
+   699→  endpoint     String
+   700→  requestBody  String
+   701→  responseHash String
+   702→  statusCode   Int
+   703→  createdAt    DateTime @default(now())
+   704→  expiresAt    DateTime
+   705→
+   706→  @@index([key])
+   707→  @@index([userId])
+   708→  @@index([expiresAt])
+   709→}
+   710→
+   711→// ============================================================
+   712→// Refresh tokens — rotating, revocable JWT refresh tokens
+   713→// ============================================================
+   714→model RefreshToken {
+   715→  id          String    @id @default(cuid())
+   716→  userId      String
+   717→  token       String    @unique
+   718→  rotatedFrom String?
+   719→  revokedAt   DateTime?
+   720→  createdAt   DateTime  @default(now())
+   721→  expiresAt   DateTime
+   722→
+   723→  @@index([userId])
+   724→  @@index([token])
+   725→  @@index([rotatedFrom])
+   726→}
+   727→
+   728→// ============================================================
+   729→// Sessions — server-tracked sessions with JTI + device binding
+   730→// ============================================================
+   731→model Session {
+   732→  id        String   @id @default(cuid())
+   733→  userId    String
+   734→  jti       String   @unique
+   735→  deviceFingerprint String?
+   736→  ipAddress String?
+   737→  userAgent String?
+   738→  createdAt DateTime @default(now())
+   739→  expiresAt DateTime
+   740→  revokedAt DateTime?
+   741→
+   742→  @@index([userId])
+   743→  @@index([jti])
+   744→  @@index([expiresAt])
+   745→}
+   746→
