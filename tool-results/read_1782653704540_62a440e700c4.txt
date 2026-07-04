@@ -1,0 +1,472 @@
+     1→"use client";
+     2→
+     3→import { motion } from "framer-motion";
+     4→import {
+     5→  ArrowRight, Shield, Zap, Globe, Smartphone, CreditCard, QrCode,
+     6→  Users, Star, Fingerprint, Sparkles, TrendingUp, Wallet,
+     7→  SendHorizontal, Coins, Lock, FileCheck, BadgeCheck,
+     8→  Twitter, Github, Linkedin, Instagram,
+     9→} from "lucide-react";
+    10→import { Logo } from "./logo";
+    11→import { Button } from "@/components/ui/button";
+    12→import { Badge } from "@/components/ui/badge";
+    13→import { CURRENCIES } from "@/lib/gaexpay";
+    14→
+    15→export function Landing({ onEnter, onSignup }: { onEnter: () => void; onSignup: () => void }) {
+    16→  return (
+    17→    <div className="min-h-screen flex flex-col bg-background">
+    18→      {/* Header */}
+    19→      <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-xl">
+    20→        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 lg:px-8">
+    21→          <Logo />
+    22→          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
+    23→            <a href="#features" className="hover:text-foreground transition">Features</a>
+    24→            <a href="#security" className="hover:text-foreground transition">Security</a>
+    25→            <a href="#platforms" className="hover:text-foreground transition">Platforms</a>
+    26→            <a href="#pi-network" className="hover:text-foreground transition">Pi Network</a>
+    27→          </nav>
+    28→          <div className="flex items-center gap-2">
+    29→            <Button variant="ghost" size="sm" className="hidden sm:inline-flex" onClick={onEnter}>Sign in</Button>
+    30→            <Button size="sm" onClick={onSignup}>Get Started <ArrowRight className="h-4 w-4 ml-1" /></Button>
+    31→          </div>
+    32→        </div>
+    33→      </header>
+    34→
+    35→      <main className="flex-1">
+    36→        {/* Hero */}
+    37→        <section className="relative overflow-hidden">
+    38→          <div className="absolute inset-0 mesh-bg" />
+    39→          <div className="relative mx-auto max-w-7xl px-4 py-16 lg:px-8 lg:py-24">
+    40→            <div className="grid items-center gap-10 lg:grid-cols-2">
+    41→              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+    42→                <Badge className="mb-4 bg-primary/10 text-primary border-0 hover:bg-primary/15">
+    43→                  <Sparkles className="h-3 w-3 mr-1" /> Now with AI-powered assistant
+    44→                </Badge>
+    45→                <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+    46→                  Borderless money,<br />
+    47→                  <span className="gradient-text">built for Africa.</span>
+    48→                </h1>
+    49→                <p className="mt-5 text-lg text-muted-foreground max-w-lg">
+    50→                  Send, spend, save and exchange across 9+ currencies. Instant mobile money,
+    51→                  bank transfers, QR payments and virtual cards — all in one beautiful wallet.
+    52→                </p>
+    53→                <div className="mt-7 flex flex-wrap gap-3">
+    54→                  <Button size="lg" onClick={onSignup} className="rounded-full">
+    55→                    Get Started Free <ArrowRight className="h-4 w-4 ml-2" />
+    56→                  </Button>
+    57→                  <Button size="lg" variant="outline" className="rounded-full" onClick={onEnter}>
+    58→                    Sign In / Live Demo
+    59→                  </Button>
+    60→                </div>
+    61→                <div className="mt-8 flex items-center gap-6 text-sm text-muted-foreground">
+    62→                  <div className="flex items-center gap-1.5">
+    63→                    <div className="flex -space-x-2">
+    64→                      {["A", "K", "F", "T"].map((n) => (
+    65→                        <div key={n} className="grid h-7 w-7 place-items-center rounded-full bg-primary/20 text-[10px] font-bold text-primary ring-2 ring-background">
+    66→                          {n}
+    67→                        </div>
+    68→                      ))}
+    69→                    </div>
+    70→                    <span>2M+ users</span>
+    71→                  </div>
+    72→                  <div className="flex items-center gap-1">
+    73→                    <div className="flex">{[1,2,3,4,5].map(i => <Star key={i} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />)}</div>
+    74→                    <span>4.9 rating</span>
+    75→                  </div>
+    76→                </div>
+    77→              </motion.div>
+    78→
+    79→              {/* Phone mockup */}
+    80→              <motion.div
+    81→                initial={{ opacity: 0, scale: 0.9, rotate: 4 }}
+    82→                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+    83→                transition={{ delay: 0.2 }}
+    84→                className="relative mx-auto"
+    85→              >
+    86→                <div className="relative w-72 rounded-[2.5rem] border-8 border-slate-900 bg-slate-900 p-3 shadow-2xl dark:border-slate-800">
+    87→                  <div className="absolute left-1/2 top-0 h-6 w-32 -translate-x-1/2 rounded-b-2xl bg-slate-900" />
+    88→                  <div className="overflow-hidden rounded-[2rem] bg-gradient-to-br from-emerald-600 to-teal-700 p-5 text-white">
+    89→                    <div className="flex items-center justify-between mb-6">
+    90→                      <span className="text-xs text-white/70">Total Balance</span>
+    91→                      <Wallet className="h-4 w-4" />
+    92→                    </div>
+    93→                    <p className="text-3xl font-bold tabular-nums">₦845,230.55</p>
+    94→                    <p className="text-xs text-white/70 mt-1">≈ $548.21 USD</p>
+    95→                    <div className="mt-6 grid grid-cols-4 gap-2">
+    96→                      {[SendHorizontal, QrCode, ArrowRight, CreditCard].map((Icon, i) => (
+    97→                        <div key={i} className="grid h-10 place-items-center rounded-xl bg-white/15 backdrop-blur">
+    98→                          <Icon className="h-4 w-4" />
+    99→                        </div>
+   100→                      ))}
+   101→                    </div>
+   102→                    <div className="mt-4 space-y-2">
+   103→                      {[["Spencer Supermarket", "-₦12,400"], ["Chinedu Eze", "+₦25,000"], ["Ikeja Electric", "-₦18,500"]].map(([n, a]) => (
+   104→                        <div key={n} className="flex items-center justify-between rounded-lg bg-white/10 px-3 py-2 text-xs backdrop-blur">
+   105→                          <span>{n}</span>
+   106→                          <span className="font-semibold">{a}</span>
+   107→                        </div>
+   108→                      ))}
+   109→                    </div>
+   110→                  </div>
+   111→                </div>
+   112→                {/* Floating card */}
+   113→                <motion.div
+   114→                  animate={{ y: [0, -8, 0] }}
+   115→                  transition={{ duration: 3, repeat: Infinity }}
+   116→                  className="absolute -right-6 top-20 hidden sm:block"
+   117→                >
+   118→                  <div className="w-44 rounded-xl bg-gradient-to-br from-slate-800 to-black p-3 text-white shadow-xl">
+   119→                    <div className="flex justify-between text-[10px] text-white/60"><span>VISA</span><span>Virtual</span></div>
+   120→                    <p className="mt-3 font-mono text-sm tracking-wider">4827 •••• 9012</p>
+   121→                    <p className="mt-1 text-[10px]">ADAEZE OKONKWO</p>
+   122→                  </div>
+   123→                </motion.div>
+   124→              </motion.div>
+   125→            </div>
+   126→          </div>
+   127→        </section>
+   128→
+   129→        {/* Currencies strip / Stats bar */}
+   130→        <section className="border-y bg-muted/30">
+   131→          <div className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
+   132→            <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground mb-5">
+   133→              Trusted across 30+ currencies worldwide
+   134→            </p>
+   135→            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+   136→              {CURRENCIES.map((c) => (
+   137→                <div
+   138→                  key={c.code}
+   139→                  className="flex items-center gap-1.5 text-sm font-medium text-foreground/70 hover:text-foreground transition"
+   140→                >
+   141→                  <span className="text-base">{c.flag}</span>
+   142→                  <span className="tabular-nums">{c.code}</span>
+   143→                </div>
+   144→              ))}
+   145→            </div>
+   146→          </div>
+   147→        </section>
+   148→
+   149→        {/* Features */}
+   150→        <section id="features" className="mx-auto max-w-7xl px-4 py-16 lg:px-8 lg:py-24">
+   151→          <div className="mb-12 text-center">
+   152→            <p className="text-xs font-semibold uppercase tracking-wider text-primary">Features</p>
+   153→            <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+   154→              Everything you need to move money
+   155→            </h2>
+   156→            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+   157→              A complete financial toolkit designed for individuals and businesses across Africa and beyond.
+   158→            </p>
+   159→          </div>
+   160→          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+   161→            {[
+   162→              { icon: Zap, title: "Instant Transfers", desc: "Send & receive money in seconds. GaexPay-to-GaexPay is always free.", color: "from-emerald-500 to-teal-600" },
+   163→              { icon: Smartphone, title: "Mobile Money", desc: "MTN MoMo, Orange, Airtel, Moov & M-PESA integrated natively.", color: "from-amber-500 to-orange-600" },
+   164→              { icon: CreditCard, title: "Virtual & Physical Cards", desc: "Issue a Visa/Mastercard instantly. Spend globally online & offline.", color: "from-violet-500 to-purple-600" },
+   165→              { icon: QrCode, title: "QR Payments", desc: "Scan to pay at millions of merchants. No cash, no cards needed.", color: "from-fuchsia-500 to-pink-600" },
+   166→              { icon: Globe, title: "Multi-Currency", desc: "Hold 9+ currencies with live exchange rates. Convert at the tap.", color: "from-sky-500 to-cyan-600" },
+   167→              { icon: TrendingUp, title: "Analytics & Insights", desc: "Track spending, set budgets and understand your money flow.", color: "from-rose-500 to-red-600" },
+   168→              { icon: Shield, title: "Bank-Grade Security", desc: "End-to-end encryption, 2FA, biometric login & AI fraud detection.", color: "from-slate-600 to-slate-800" },
+   169→              { icon: Users, title: "Referral Rewards", desc: "Earn ₦500 for every friend. Climb tiers for bigger bonuses.", color: "from-lime-500 to-green-600" },
+   170→              { icon: Coins, title: "Pi Network Integration", desc: "Connect your Pi account. Swap Pi for fiat and stablecoins instantly.", color: "from-violet-500 to-fuchsia-600" },
+   171→            ].map((f, i) => {
+   172→              const Icon = f.icon;
+   173→              return (
+   174→                <motion.div
+   175→                  key={f.title}
+   176→                  initial={{ opacity: 0, y: 20 }}
+   177→                  whileInView={{ opacity: 1, y: 0 }}
+   178→                  viewport={{ once: true, margin: "-80px" }}
+   179→                  transition={{ duration: 0.4, delay: i * 0.08 }}
+   180→                  className="group rounded-2xl border bg-card p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+   181→                >
+   182→                  <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${f.color} grid place-items-center shadow-lg`}>
+   183→                    <Icon className="h-6 w-6 text-white" />
+   184→                  </div>
+   185→                  <h3 className="text-lg font-semibold mt-4">{f.title}</h3>
+   186→                  <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{f.desc}</p>
+   187→                </motion.div>
+   188→              );
+   189→            })}
+   190→          </div>
+   191→        </section>
+   192→
+   193→        {/* Security */}
+   194→        <section id="security" className="bg-muted/30 border-y">
+   195→          <div className="mx-auto max-w-7xl px-4 py-16 lg:px-8 lg:py-24">
+   196→            <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+   197→              {/* Left visual */}
+   198→              <motion.div
+   199→                initial={{ opacity: 0, scale: 0.95 }}
+   200→                whileInView={{ opacity: 1, scale: 1 }}
+   201→                viewport={{ once: true }}
+   202→                transition={{ duration: 0.5 }}
+   203→                className="relative rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 p-8 grid place-items-center min-h-[320px] lg:p-12"
+   204→              >
+   205→                <div className="absolute inset-0 mesh-bg rounded-3xl opacity-60" />
+   206→                <div className="relative grid h-32 w-32 place-items-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 shadow-2xl shadow-emerald-500/30">
+   207→                  <Shield className="h-16 w-16 text-white" />
+   208→                </div>
+   209→                <div className="absolute right-6 top-6 rounded-full border bg-background/80 px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur">
+   210→                  🔒 AES-256
+   211→                </div>
+   212→                <div className="absolute bottom-6 left-6 rounded-full border bg-background/80 px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur">
+   213→                  ✓ PCI-DSS L1
+   214→                </div>
+   215→              </motion.div>
+   216→
+   217→              {/* Right content */}
+   218→              <div>
+   219→                <p className="text-xs font-semibold uppercase tracking-wider text-primary">Security</p>
+   220→                <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+   221→                  Your money is protected, always.
+   222→                </h2>
+   223→                <p className="mt-4 text-lg text-muted-foreground">
+   224→                  We use the same encryption trusted by global banks, with added layers of intelligence working around the clock.
+   225→                </p>
+   226→                <div className="mt-8 grid gap-5 sm:grid-cols-2">
+   227→                  {[
+   228→                    { icon: Lock, title: "256-bit encryption", desc: "AES-256 end-to-end on every transaction.", color: "bg-emerald-500" },
+   229→                    { icon: Fingerprint, title: "Biometric auth", desc: "Face ID, Touch ID & fingerprint unlock.", color: "bg-violet-500" },
+   230→                    { icon: FileCheck, title: "PCI-DSS compliant", desc: "Level 1 certified payment infrastructure.", color: "bg-amber-500" },
+   231→                    { icon: BadgeCheck, title: "Regulated & licensed", desc: "AML & KYC compliant, CBN licensed operator.", color: "bg-sky-500" },
+   232→                  ].map((s, i) => {
+   233→                    const Icon = s.icon;
+   234→                    return (
+   235→                      <motion.div
+   236→                        key={s.title}
+   237→                        initial={{ opacity: 0, y: 12 }}
+   238→                        whileInView={{ opacity: 1, y: 0 }}
+   239→                        viewport={{ once: true }}
+   240→                        transition={{ duration: 0.4, delay: i * 0.08 }}
+   241→                        className="flex items-start gap-3"
+   242→                      >
+   243→                        <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${s.color} text-white shadow-md`}>
+   244→                          <Icon className="h-5 w-5" />
+   245→                        </div>
+   246→                        <div>
+   247→                          <h3 className="text-sm font-semibold">{s.title}</h3>
+   248→                          <p className="mt-0.5 text-sm text-muted-foreground">{s.desc}</p>
+   249→                        </div>
+   250→                      </motion.div>
+   251→                    );
+   252→                  })}
+   253→                </div>
+   254→              </div>
+   255→            </div>
+   256→          </div>
+   257→        </section>
+   258→
+   259→        {/* Platforms */}
+   260→        <section id="platforms" className="mx-auto max-w-7xl px-4 py-16 lg:px-8 lg:py-24">
+   261→          <div className="mb-12 text-center">
+   262→            <p className="text-xs font-semibold uppercase tracking-wider text-primary">Cross-Platform</p>
+   263→            <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+   264→              Available everywhere you are
+   265→            </h2>
+   266→            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+   267→              Mobile, web, desktop — synced in real time across all your devices.
+   268→            </p>
+   269→          </div>
+   270→          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+   271→            {[
+   272→              { icon: Smartphone, title: "iOS & Android", desc: "Native apps with offline sync & biometrics", color: "from-emerald-500 to-teal-600" },
+   273→              { icon: Globe, title: "Web App", desc: "Full-featured wallet in your browser", color: "from-sky-500 to-cyan-600" },
+   274→              { icon: CreditCard, title: "Desktop", desc: "Windows, macOS & Linux native experience", color: "from-violet-500 to-purple-600" },
+   275→              { icon: Users, title: "Admin Console", desc: "Complete operations & compliance suite", color: "from-amber-500 to-orange-600" },
+   276→            ].map((p, i) => {
+   277→              const Icon = p.icon;
+   278→              return (
+   279→                <motion.div
+   280→                  key={p.title}
+   281→                  initial={{ opacity: 0, y: 20 }}
+   282→                  whileInView={{ opacity: 1, y: 0 }}
+   283→                  viewport={{ once: true, margin: "-80px" }}
+   284→                  transition={{ duration: 0.4, delay: i * 0.08 }}
+   285→                  className="group rounded-2xl border bg-card p-6 text-center transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+   286→                >
+   287→                  <div className={`mx-auto h-14 w-14 rounded-2xl bg-gradient-to-br ${p.color} grid place-items-center shadow-lg`}>
+   288→                    <Icon className="h-7 w-7 text-white" />
+   289→                  </div>
+   290→                  <h3 className="mt-4 font-semibold">{p.title}</h3>
+   291→                  <p className="mt-1.5 text-sm text-muted-foreground">{p.desc}</p>
+   292→                  <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+   293→                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+   294→                    Available
+   295→                  </div>
+   296→                </motion.div>
+   297→              );
+   298→            })}
+   299→          </div>
+   300→        </section>
+   301→
+   302→        {/* Pi Network */}
+   303→        <section id="pi-network" className="bg-muted/30 border-y">
+   304→          <div className="mx-auto max-w-7xl px-4 py-16 lg:px-8 lg:py-24">
+   305→            <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+   306→              <div className="order-2 lg:order-1">
+   307→                <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+   308→                  <span className="text-sm font-bold">π</span> Pi Network
+   309→                </span>
+   310→                <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+   311→                  Bring your Pi to life.
+   312→                </h2>
+   313→                <p className="mt-4 text-lg text-muted-foreground">
+   314→                  Connect your Pi Network account and turn your mined Pi into spendable value. Swap, send and spend — all from one wallet.
+   315→                </p>
+   316→                <div className="mt-8 grid gap-4">
+   317→                  {[
+   318→                    { icon: Coins, title: "Instant Pi swaps", desc: "Convert Pi to NGN, USD, USDT and 9+ currencies at live rates." },
+   319→                    { icon: SendHorizontal, title: "Send Pi to anyone", desc: "P2P transfers to any GaexPay user — free and instant." },
+   320→                    { icon: Shield, title: "Verified & secure", desc: "Wallet-to-wallet connection. We never touch your private keys." },
+   321→                  ].map((f, i) => {
+   322→                    const Icon = f.icon;
+   323→                    return (
+   324→                      <motion.div
+   325→                        key={f.title}
+   326→                        initial={{ opacity: 0, x: -10 }}
+   327→                        whileInView={{ opacity: 1, x: 0 }}
+   328→                        viewport={{ once: true }}
+   329→                        transition={{ duration: 0.4, delay: i * 0.08 }}
+   330→                        className="flex items-start gap-3 rounded-2xl border bg-card p-4"
+   331→                      >
+   332→                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-600 text-white shadow-md">
+   333→                          <Icon className="h-5 w-5" />
+   334→                        </div>
+   335→                        <div>
+   336→                          <h3 className="text-sm font-semibold">{f.title}</h3>
+   337→                          <p className="mt-0.5 text-sm text-muted-foreground">{f.desc}</p>
+   338→                        </div>
+   339→                      </motion.div>
+   340→                    );
+   341→                  })}
+   342→                </div>
+   343→                <Button
+   344→                  size="lg"
+   345→                  onClick={onSignup}
+   346→                  className="mt-8 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg transition hover:from-violet-700 hover:to-fuchsia-700 hover:shadow-xl"
+   347→                >
+   348→                  Connect Pi Account <ArrowRight className="h-4 w-4 ml-2" />
+   349→                </Button>
+   350→              </div>
+   351→
+   352→              {/* Visual */}
+   353→              <motion.div
+   354→                initial={{ opacity: 0, scale: 0.95 }}
+   355→                whileInView={{ opacity: 1, scale: 1 }}
+   356→                viewport={{ once: true }}
+   357→                transition={{ duration: 0.5 }}
+   358→                className="relative order-1 grid min-h-[320px] place-items-center rounded-3xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 to-fuchsia-500/5 p-8 lg:order-2 lg:p-12"
+   359→              >
+   360→                <div className="absolute inset-0 mesh-bg rounded-3xl opacity-60" />
+   361→                <div className="relative grid h-32 w-32 place-items-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-2xl shadow-violet-500/30">
+   362→                  <span className="text-6xl font-bold text-white">π</span>
+   363→                </div>
+   364→                <div className="absolute right-6 top-6 rounded-full border bg-background/80 px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur">
+   365→                  🟣 Pi Mainnet
+   366→                </div>
+   367→                <div className="absolute bottom-6 left-6 rounded-full border bg-background/80 px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur tabular-nums">
+   368→                  Live: 1 π ≈ $47.35
+   369→                </div>
+   370→              </motion.div>
+   371→            </div>
+   372→          </div>
+   373→        </section>
+   374→
+   375→        {/* CTA */}
+   376→        <section className="px-4 pb-16 pt-16 lg:px-8 lg:pb-24 lg:pt-24">
+   377→          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 py-20 lg:py-28">
+   378→            {/* Decorative orbs */}
+   379→            <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+   380→            <div className="absolute -bottom-20 -left-20 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+   381→            <div className="absolute right-1/3 top-1/4 h-40 w-40 rounded-full bg-amber-300/20 blur-3xl" />
+   382→
+   383→            <motion.div
+   384→              initial={{ opacity: 0, y: 20 }}
+   385→              whileInView={{ opacity: 1, y: 0 }}
+   386→              viewport={{ once: true }}
+   387→              transition={{ duration: 0.5 }}
+   388→              className="relative mx-auto max-w-3xl px-6 text-center text-white"
+   389→            >
+   390→              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+   391→                Ready to take control of your money?
+   392→              </h2>
+   393→              <p className="mx-auto mt-5 max-w-xl text-lg text-white/80">
+   394→                Join 2 million+ people using GaexPay across Africa. Open an account in 2 minutes — no paperwork.
+   395→              </p>
+   396→              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+   397→                <Button
+   398→                  size="lg"
+   399→                  onClick={onSignup}
+   400→                  className="h-12 w-full rounded-full bg-white px-8 font-semibold text-emerald-700 shadow-lg transition hover:bg-white/90 active:scale-95 sm:h-14 sm:w-auto"
+   401→                >
+   402→                  Open Free Account <ArrowRight className="h-4 w-4 ml-2" />
+   403→                </Button>
+   404→                <Button
+   405→                  size="lg"
+   406→                  variant="outline"
+   407→                  onClick={onEnter}
+   408→                  className="h-12 w-full rounded-full border border-white/30 bg-transparent px-8 text-white backdrop-blur transition hover:bg-white/10 hover:text-white sm:h-14 sm:w-auto"
+   409→                >
+   410→                  Talk to Sales
+   411→                </Button>
+   412→              </div>
+   413→            </motion.div>
+   414→          </div>
+   415→        </section>
+   416→      </main>
+   417→
+   418→      {/* Footer */}
+   419→      <footer className="mt-auto border-t bg-background">
+   420→        <div className="mx-auto max-w-7xl px-4 py-12 lg:px-8 lg:py-16">
+   421→          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+   422→            <div>
+   423→              <Logo />
+   424→              <p className="mt-4 max-w-xs text-sm text-muted-foreground">
+   425→                Borderless digital wallet built for Africa and the world. Send, spend and save across 30+ currencies.
+   426→              </p>
+   427→              <div className="mt-5 flex items-center gap-2">
+   428→                {[Twitter, Github, Linkedin, Instagram].map((Icon, i) => (
+   429→                  <a
+   430→                    key={i}
+   431→                    href="#"
+   432→                    onClick={(e) => e.preventDefault()}
+   433→                    className="grid h-9 w-9 place-items-center rounded-full border text-muted-foreground transition hover:bg-muted hover:text-foreground"
+   434→                    aria-label="Social link"
+   435→                  >
+   436→                    <Icon className="h-4 w-4" />
+   437→                  </a>
+   438→                ))}
+   439→              </div>
+   440→            </div>
+   441→            {[
+   442→              { title: "Product", links: ["Wallets", "Cards", "Transfers", "QR Payments", "Mobile Money"] },
+   443→              { title: "Company", links: ["About", "Careers", "Blog", "Press", "Contact"] },
+   444→              { title: "Legal", links: ["Privacy", "Terms", "Security", "Compliance", "Licenses"] },
+   445→            ].map((col) => (
+   446→              <div key={col.title}>
+   447→                <p className="mb-4 text-sm font-semibold">{col.title}</p>
+   448→                <ul className="space-y-2.5 text-sm text-muted-foreground">
+   449→                  {col.links.map((l) => (
+   450→                    <li key={l}>
+   451→                      <a href="#" onClick={(e) => e.preventDefault()} className="transition hover:text-foreground">{l}</a>
+   452→                    </li>
+   453→                  ))}
+   454→                </ul>
+   455→              </div>
+   456→            ))}
+   457→          </div>
+   458→          <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t pt-6 sm:flex-row">
+   459→            <p className="text-xs text-muted-foreground">© 2025 GaexPay Inc. All rights reserved. Licensed by CBN.</p>
+   460→            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+   461→              <a href="#" onClick={(e) => e.preventDefault()} className="transition hover:text-foreground">Privacy</a>
+   462→              <a href="#" onClick={(e) => e.preventDefault()} className="transition hover:text-foreground">Terms</a>
+   463→              <a href="#" onClick={(e) => e.preventDefault()} className="transition hover:text-foreground">Cookies</a>
+   464→            </div>
+   465→          </div>
+   466→        </div>
+   467→      </footer>
+   468→    </div>
+   469→  );
+   470→}
+
+[showing lines 1-470 of 471; use offset=471 with limit to continue reading]

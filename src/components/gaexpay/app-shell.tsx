@@ -56,6 +56,14 @@ import { CurrencyPicker } from "./currency-picker";
 import { LanguagePicker } from "./language-picker";
 import { motion, AnimatePresence } from "framer-motion";
 import { hydratePreferencesFromStorage } from "@/lib/store";
+import { SocialView } from "./views/social-view";
+import { MessagingView } from "./views/messaging-view";
+import { LiveView } from "./views/live-view";
+import { StakingView } from "./views/staking-view";
+import { GaexTokenView } from "./views/gaex-token-view";
+import { SellerDashboardView } from "./views/seller-dashboard-view";
+import { NotificationsView } from "./views/notifications-view";
+import { AccountingView } from "./views/accounting-view";
 
 export function AppShell() {
   const { view, userCurrency, setUserCurrency, currencyPickerOpen, setCurrencyPickerOpen } = useApp();
@@ -117,6 +125,14 @@ export function AppShell() {
     developer: <DeveloperPortalView />,
     referral: <ReferralView />,
     marketplace: <MarketplaceView />,
+    social: <SocialView />,
+    messaging: <MessagingView />,
+    live: <LiveView />,
+    staking: <StakingView />,
+    "gaex-token": <GaexTokenView />,
+    "seller-dashboard": <SellerDashboardView />,
+    notifications: <NotificationsView />,
+    accounting: <AccountingView />,
   };
 
   return (

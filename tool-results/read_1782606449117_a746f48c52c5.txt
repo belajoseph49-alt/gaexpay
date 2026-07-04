@@ -1,0 +1,1044 @@
+     1→"use client";
+     2→
+     3→/**
+     4→ * src/components/gaexpay/auth-modal.tsx
+     5→ *
+     6→ * Combined Sign In / Create Account modal with:
+     7→ *   - Account type selector (personal | business) — two large selectable cards
+     8→ *   - Password strength meter (4-segment weak/fair/good/strong)
+     9→ *   - Show/hide password toggle
+    10→ *   - Forgot password flow (email → token → reset)
+    11→ *   - "Try Demo Account" button (calls /api/auth/demo)
+    12→ *
+    13→ * Mobile-first: full-screen on mobile, centered dialog on desktop.
+    14→ * Framer Motion animates the gradient header + tab transitions.
+    15→ */
+    16→
+    17→import { useEffect, useMemo, useState } from "react";
+    18→import { AnimatePresence, motion } from "framer-motion";
+    19→import { toast } from "sonner";
+    20→import {
+    21→  User, Building2, Mail, Lock, Phone, Eye, EyeOff, Shield,
+    22→  ArrowRight, Sparkles, Loader2, BadgeCheck, Globe2, KeyRound, Check, FileText,
+    23→} from "lucide-react";
+    24→
+    25→import {
+    26→  Dialog, DialogContent, DialogTitle, DialogDescription,
+    27→} from "@/components/ui/dialog";
+    28→import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+    29→import { Input } from "@/components/ui/input";
+    30→import { Button } from "@/components/ui/button";
+    31→import { Label } from "@/components/ui/label";
+    32→import { Logo } from "./logo";
+    33→import { setAuthed } from "@/lib/auth-client";
+    34→import { cn } from "@/lib/utils";
+    35→import { CURRENCIES } from "@/lib/gaexpay";
+    36→
+    37→type Mode = "login" | "signup";
+    38→type AccountType = "personal" | "business";
+    39→type Flow = "auth" | "forgot" | "reset" | "2fa";
+    40→type Strength = { score: 0 | 1 | 2 | 3 | 4; label: string };
+    41→
+    42→interface AuthModalProps {
+    43→  open: boolean;
+    44→  mode: Mode;
+    45→  onClose: () => void;
+    46→  onSuccess: () => void;
+    47→}
+    48→
+    49→const EMAIL_RE = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
+    50→
+    51→// ---------------------------------------------------------------------------
+    52→// Password strength
+    53→// ---------------------------------------------------------------------------
+    54→function evalStrength(pw: string): Strength {
+    55→  if (!pw) return { score: 0, label: "—" };
+    56→  let score = 0;
+    57→  if (pw.length >= 8) score++;
+    58→  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+    59→  if (/[0-9]/.test(pw)) score++;
+    60→  if (/[^A-Za-z0-9]/.test(pw) || pw.length >= 12) score++;
+    61→  const clamped = Math.min(score, 4) as 0 | 1 | 2 | 3 | 4;
+    62→  const labels = ["Too short", "Weak", "Fair", "Good", "Strong"];
+    63→  return { score: clamped, label: labels[clamped] };
+    64→}
+    65→
+    66→const STRENGTH_COLORS = [
+    67→  "bg-muted",
+    68→  "bg-red-500",
+    69→  "bg-amber-500",
+    70→  "bg-yellow-400",
+    71→  "bg-emerald-500",
+    72→];
+    73→const STRENGTH_TEXT = [
+    74→  "text-muted-foreground",
+    75→  "text-red-500",
+    76→  "text-amber-500",
+    77→  "text-yellow-500",
+    78→  "text-emerald-500",
+    79→];
+    80→
+    81→// ---------------------------------------------------------------------------
+    82→// Account type selector card
+    83→// ---------------------------------------------------------------------------
+    84→function AccountTypeCard({
+    85→  selected, onClick, icon: Icon, title, subtitle,
+    86→}: {
+    87→  selected: boolean;
+    88→  onClick: () => void;
+    89→  icon: typeof User;
+    90→  title: string;
+    91→  subtitle: string;
+    92→}) {
+    93→  return (
+    94→    <button
+    95→      type="button"
+    96→      onClick={onClick}
+    97→      aria-pressed={selected}
+    98→      className={cn(
+    99→        "relative flex flex-1 flex-col items-start gap-2 rounded-xl border-2 p-4 text-left transition-all duration-200",
+   100→        selected
+   101→          ? "border-primary bg-primary/5 ring-2 ring-primary/30"
+   102→          : "border-border bg-background hover:border-primary/40 hover:bg-muted/40",
+   103→      )}
+   104→    >
+   105→      <div
+   106→        className={cn(
+   107→          "grid h-9 w-9 place-items-center rounded-lg transition-colors",
+   108→          selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+   109→        )}
+   110→      >
+   111→        <Icon className="h-5 w-5" />
+   112→      </div>
+   113→      <div>
+   114→        <div className="text-sm font-semibold">{title}</div>
+   115→        <div className="text-[11px] text-muted-foreground leading-tight mt-0.5">{subtitle}</div>
+   116→      </div>
+   117→      {selected && (
+   118→        <motion.div
+   119→          layoutId="account-type-check"
+   120→          className="absolute top-2 right-2 grid h-5 w-5 place-items-center rounded-full bg-primary text-primary-foreground"
+   121→          initial={{ scale: 0 }}
+   122→          animate={{ scale: 1 }}
+   123→        >
+   124→          <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none">
+   125→            <path d="M2 6l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+   126→          </svg>
+   127→        </motion.div>
+   128→      )}
+   129→    </button>
+   130→  );
+   131→}
+   132→
+   133→// ---------------------------------------------------------------------------
+   134→// Field component
+   135→// ---------------------------------------------------------------------------
+   136→function Field({
+   137→  label, icon: Icon, ...props
+   138→}: { label: string; icon: typeof User } & React.InputHTMLAttributes<HTMLInputElement>) {
+   139→  return (
+   140→    <div className="space-y-1.5">
+   141→      <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
+   142→      <div className="relative">
+   143→        <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+   144→        <Input
+   145→          {...props}
+   146→          className="h-11 rounded-lg pl-9 text-sm"
+   147→        />
+   148→      </div>
+   149→    </div>
+   150→  );
+   151→}
+   152→
+   153→// ---------------------------------------------------------------------------
+   154→// Main modal
+   155→// ---------------------------------------------------------------------------
+   156→export function AuthModal({ open, mode, onClose, onSuccess }: AuthModalProps) {
+   157→  const [tab, setTab] = useState<Mode>(mode);
+   158→  const [flow, setFlow] = useState<Flow>("auth");
+   159→
+   160→  // Signup state
+   161→  const [accountType, setAccountType] = useState<AccountType>("personal");
+   162→  const [companyName, setCompanyName] = useState("");
+   163→  const [firstName, setFirstName] = useState("");
+   164→  const [lastName, setLastName] = useState("");
+   165→  const [email, setEmail] = useState("");
+   166→  const [phone, setPhone] = useState("");
+   167→  const [country, setCountry] = useState("");
+   168→  const [signupCurrency, setSignupCurrency] = useState("USD");
+   169→  const [password, setPassword] = useState("");
+   170→  const [confirmPassword, setConfirmPassword] = useState("");
+   171→  const [showPassword, setShowPassword] = useState(false);
+   172→  const [agreeTerms, setAgreeTerms] = useState(false);
+   173→  const [showTermsModal, setShowTermsModal] = useState(false);
+   174→
+   175→  // Login state
+   176→  const [loginEmail, setLoginEmail] = useState("");
+   177→  const [loginPassword, setLoginPassword] = useState("");
+   178→
+   179→  // Forgot/reset state
+   180→  const [forgotEmail, setForgotEmail] = useState("");
+   181→  const [resetToken, setResetToken] = useState("");
+   182→  const [newPassword, setNewPassword] = useState("");
+   183→
+   184→  // 2FA challenge state
+   185→  const [twoFAChallenge, setTwoFAChallenge] = useState<string | null>(null);
+   186→  const [twoFACode, setTwoFACode] = useState("");
+   187→  const [twoFAMode, setTwoFAMode] = useState<"totp" | "recovery">("totp");
+   188→  const [twoFAEmail, setTwoFAEmail] = useState("");
+   189→
+   190→  const [loading, setLoading] = useState(false);
+   191→  const [forgotSent, setForgotSent] = useState(false);
+   192→  const [resetDone, setResetDone] = useState(false);
+   193→
+   194→  // Sync tab when `mode` prop changes (e.g. user clicked "Sign in" vs "Get Started")
+   195→  useEffect(() => {
+   196→    if (open) {
+   197→      setTab(mode);
+   198→      setFlow("auth");
+   199→      setForgotSent(false);
+   200→      setResetDone(false);
+   201→      setTwoFAChallenge(null);
+   202→      setTwoFACode("");
+   203→      setTwoFAMode("totp");
+   204→    }
+   205→  }, [open, mode]);
+   206→
+   207→  const strength = useMemo(() => evalStrength(password), [password]);
+   208→
+   209→  // -------------------------------------------------------------------------
+   210→  // Submit handlers
+   211→  // -------------------------------------------------------------------------
+   212→  async function handleSignup(e: React.FormEvent) {
+   213→    e.preventDefault();
+   214→    if (loading) return;
+   215→
+   216→    if (!firstName.trim() || !lastName.trim()) return toast.error("Please enter your name");
+   217→    if (!EMAIL_RE.test(email)) return toast.error("Please enter a valid email");
+   218→    if (phone.replace(/\D/g, "").length < 7) return toast.error("Please enter a valid phone number");
+   219→    if (password.length < 8) return toast.error("Password must be at least 8 characters");
+   220→    if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+   221→      return toast.error("Password must contain a letter and a number");
+   222→    }
+   223→    if (password !== confirmPassword) return toast.error("Passwords do not match");
+   224→    if (accountType === "business" && companyName.trim().length < 2) {
+   225→      return toast.error("Please enter your company name");
+   226→    }
+   227→    if (!agreeTerms) {
+   228→      setShowTermsModal(true);
+   229→      return;
+   230→    }
+   231→
+   232→    setLoading(true);
+   233→    try {
+   234→      const res = await fetch("/api/auth/signup", {
+   235→        method: "POST",
+   236→        headers: { "Content-Type": "application/json" },
+   237→        credentials: "include",
+   238→        body: JSON.stringify({
+   239→          firstName, lastName, email, phone, password,
+   240→          country: country || undefined,
+   241→          accountType,
+   242→          currency: signupCurrency,
+   243→          companyName: accountType === "business" ? companyName : undefined,
+   244→        }),
+   245→      });
+   246→      const data = await res.json();
+   247→      if (!res.ok) throw new Error(data?.error || "Signup failed");
+   248→      setAuthed();
+   249→      toast.success(`Welcome to GaexPay, ${firstName}! 🎉`);
+   250→      onSuccess();
+   251→    } catch (err) {
+   252→      toast.error(err instanceof Error ? err.message : "Signup failed");
+   253→    } finally {
+   254→      setLoading(false);
+   255→    }
+   256→  }
+   257→
+   258→  async function handleLogin(e: React.FormEvent) {
+   259→    e.preventDefault();
+   260→    if (loading) return;
+   261→
+   262→    if (!EMAIL_RE.test(loginEmail)) return toast.error("Please enter a valid email");
+   263→    if (!loginPassword) return toast.error("Please enter your password");
+   264→
+   265→    setLoading(true);
+   266→    try {
+   267→      const res = await fetch("/api/auth/login", {
+   268→        method: "POST",
+   269→        headers: { "Content-Type": "application/json" },
+   270→        credentials: "include",
+   271→        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+   272→      });
+   273→      const data = await res.json();
+   274→      if (!res.ok) throw new Error(data?.error || "Login failed");
+   275→
+   276→      // 2FA challenge branch — server returns { requires2FA, challenge, methods }
+   277→      // instead of issuing a token. Switch to the 2FA flow.
+   278→      if (data?.requires2FA && data?.challenge) {
+   279→        setTwoFAChallenge(data.challenge);
+   280→        setTwoFAEmail(data.email || loginEmail);
+   281→        setTwoFACode("");
+   282→        setTwoFAMode("totp");
+   283→        setFlow("2fa");
+   284→        setLoading(false);
+   285→        return;
+   286→      }
+   287→
+   288→      setAuthed();
+   289→      toast.success(`Welcome back, ${data?.user?.firstName ?? "friend"}!`);
+   290→      onSuccess();
+   291→    } catch (err) {
+   292→      toast.error(err instanceof Error ? err.message : "Login failed");
+   293→    } finally {
+   294→      setLoading(false);
+   295→    }
+   296→  }
+   297→
+   298→  // Complete a 2FA-challenged login by submitting a TOTP code or recovery code.
+   299→  async function handleVerify2FA(e: React.FormEvent) {
+   300→    e.preventDefault();
+   301→    if (loading) return;
+   302→    if (!twoFAChallenge) return toast.error("2FA session expired — please log in again");
+   303→
+   304→    const trimmed = twoFACode.trim();
+   305→    if (twoFAMode === "totp") {
+   306→      if (!/^\d{6}$/.test(trimmed)) {
+   307→        return toast.error("Please enter the 6-digit code from your authenticator app");
+   308→      }
+   309→    } else {
+   310→      if (!trimmed) {
+   311→        return toast.error("Please enter a recovery code");
+   312→      }
+   313→    }
+   314→
+   315→    setLoading(true);
+   316→    try {
+   317→      const body =
+   318→        twoFAMode === "totp"
+   319→          ? { challenge: twoFAChallenge, code: trimmed }
+   320→          : { challenge: twoFAChallenge, recoveryCode: trimmed };
+   321→      const res = await fetch("/api/auth/login/verify-2fa", {
+   322→        method: "POST",
+   323→        headers: { "Content-Type": "application/json" },
+   324→        credentials: "include",
+   325→        body: JSON.stringify(body),
+   326→      });
+   327→      const data = await res.json();
+   328→      if (!res.ok) throw new Error(data?.error || "Verification failed");
+   329→      setAuthed();
+   330→      toast.success(`Welcome back, ${data?.user?.firstName ?? "friend"}!`);
+   331→      onSuccess();
+   332→    } catch (err) {
+   333→      toast.error(err instanceof Error ? err.message : "Verification failed");
+   334→    } finally {
+   335→      setLoading(false);
+   336→    }
+   337→  }
+   338→
+   339→  function handleBackToLogin() {
+   340→    setFlow("auth");
+   341→    setTwoFAChallenge(null);
+   342→    setTwoFACode("");
+   343→    setTwoFAMode("totp");
+   344→  }
+   345→
+   346→  async function handleDemo() {
+   347→    if (loading) return;
+   348→    setLoading(true);
+   349→    try {
+   350→      const res = await fetch("/api/auth/demo", {
+   351→        method: "POST",
+   352→        credentials: "include",
+   353→      });
+   354→      const data = await res.json();
+   355→      if (!res.ok) throw new Error(data?.error || "Demo login failed");
+   356→      setAuthed();
+   357→      toast.success("Signed in as demo user");
+   358→      onSuccess();
+   359→    } catch (err) {
+   360→      toast.error(err instanceof Error ? err.message : "Demo login failed");
+   361→    } finally {
+   362→      setLoading(false);
+   363→    }
+   364→  }
+   365→
+   366→  async function handleForgot(e: React.FormEvent) {
+   367→    e.preventDefault();
+   368→    if (loading) return;
+   369→    if (!EMAIL_RE.test(forgotEmail)) return toast.error("Please enter a valid email");
+   370→
+   371→    setLoading(true);
+   372→    try {
+   373→      const res = await fetch("/api/auth/forgot-password", {
+   374→        method: "POST",
+   375→        headers: { "Content-Type": "application/json" },
+   376→        body: JSON.stringify({ email: forgotEmail }),
+   377→      });
+   378→      const data = await res.json();
+   379→      if (!res.ok) throw new Error(data?.error || "Request failed");
+   380→      setForgotSent(true);
+   381→      // Dev convenience: pre-fill the reset-token field so the tester can move
+   382→      // straight to the reset step without manually copying.
+   383→      if (data?.devResetToken) {
+   384→        setResetToken(data.devResetToken);
+   385→        toast.info("Dev mode: reset token auto-filled");
+   386→      } else {
+   387→        toast.success("If the email exists, a reset link has been sent.");
+   388→      }
+   389→    } catch (err) {
+   390→      toast.error(err instanceof Error ? err.message : "Request failed");
+   391→    } finally {
+   392→      setLoading(false);
+   393→    }
+   394→  }
+   395→
+   396→  async function handleReset(e: React.FormEvent) {
+   397→    e.preventDefault();
+   398→    if (loading) return;
+   399→    if (!resetToken) return toast.error("Reset token is required");
+   400→    if (newPassword.length < 8) return toast.error("Password must be at least 8 characters");
+   401→    if (!/[A-Za-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+   402→      return toast.error("Password must contain a letter and a number");
+   403→    }
+   404→
+   405→    setLoading(true);
+   406→    try {
+   407→      const res = await fetch("/api/auth/reset-password", {
+   408→        method: "POST",
+   409→        headers: { "Content-Type": "application/json" },
+   410→        body: JSON.stringify({ token: resetToken, newPassword }),
+   411→      });
+   412→      const data = await res.json();
+   413→      if (!res.ok) throw new Error(data?.error || "Reset failed");
+   414→      setResetDone(true);
+   415→      toast.success("Password reset. Please log in.");
+   416→    } catch (err) {
+   417→      toast.error(err instanceof Error ? err.message : "Reset failed");
+   418→    } finally {
+   419→      setLoading(false);
+   420→    }
+   421→  }
+   422→
+   423→  // -------------------------------------------------------------------------
+   424→  // Render
+   425→  // -------------------------------------------------------------------------
+   426→  return (
+   427→    <>
+   428→    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+   429→      <DialogContent
+   430→        showCloseButton
+   431→        className="max-w-md gap-0 overflow-hidden p-0 sm:rounded-2xl [&>button]:top-3 [&>button]:right-3 [&>button]:z-30"
+   432→      >
+   433→        <DialogTitle className="sr-only">
+   434→          {flow === "forgot"
+   435→            ? "Reset password"
+   436→            : flow === "reset"
+   437→              ? "Set new password"
+   438→              : flow === "2fa"
+   439→                ? "Two-factor verification"
+   440→                : tab === "login"
+   441→                  ? "Sign in to GaexPay"
+   442→                  : "Create your GaexPay account"}
+   443→        </DialogTitle>
+   444→        <DialogDescription className="sr-only">
+   445→          GaexPay authentication — sign in or create a personal / business account.
+   446→        </DialogDescription>
+   447→
+   448→        {/* Gradient header */}
+   449→        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 px-6 pb-5 pt-6 text-white">
+   450→          <div className="absolute inset-0 opacity-30">
+   451→            <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/20 blur-2xl" />
+   452→            <div className="absolute -left-10 bottom-0 h-24 w-24 rounded-full bg-teal-300/30 blur-2xl" />
+   453→          </div>
+   454→          <div className="relative flex items-center justify-between">
+   455→            <Logo size={28} className="text-white [&_span]:text-white" />
+   456→            <div className="hidden items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-medium backdrop-blur sm:flex">
+   457→              <Shield className="h-3 w-3" /> Bank-grade security
+   458→            </div>
+   459→          </div>
+   460→          <AnimatePresence mode="wait">
+   461→            <motion.div
+   462→              key={flow + tab}
+   463→              initial={{ opacity: 0, y: 8 }}
+   464→              animate={{ opacity: 1, y: 0 }}
+   465→              exit={{ opacity: 0, y: -8 }}
+   466→              transition={{ duration: 0.2 }}
+   467→              className="relative mt-4"
+   468→            >
+   469→              <h2 className="text-xl font-bold leading-tight">
+   470→                {flow === "forgot"
+   471→                  ? "Forgot password?"
+   472→                  : flow === "reset"
+   473→                    ? "Set a new password"
+   474→                    : flow === "2fa"
+   475→                      ? "Two-factor verification"
+   476→                      : tab === "login"
+   477→                        ? "Welcome back"
+   478→                        : "Create your account"}
+   479→              </h2>
+   480→              <p className="mt-1 text-xs text-white/80">
+   481→                {flow === "forgot"
+   482→                  ? "Enter your email and we'll send you a reset link."
+   483→                  : flow === "reset"
+   484→                    ? "Enter your reset token and a new password."
+   485→                    : flow === "2fa"
+   486→                      ? "Enter the code from your authenticator app to continue."
+   487→                      : tab === "login"
+   488→                        ? "Sign in to access your wallets, cards and transfers."
+   489→                        : "Join 50K+ users banking borderless on Africa."}
+   490→              </p>
+   491→            </motion.div>
+   492→          </AnimatePresence>
+   493→        </div>
+   494→
+   495→        {/* Body */}
+   496→        <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
+   497→          {/* ---------- 2FA flow ---------- */}
+   498→          {flow === "2fa" && (
+   499→            <form onSubmit={handleVerify2FA} className="space-y-4">
+   500→              <div className="flex items-start gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3.5 text-sm">
+   501→                <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+   502→                <div>
+   503→                  <p className="font-medium text-foreground">Two-factor required</p>
+   504→                  <p className="mt-0.5 text-xs text-muted-foreground">
+   505→                    Enter the 6-digit code from your authenticator app for{" "}
+   506→                    <span className="font-medium">{twoFAEmail || "your account"}</span>.
+   507→                    Lost your device? Use a recovery code instead.
+   508→                  </p>
+   509→                </div>
+   510→              </div>
+   511→
+   512→              <div className="flex gap-1">
+   513→                <button
+   514→                  type="button"
+   515→                  onClick={() => { setTwoFAMode("totp"); setTwoFACode(""); }}
+   516→                  className={cn(
+   517→                    "flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+   518→                    twoFAMode === "totp"
+   519→                      ? "bg-primary text-primary-foreground"
+   520→                      : "bg-muted text-muted-foreground hover:bg-muted/70",
+   521→                  )}
+   522→                >
+   523→                  Authenticator code
+   524→                </button>
+   525→                <button
+   526→                  type="button"
+   527→                  onClick={() => { setTwoFAMode("recovery"); setTwoFACode(""); }}
+   528→                  className={cn(
+   529→                    "flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+   530→                    twoFAMode === "recovery"
+   531→                      ? "bg-primary text-primary-foreground"
+   532→                      : "bg-muted text-muted-foreground hover:bg-muted/70",
+   533→                  )}
+   534→                >
+   535→                  Recovery code
+   536→                </button>
+   537→              </div>
+   538→
+   539→              <div className="space-y-1.5">
+   540→                <Label className="text-xs font-medium text-muted-foreground">
+   541→                  {twoFAMode === "totp"
+   542→                    ? "6-digit verification code"
+   543→                    : "Recovery code (XXXX-XXXX-XXXX)"}
+   544→                </Label>
+   545→                <Input
+   546→                  type="text"
+   547→                  inputMode={twoFAMode === "totp" ? "numeric" : "text"}
+   548→                  pattern={twoFAMode === "totp" ? "\\d{6}" : "[A-Z0-9-]{14}"}
+   549→                  maxLength={twoFAMode === "totp" ? 6 : 14}
+   550→                  placeholder={twoFAMode === "totp" ? "123456" : "ABCD-1234-EF56"}
+   551→                  value={twoFACode}
+   552→                  autoFocus
+   553→                  onChange={(e) => {
+   554→                    const v =
+   555→                      twoFAMode === "totp"
+   556→                        ? e.target.value.replace(/\D/g, "")
+   557→                        : e.target.value.toUpperCase();
+   558→                    setTwoFACode(v);
+   559→                  }}
+   560→                  className={cn(
+   561→                    "h-11 rounded-lg text-center font-mono",
+   562→                    twoFAMode === "totp"
+   563→                      ? "text-lg tracking-[0.4em]"
+   564→                      : "text-sm tracking-wide",
+   565→                  )}
+   566→                  required
+   567→                />
+   568→              </div>
+   569→
+   570→              <Button
+   571→                type="submit"
+   572→                disabled={loading || (twoFAMode === "totp" ? twoFACode.length !== 6 : !twoFACode.trim())}
+   573→                className="h-11 w-full rounded-lg"
+   574→              >
+   575→                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+   576→                Verify & Continue <ArrowRight className="ml-1 h-4 w-4" />
+   577→              </Button>
+   578→
+   579→              <button
+   580→                type="button"
+   581→                onClick={handleBackToLogin}
+   582→                className="w-full text-center text-xs text-muted-foreground transition hover:text-foreground"
+   583→              >
+   584→                ← Back to sign in
+   585→              </button>
+   586→            </form>
+   587→          )}
+   588→
+   589→          {/* ---------- FORGOT / RESET flows ---------- */}
+   590→          {flow === "forgot" && (
+   591→            <form onSubmit={handleForgot} className="space-y-4">
+   592→              {!forgotSent ? (
+   593→                <>
+   594→                  <Field
+   595→                    label="Email address"
+   596→                    icon={Mail}
+   597→                    type="email"
+   598→                    autoComplete="email"
+   599→                    placeholder="you@example.com"
+   600→                    value={forgotEmail}
+   601→                    onChange={(e) => setForgotEmail(e.target.value)}
+   602→                    required
+   603→                  />
+   604→                  <Button type="submit" disabled={loading} className="h-11 w-full rounded-lg">
+   605→                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+   606→                    Send reset link
+   607→                  </Button>
+   608→                </>
+   609→              ) : (
+   610→                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm">
+   611→                  <div className="flex items-start gap-2">
+   612→                    <Mail className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+   613→                    <div>
+   614→                      <p className="font-medium text-foreground">Check your inbox</p>
+   615→                      <p className="mt-0.5 text-xs text-muted-foreground">
+   616→                        If an account exists for <span className="font-medium">{forgotEmail}</span>, a reset link has been sent.
+   617→                        The link expires in 1 hour.
+   618→                      </p>
+   619→                    </div>
+   620→                  </div>
+   621→                </div>
+   622→              )}
+   623→              <button
+   624→                type="button"
+   625→                onClick={() => { setFlow("auth"); setForgotSent(false); }}
+   626→                className="w-full text-center text-xs text-muted-foreground transition hover:text-foreground"
+   627→              >
+   628→                ← Back to sign in
+   629→              </button>
+   630→            </form>
+   631→          )}
+   632→
+   633→          {flow === "reset" && (
+   634→            <form onSubmit={handleReset} className="space-y-4">
+   635→              {!resetDone ? (
+   636→                <>
+   637→                  <Field
+   638→                    label="Reset token"
+   639→                    icon={Lock}
+   640→                    placeholder="Paste your reset token"
+   641→                    value={resetToken}
+   642→                    onChange={(e) => setResetToken(e.target.value)}
+   643→                    required
+   644→                  />
+   645→                  <div className="space-y-1.5">
+   646→                    <Label className="text-xs font-medium text-muted-foreground">New password</Label>
+   647→                    <div className="relative">
+   648→                      <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+   649→                      <Input
+   650→                        type={showPassword ? "text" : "password"}
+   651→                        value={newPassword}
+   652→                        onChange={(e) => setNewPassword(e.target.value)}
+   653→                        className="h-11 rounded-lg pl-9 pr-9 text-sm"
+   654→                        required
+   655→                      />
+   656→                      <button
+   657→                        type="button"
+   658→                        onClick={() => setShowPassword((s) => !s)}
+   659→                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition hover:bg-muted"
+   660→                        aria-label={showPassword ? "Hide password" : "Show password"}
+   661→                      >
+   662→                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+   663→                      </button>
+   664→                    </div>
+   665→                  </div>
+   666→                  <Button type="submit" disabled={loading} className="h-11 w-full rounded-lg">
+   667→                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+   668→                    Reset password
+   669→                  </Button>
+   670→                </>
+   671→              ) : (
+   672→                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm">
+   673→                  <div className="flex items-start gap-2">
+   674→                    <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+   675→                    <div>
+   676→                      <p className="font-medium text-foreground">Password reset</p>
+   677→                      <p className="mt-0.5 text-xs text-muted-foreground">
+   678→                        Your password has been updated. Please log in with your new password.
+   679→                      </p>
+   680→                    </div>
+   681→                  </div>
+   682→                </div>
+   683→              )}
+   684→              <button
+   685→                type="button"
+   686→                onClick={() => { setFlow("auth"); setResetDone(false); setTab("login"); }}
+   687→                className="w-full text-center text-xs text-muted-foreground transition hover:text-foreground"
+   688→              >
+   689→                ← Back to sign in
+   690→              </button>
+   691→            </form>
+   692→          )}
+   693→
+   694→          {/* ---------- AUTH (login + signup tabs) ---------- */}
+   695→          {flow === "auth" && (
+   696→            <Tabs value={tab} onValueChange={(v) => setTab(v as Mode)} className="w-full">
+   697→              <TabsList className="grid h-10 w-full grid-cols-2 rounded-lg">
+   698→                <TabsTrigger value="login" className="rounded-md text-sm">Sign In</TabsTrigger>
+   699→                <TabsTrigger value="signup" className="rounded-md text-sm">Create Account</TabsTrigger>
+   700→              </TabsList>
+   701→
+   702→              {/* ---------------- SIGN IN ---------------- */}
+   703→              <TabsContent value="login" className="mt-5">
+   704→                <form onSubmit={handleLogin} className="space-y-4">
+   705→                  <Field
+   706→                    label="Email"
+   707→                    icon={Mail}
+   708→                    type="email"
+   709→                    autoComplete="email"
+   710→                    placeholder="you@example.com"
+   711→                    value={loginEmail}
+   712→                    onChange={(e) => setLoginEmail(e.target.value)}
+   713→                    required
+   714→                  />
+   715→                  <div className="space-y-1.5">
+   716→                    <div className="flex items-center justify-between">
+   717→                      <Label className="text-xs font-medium text-muted-foreground">Password</Label>
+   718→                      <button
+   719→                        type="button"
+   720→                        onClick={() => { setFlow("forgot"); setForgotEmail(loginEmail); }}
+   721→                        className="text-[11px] font-medium text-primary transition hover:underline"
+   722→                      >
+   723→                        Forgot password?
+   724→                      </button>
+   725→                    </div>
+   726→                    <div className="relative">
+   727→                      <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+   728→                      <Input
+   729→                        type={showPassword ? "text" : "password"}
+   730→                        autoComplete="current-password"
+   731→                        value={loginPassword}
+   732→                        onChange={(e) => setLoginPassword(e.target.value)}
+   733→                        className="h-11 rounded-lg pl-9 pr-9 text-sm"
+   734→                        placeholder="••••••••"
+   735→                        required
+   736→                      />
+   737→                      <button
+   738→                        type="button"
+   739→                        onClick={() => setShowPassword((s) => !s)}
+   740→                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition hover:bg-muted"
+   741→                        aria-label={showPassword ? "Hide password" : "Show password"}
+   742→                      >
+   743→                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+   744→                      </button>
+   745→                    </div>
+   746→                  </div>
+   747→                  <Button type="submit" disabled={loading} className="h-11 w-full rounded-lg">
+   748→                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+   749→                    Sign In <ArrowRight className="ml-1 h-4 w-4" />
+   750→                  </Button>
+   751→
+   752→                  <div className="relative my-1">
+   753→                    <div className="absolute inset-0 flex items-center">
+   754→                      <div className="w-full border-t border-border" />
+   755→                    </div>
+   756→                    <div className="relative flex justify-center">
+   757→                      <span className="bg-background px-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+   758→                        or
+   759→                      </span>
+   760→                    </div>
+   761→                  </div>
+   762→
+   763→                  <Button
+   764→                    type="button"
+   765→                    variant="outline"
+   766→                    onClick={handleDemo}
+   767→                    disabled={loading}
+   768→                    className="h-11 w-full rounded-lg"
+   769→                  >
+   770→                    <Sparkles className="mr-2 h-4 w-4 text-primary" />
+   771→                    Try Demo Account
+   772→                  </Button>
+   773→                </form>
+   774→              </TabsContent>
+   775→
+   776→              {/* ---------------- SIGN UP ---------------- */}
+   777→              <TabsContent value="signup" className="mt-5">
+   778→                <form onSubmit={handleSignup} className="space-y-4">
+   779→                  {/* Account type selector */}
+   780→                  <div className="space-y-2">
+   781→                    <Label className="text-xs font-medium text-muted-foreground">Account type</Label>
+   782→                    <div className="flex gap-2.5">
+   783→                      <AccountTypeCard
+   784→                        selected={accountType === "personal"}
+   785→                        onClick={() => setAccountType("personal")}
+   786→                        icon={User}
+   787→                        title="Compte Personnel"
+   788→                        subtitle="For individuals — send, save, spend."
+   789→                      />
+   790→                      <AccountTypeCard
+   791→                        selected={accountType === "business"}
+   792→                        onClick={() => setAccountType("business")}
+   793→                        icon={Building2}
+   794→                        title="Compte Entreprise"
+   795→                        subtitle="For businesses — payouts, KYB, team."
+   796→                      />
+   797→                    </div>
+   798→                  </div>
+   799→
+   800→                  {/* Business-only field */}
+   801→                  <AnimatePresence initial={false}>
+   802→                    {accountType === "business" && (
+   803→                      <motion.div
+   804→                        initial={{ opacity: 0, height: 0 }}
+   805→                        animate={{ opacity: 1, height: "auto" }}
+   806→                        exit={{ opacity: 0, height: 0 }}
+   807→                        transition={{ duration: 0.2 }}
+   808→                        className="overflow-hidden"
+   809→                      >
+   810→                        <Field
+   811→                          label="Company name"
+   812→                          icon={Building2}
+   813→                          placeholder="Acme Inc."
+   814→                          value={companyName}
+   815→                          onChange={(e) => setCompanyName(e.target.value)}
+   816→                          required
+   817→                        />
+   818→                      </motion.div>
+   819→                    )}
+   820→                  </AnimatePresence>
+   821→
+   822→                  {/* Names */}
+   823→                  <div className="grid grid-cols-2 gap-3">
+   824→                    <Field
+   825→                      label="First name"
+   826→                      icon={User}
+   827→                      placeholder="Adaeze"
+   828→                      value={firstName}
+   829→                      onChange={(e) => setFirstName(e.target.value)}
+   830→                      required
+   831→                    />
+   832→                    <Field
+   833→                      label="Last name"
+   834→                      icon={User}
+   835→                      placeholder="Okonkwo"
+   836→                      value={lastName}
+   837→                      onChange={(e) => setLastName(e.target.value)}
+   838→                      required
+   839→                    />
+   840→                  </div>
+   841→
+   842→                  {/* Contact */}
+   843→                  <Field
+   844→                    label="Email"
+   845→                    icon={Mail}
+   846→                    type="email"
+   847→                    autoComplete="email"
+   848→                    placeholder="you@example.com"
+   849→                    value={email}
+   850→                    onChange={(e) => setEmail(e.target.value)}
+   851→                    required
+   852→                  />
+   853→                  <div className="grid grid-cols-2 gap-3">
+   854→                    <Field
+   855→                      label="Phone"
+   856→                      icon={Phone}
+   857→                      type="tel"
+   858→                      autoComplete="tel"
+   859→                      placeholder="+234 800 000 0000"
+   860→                      value={phone}
+   861→                      onChange={(e) => setPhone(e.target.value)}
+   862→                      required
+   863→                    />
+   864→                    <Field
+   865→                      label="Country (optional)"
+   866→                      icon={Globe2}
+   867→                      placeholder="Nigeria"
+   868→                      value={country}
+   869→                      onChange={(e) => setCountry(e.target.value)}
+   870→                    />
+   871→                    {/* Currency selector */}
+   872→                    <div className="space-y-1.5">
+   873→                      <Label className="text-xs font-medium text-muted-foreground">Primary Currency</Label>
+   874→                      <select
+   875→                        value={signupCurrency}
+   876→                        onChange={(e) => setSignupCurrency(e.target.value)}
+   877→                        className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-primary/30"
+   878→                      >
+   879→                        {CURRENCIES.map((c) => (
+   880→                          <option key={c.code} value={c.code}>
+   881→                            {c.flag} {c.code} — {c.name}
+   882→                          </option>
+   883→                        ))}
+   884→                      </select>
+   885→                    </div>
+   886→                  </div>
+   887→
+   888→                  {/* Password + strength meter */}
+   889→                  <div className="space-y-1.5">
+   890→                    <Label className="text-xs font-medium text-muted-foreground">Password</Label>
+   891→                    <div className="relative">
+   892→                      <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+   893→                      <Input
+   894→                        type={showPassword ? "text" : "password"}
+   895→                        autoComplete="new-password"
+   896→                        value={password}
+   897→                        onChange={(e) => setPassword(e.target.value)}
+   898→                        className="h-11 rounded-lg pl-9 pr-9 text-sm"
+   899→                        placeholder="Min. 8 chars, letter + number"
+   900→                        required
+   901→                      />
+   902→                      <button
+   903→                        type="button"
+   904→                        onClick={() => setShowPassword((s) => !s)}
+   905→                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition hover:bg-muted"
+   906→                        aria-label={showPassword ? "Hide password" : "Show password"}
+   907→                      >
+   908→                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+   909→                      </button>
+   910→                    </div>
+   911→                    {password && (
+   912→                      <div className="flex items-center gap-2 pt-1">
+   913→                        <div className="flex flex-1 gap-1">
+   914→                          {[1, 2, 3, 4].map((i) => (
+   915→                            <div
+   916→                              key={i}
+   917→                              className={cn(
+   918→                                "h-1 flex-1 rounded-full transition-colors",
+   919→                                i <= strength.score ? STRENGTH_COLORS[strength.score] : "bg-muted",
+   920→                              )}
+   921→                            />
+   922→                          ))}
+   923→                        </div>
+   924→                        <span className={cn("text-[10px] font-medium", STRENGTH_TEXT[strength.score])}>
+   925→                          {strength.label}
+   926→                        </span>
+   927→                      </div>
+   928→                    )}
+   929→                  </div>
+   930→
+   931→                  <div className="space-y-1.5">
+   932→                    <Label className="text-xs font-medium text-muted-foreground">Confirm password</Label>
+   933→                    <div className="relative">
+   934→                      <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+   935→                      <Input
+   936→                        type={showPassword ? "text" : "password"}
+   937→                        autoComplete="new-password"
+   938→                        value={confirmPassword}
+   939→                        onChange={(e) => setConfirmPassword(e.target.value)}
+   940→                        className="h-11 rounded-lg pl-9 pr-9 text-sm"
+   941→                        placeholder="Re-enter your password"
+   942→                        required
+   943→                      />
+   944→                    </div>
+   945→                    {confirmPassword && password !== confirmPassword && (
+   946→                      <p className="text-[10px] text-red-500">Passwords do not match</p>
+   947→                    )}
+   948→                  </div>
+   949→
+   950→                  {/* Terms & Conditions checkbox */}
+   951→                  <div className="flex items-start gap-2.5 rounded-lg border bg-muted/30 p-3">
+   952→                    <button
+   953→                      type="button"
+   954→                      onClick={() => setAgreeTerms(!agreeTerms)}
+   955→                      className={cn(
+   956→                        "mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border-2 transition",
+   957→                        agreeTerms
+   958→                          ? "border-primary bg-primary text-primary-foreground"
+   959→                          : "border-muted-foreground/30 hover:border-primary/50"
+   960→                      )}
+   961→                    >
+   962→                      {agreeTerms && <Check className="h-3 w-3" strokeWidth={3} />}
+   963→                    </button>
+   964→                    <div className="flex-1">
+   965→                      <p className="text-xs leading-relaxed text-muted-foreground">
+   966→                        I agree to GaexPay's{" "}
+   967→                        <a href="/terms" target="_blank" className="font-medium text-primary hover:underline">Terms of Service</a>,{" "}
+   968→                        <a href="/privacy" target="_blank" className="font-medium text-primary hover:underline">Privacy Policy</a>,{" "}
+   969→                        <a href="/cookies" target="_blank" className="font-medium text-primary hover:underline">Cookie Policy</a>, and{" "}
+   970→                        <a href="/licenses" target="_blank" className="font-medium text-primary hover:underline">Licenses</a>.
+   971→                        I confirm that I am at least 18 years old and the information provided is accurate.
+   972→                      </p>
+   973→                    </div>
+   974→                  </div>
+   975→
+   976→                  <Button type="submit" disabled={loading} className="h-11 w-full rounded-lg">
+   977→                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+   978→                    Create Account <ArrowRight className="ml-1 h-4 w-4" />
+   979→                  </Button>
+   980→
+   981→                  {/* Trust badges */}
+   982→                  <div className="flex items-center justify-center gap-4 pt-1 text-[10px] text-muted-foreground">
+   983→                    <span className="flex items-center gap-1"><Shield className="h-3 w-3" /> Bank-grade security</span>
+   984→                    <span className="flex items-center gap-1"><BadgeCheck className="h-3 w-3" /> 50K+ users</span>
+   985→                    <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" /> Regulated</span>
+   986→                  </div>
+   987→                </form>
+   988→              </TabsContent>
+   989→            </Tabs>
+   990→          )}
+   991→        </div>
+   992→      </DialogContent>
+   993→    </Dialog>
+   994→
+   995→    {/* Terms & Conditions acceptance popup */}
+   996→    {showTermsModal && (
+   997→      <Dialog open={showTermsModal} onOpenChange={setShowTermsModal}>
+   998→        <DialogContent className="sm:max-w-md">
+   999→          <DialogTitle className="sr-only">Terms and Conditions</DialogTitle>
+  1000→          <div className="flex flex-col items-center text-center py-4">
+  1001→            <div className="mb-4 grid h-14 w-14 place-items-center rounded-full bg-amber-500/15 text-amber-500">
+  1002→              <Shield className="h-7 w-7" />
+  1003→            </div>
+  1004→            <h2 className="text-xl font-bold">Accept Terms & Conditions</h2>
+  1005→            <p className="mt-2 text-sm text-muted-foreground">
+  1006→              To create your GaexPay account, you must accept our Terms of Service, Privacy Policy, Cookie Policy, and Licenses. Please review them before continuing.
+  1007→            </p>
+  1008→            <div className="mt-4 flex flex-wrap justify-center gap-2">
+  1009→              <a href="/terms" target="_blank" className="flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition hover:bg-muted">
+  1010→                <FileText className="h-3.5 w-3.5" /> Terms
+  1011→              </a>
+  1012→              <a href="/privacy" target="_blank" className="flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition hover:bg-muted">
+  1013→                <Shield className="h-3.5 w-3.5" /> Privacy
+  1014→              </a>
+  1015→              <a href="/cookies" target="_blank" className="flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition hover:bg-muted">
+  1016→                <FileText className="h-3.5 w-3.5" /> Cookies
+  1017→              </a>
+  1018→              <a href="/licenses" target="_blank" className="flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition hover:bg-muted">
+  1019→                <BadgeCheck className="h-3.5 w-3.5" /> Licenses
+  1020→              </a>
+  1021→            </div>
+  1022→            <div className="mt-5 flex gap-2 w-full">
+  1023→              <Button variant="outline" className="flex-1" onClick={() => setShowTermsModal(false)}>
+  1024→                Cancel
+  1025→              </Button>
+  1026→              <Button
+  1027→                className="flex-1"
+  1028→                onClick={() => {
+  1029→                  setAgreeTerms(true);
+  1030→                  setShowTermsModal(false);
+  1031→                  toast.success("Terms accepted! Click Create Account to continue.");
+  1032→                }}
+  1033→              >
+  1034→                <Check className="h-4 w-4 mr-1" /> I Accept
+  1035→              </Button>
+  1036→            </div>
+  1037→          </div>
+  1038→        </DialogContent>
+  1039→      </Dialog>
+  1040→    )}
+  1041→    </>
+  1042→  );
+  1043→}
+  1044→

@@ -1,0 +1,2002 @@
+     1→/**
+     2→ * src/lib/country-services.ts
+     3→ *
+     4→ * Comprehensive database of REAL service providers per African country,
+     5→ * organized by category. Used by GaexPay's bills/merchant directory so
+     6→ * users see the actual providers in their country/city.
+     7→ *
+     8→ * Categories:
+     9→ *   - transport         (ride-hailing, bus, intercity-bus, train, ferry)
+    10→ *   - restaurants       (fast-food, restaurant, café, chain)
+    11→ *   - supermarkets      (supermarket, hypermarket, convenience)
+    12→ *   - hospitals         (public, private, teaching, clinic)
+    13→ *   - pharmacies        (pharmacy, drug-store)
+    14→ *   - internetProviders (mobile-data, broadband, fiber, satellite)
+    15→ *   - universities      (public, private)
+    16→ *   - fuelStations      (fuel)
+    17→ *   - electricity       (electricity)
+    18→ *   - water             (water)
+    19→ *   - tv                (satellite-tv, cable-tv, streaming)
+    20→ *   - insurance         (insurance)
+    21→ *   - government        (tax, social-security, customs)
+    22→ *
+    23→ * Pricing is approximate (public list prices at time of writing) and is
+    24→ * intended for representative display in the GaexPay demo. Always confirm
+    25→ * the current price with the provider before paying.
+    26→ */
+    27→
+    28→// ----- Shared types -------------------------------------------------------
+    29→
+    30→export interface CityProvider {
+    31→  name: string;
+    32→  type: string;
+    33→  cities: string[];
+    34→}
+    35→
+    36→export interface PlanProvider {
+    37→  name: string;
+    38→  type: string;
+    39→  plans: { name: string; price: number; currency: string }[];
+    40→}
+    41→
+    42→export interface UniversityProvider {
+    43→  name: string;
+    44→  type: string;
+    45→  city: string;
+    46→  tuitionRange: string;
+    47→}
+    48→
+    49→export interface CoverageProvider {
+    50→  name: string;
+    51→  type: string;
+    52→  coverage: string;
+    53→}
+    54→
+    55→export interface PackageProvider {
+    56→  name: string;
+    57→  type: string;
+    58→  packages: { name: string; price: number; currency: string }[];
+    59→}
+    60→
+    61→export interface ServiceListProvider {
+    62→  name: string;
+    63→  type: string;
+    64→  services: string[];
+    65→}
+    66→
+    67→export interface CountryServices {
+    68→  transport: CityProvider[];
+    69→  restaurants: CityProvider[];
+    70→  supermarkets: CityProvider[];
+    71→  hospitals: CityProvider[];
+    72→  pharmacies: CityProvider[];
+    73→  internetProviders: PlanProvider[];
+    74→  universities: UniversityProvider[];
+    75→  fuelStations: CityProvider[];
+    76→  electricity: CoverageProvider[];
+    77→  water: CoverageProvider[];
+    78→  tv: PackageProvider[];
+    79→  insurance: ServiceListProvider[];
+    80→  government: ServiceListProvider[];
+    81→}
+    82→
+    83→export const SERVICE_CATEGORIES = [
+    84→  "transport",
+    85→  "restaurants",
+    86→  "supermarkets",
+    87→  "hospitals",
+    88→  "pharmacies",
+    89→  "internetProviders",
+    90→  "universities",
+    91→  "fuelStations",
+    92→  "electricity",
+    93→  "water",
+    94→  "tv",
+    95→  "insurance",
+    96→  "government",
+    97→] as const;
+    98→
+    99→export type ServiceCategory = (typeof SERVICE_CATEGORIES)[number];
+   100→
+   101→// ----- Country data -------------------------------------------------------
+   102→
+   103→export const COUNTRY_SERVICES: Record<string, CountryServices> = {
+   104→  // ========================================================================
+   105→  // NG — Nigeria
+   106→  // ========================================================================
+   107→  NG: {
+   108→    transport: [
+   109→      { name: "Uber", type: "ride-hailing", cities: ["Lagos", "Abuja", "Port Harcourt", "Ibadan", "Benin City"] },
+   110→      { name: "Bolt", type: "ride-hailing", cities: ["Lagos", "Abuja", "Port Harcourt", "Ibadan", "Kano", "Benin City"] },
+   111→      { name: "LagRide", type: "ride-hailing", cities: ["Lagos"] },
+   112→      { name: "Lagos BRT", type: "bus", cities: ["Lagos"] },
+   113→      { name: "God is Good Motors (GIGM)", type: "intercity-bus", cities: ["Lagos", "Abuja", "Port Harcourt", "Enugu", "Benin City"] },
+   114→      { name: "ABC Transport", type: "intercity-bus", cities: ["Lagos", "Abuja", "Port Harcourt", "Enugu"] },
+   115→      { name: "GUO Transport", type: "intercity-bus", cities: ["Lagos", "Abuja", "Port Harcourt"] },
+   116→    ],
+   117→    restaurants: [
+   118→      { name: "Chicken Republic", type: "fast-food", cities: ["Lagos", "Abuja", "Port Harcourt", "Ibadan"] },
+   119→      { name: "The Place", type: "restaurant", cities: ["Lagos", "Abuja"] },
+   120→      { name: "Kilimanjaro", type: "fast-food", cities: ["Lagos", "Abuja", "Port Harcourt"] },
+   121→      { name: "Mr Biggs", type: "fast-food", cities: ["Lagos", "Abuja", "Port Harcourt", "Ibadan", "Benin City"] },
+   122→      { name: "Tastee Fried Chicken", type: "fast-food", cities: ["Lagos", "Abuja"] },
+   123→      { name: "Domino's Pizza Nigeria", type: "fast-food", cities: ["Lagos", "Abuja"] },
+   124→    ],
+   125→    supermarkets: [
+   126→      { name: "Shoprite Nigeria", type: "supermarket", cities: ["Lagos", "Abuja", "Port Harcourt", "Ibadan"] },
+   127→      { name: "Spar Nigeria", type: "supermarket", cities: ["Lagos", "Abuja"] },
+   128→      { name: "Justrite Superstores", type: "supermarket", cities: ["Lagos"] },
+   129→      { name: "Hubmart", type: "supermarket", cities: ["Lagos"] },
+   130→      { name: "Ebeano Supermarket", type: "supermarket", cities: ["Lagos"] },
+   131→      { name: "Addide", type: "supermarket", cities: ["Lagos"] },
+   132→    ],
+   133→    hospitals: [
+   134→      { name: "Lagos University Teaching Hospital (LUTH)", type: "public", cities: ["Lagos"] },
+   135→      { name: "Reddington Hospital", type: "private", cities: ["Lagos", "Abuja"] },
+   136→      { name: "Eko Hospital", type: "private", cities: ["Lagos"] },
+   137→      { name: "Cedarcrest Hospital", type: "private", cities: ["Abuja"] },
+   138→      { name: "St Nicholas Hospital", type: "private", cities: ["Lagos"] },
+   139→      { name: "National Hospital Abuja", type: "public", cities: ["Abuja"] },
+   140→    ],
+   141→    pharmacies: [
+   142→      { name: "HealthPlus", type: "pharmacy", cities: ["Lagos", "Abuja", "Port Harcourt"] },
+   143→      { name: "MedPlus", type: "pharmacy", cities: ["Lagos", "Abuja"] },
+   144→      { name: "Alpha Pharmacy", type: "pharmacy", cities: ["Lagos"] },
+   145→      { name: "Rx Pharmacy", type: "pharmacy", cities: ["Lagos", "Abuja"] },
+   146→    ],
+   147→    internetProviders: [
+   148→      {
+   149→        name: "MTN Nigeria",
+   150→        type: "mobile-data",
+   151→        plans: [
+   152→          { name: "Daily 100MB", price: 100, currency: "NGN" },
+   153→          { name: "Weekly 1GB", price: 500, currency: "NGN" },
+   154→          { name: "Monthly 10GB", price: 5000, currency: "NGN" },
+   155→          { name: "Monthly 75GB", price: 15000, currency: "NGN" },
+   156→          { name: "Monthly 120GB", price: 20000, currency: "NGN" },
+   157→        ],
+   158→      },
+   159→      {
+   160→        name: "Airtel Nigeria",
+   161→        type: "mobile-data",
+   162→        plans: [
+   163→          { name: "Daily 100MB", price: 100, currency: "NGN" },
+   164→          { name: "Weekly 1.5GB", price: 500, currency: "NGN" },
+   165→          { name: "Monthly 10GB", price: 5000, currency: "NGN" },
+   166→          { name: "Monthly 40GB", price: 9999, currency: "NGN" },
+   167→          { name: "Monthly 120GB", price: 19500, currency: "NGN" },
+   168→        ],
+   169→      },
+   170→      {
+   171→        name: "Glo (Globacom)",
+   172→        type: "mobile-data",
+   173→        plans: [
+   174→          { name: "Daily 100MB", price: 100, currency: "NGN" },
+   175→          { name: "Weekly 2.7GB", price: 500, currency: "NGN" },
+   176→          { name: "Monthly 10GB", price: 4999, currency: "NGN" },
+   177→          { name: "Monthly 93.9GB", price: 19900, currency: "NGN" },
+   178→        ],
+   179→      },
+   180→      {
+   181→        name: "9mobile",
+   182→        type: "mobile-data",
+   183→        plans: [
+   184→          { name: "Daily 100MB", price: 100, currency: "NGN" },
+   185→          { name: "Monthly 11GB", price: 5000, currency: "NGN" },
+   186→          { name: "Monthly 75GB", price: 18000, currency: "NGN" },
+   187→        ],
+   188→      },
+   189→      {
+   190→        name: "Spectranet",
+   191→        type: "broadband",
+   192→        plans: [
+   193→          { name: "Easy 15GB", price: 7000, currency: "NGN" },
+   194→          { name: "Easy 50GB", price: 18500, currency: "NGN" },
+   195→          { name: "Unlimited Lite", price: 18000, currency: "NGN" },
+   196→          { name: "Unlimited Premium", price: 40000, currency: "NGN" },
+   197→        ],
+   198→      },
+   199→      {
+   200→        name: "Smile Communications",
+   201→        type: "broadband",
+   202→        plans: [
+   203→          { name: "Anytime 5GB", price: 4200, currency: "NGN" },
+   204→          { name: "Anytime 21GB", price: 12000, currency: "NGN" },
+   205→          { name: "Unlimited Premium", price: 27500, currency: "NGN" },
+   206→        ],
+   207→      },
+   208→      {
+   209→        name: "Starlink Nigeria",
+   210→        type: "satellite",
+   211→        plans: [
+   212→          { name: "Standard", price: 38000, currency: "NGN" },
+   213→          { name: "Standard Lite", price: 29000, currency: "NGN" },
+   214→        ],
+   215→      },
+   216→    ],
+   217→    universities: [
+   218→      { name: "University of Lagos (UNILAG)", type: "public", city: "Lagos", tuitionRange: "₦50,000 – ₦100,000/yr" },
+   219→      { name: "University of Nigeria, Nsukka (UNN)", type: "public", city: "Enugu", tuitionRange: "₦60,000 – ₦120,000/yr" },
+   220→      { name: "Covenant University", type: "private", city: "Ota", tuitionRange: "₦900,000 – ₦1,500,000/yr" },
+   221→      { name: "Obafemi Awolowo University (OAU)", type: "public", city: "Ile-Ife", tuitionRange: "₦60,000 – ₦120,000/yr" },
+   222→      { name: "University of Ibadan (UI)", type: "public", city: "Ibadan", tuitionRange: "₦50,000 – ₦100,000/yr" },
+   223→      { name: "Babcock University", type: "private", city: "Ilishan-Remo", tuitionRange: "₦600,000 – ₦1,200,000/yr" },
+   224→    ],
+   225→    fuelStations: [
+   226→      { name: "NNPC Retail", type: "fuel", cities: ["All cities"] },
+   227→      { name: "TotalEnergies Nigeria", type: "fuel", cities: ["All cities"] },
+   228→      { name: "Oando", type: "fuel", cities: ["All cities"] },
+   229→      { name: "Conoil", type: "fuel", cities: ["Lagos", "Abuja", "Port Harcourt"] },
+   230→      { name: "MRS Oil Nigeria", type: "fuel", cities: ["Lagos", "Abuja"] },
+   231→      { name: "Fort Oil (Ardova)", type: "fuel", cities: ["Lagos", "Abuja"] },
+   232→    ],
+   233→    electricity: [
+   234→      { name: "Ikeja Electric (IKEDC)", type: "electricity", coverage: "Lagos (Ikeja axis)" },
+   235→      { name: "Eko Electric (EKEDC)", type: "electricity", coverage: "Lagos (Eko axis)" },
+   236→      { name: "Abuja Electricity Distribution (AEDC)", type: "electricity", coverage: "Abuja, Kogi, Nasarawa, Niger" },
+   237→      { name: "Ibadan Electricity Distribution (IBEDC)", type: "electricity", coverage: "Ibadan, Oyo, Ogun, Osun" },
+   238→      { name: "Port Harcourt Electricity Distribution (PHED)", type: "electricity", coverage: "Port Harcourt, Rivers, Bayelsa" },
+   239→      { name: "Kano Electricity Distribution (KEDCO)", type: "electricity", coverage: "Kano, Katsina, Jigawa" },
+   240→    ],
+   241→    water: [
+   242→      { name: "Lagos Water Corporation", type: "water", coverage: "Lagos" },
+   243→      { name: "Abuja Water Board", type: "water", coverage: "Abuja" },
+   244→    ],
+   245→    tv: [
+   246→      {
+   247→        name: "DStv Nigeria",
+   248→        type: "satellite-tv",
+   249→        packages: [
+   250→          { name: "DStv Padi", price: 4400, currency: "NGN" },
+   251→          { name: "DStv Yanga", price: 6000, currency: "NGN" },
+   252→          { name: "DStv Compact", price: 12500, currency: "NGN" },
+   253→          { name: "DStv Compact Plus", price: 19700, currency: "NGN" },
+   254→          { name: "DStv Premium", price: 37500, currency: "NGN" },
+   255→        ],
+   256→      },
+   257→      {
+   258→        name: "GOtv Nigeria",
+   259→        type: "satellite-tv",
+   260→        packages: [
+   261→          { name: "GOtv Smallie", price: 1900, currency: "NGN" },
+   262→          { name: "GOtv Jinja", price: 3900, currency: "NGN" },
+   263→          { name: "GOtv Jolli", price: 5600, currency: "NGN" },
+   264→          { name: "GOtv Max", price: 8500, currency: "NGN" },
+   265→          { name: "GOtv Supa", price: 11000, currency: "NGN" },
+   266→        ],
+   267→      },
+   268→      {
+   269→        name: "StarTimes Nigeria",
+   270→        type: "satellite-tv",
+   271→        packages: [
+   272→          { name: "Nova", price: 1900, currency: "NGN" },
+   273→          { name: "Basic", price: 3700, currency: "NGN" },
+   274→          { name: "Smart", price: 5800, currency: "NGN" },
+   275→          { name: "Super", price: 9300, currency: "NGN" },
+   276→        ],
+   277→      },
+   278→    ],
+   279→    insurance: [
+   280→      { name: "AXA Mansard", type: "insurance", services: ["Health", "Auto", "Life", "Investments"] },
+   281→      { name: "Leadway Assurance", type: "insurance", services: ["Health", "Auto", "Life", "Property", "Travel"] },
+   282→      { name: "AIICO Insurance", type: "insurance", services: ["Health", "Auto", "Life", "Annuity"] },
+   283→      { name: "Cornerstone Insurance", type: "insurance", services: ["Auto", "Health", "Property"] },
+   284→    ],
+   285→    government: [
+   286→      { name: "FIRS (Federal Inland Revenue Service)", type: "tax", services: ["Income Tax", "VAT", "Withholding Tax", "Company Tax"] },
+   287→      { name: "LIRS (Lagos Internal Revenue Service)", type: "tax", services: ["Personal Income Tax", "Land Use Charge", "Withholding Tax"] },
+   288→      { name: "JAMB", type: "exam", services: ["UTME", "Direct Entry"] },
+   289→      { name: "WAEC", type: "exam", services: ["WASSCE"] },
+   290→    ],
+   291→  },
+   292→
+   293→  // ========================================================================
+   294→  // GH — Ghana
+   295→  // ========================================================================
+   296→  GH: {
+   297→    transport: [
+   298→      { name: "Uber", type: "ride-hailing", cities: ["Accra", "Kumasi", "Takoradi"] },
+   299→      { name: "Bolt", type: "ride-hailing", cities: ["Accra", "Kumasi", "Takoradi", "Tamale"] },
+   300→      { name: "Yango", type: "ride-hailing", cities: ["Accra", "Kumasi"] },
+   301→      { name: "Metro Mass Transit", type: "bus", cities: ["Accra", "Kumasi", "Tamale", "Takoradi"] },
+   302→      { name: "STC (State Transport Corporation)", type: "intercity-bus", cities: ["Accra", "Kumasi", "Takoradi", "Tamale"] },
+   303→      { name: "VIP JEOUN", type: "intercity-bus", cities: ["Accra", "Kumasi", "Takoradi"] },
+   304→    ],
+   305→    restaurants: [
+   306→      { name: "Papaye Fast Food", type: "fast-food", cities: ["Accra"] },
+   307→      { name: "KFC Ghana", type: "fast-food", cities: ["Accra", "Kumasi", "Takoradi"] },
+   308→      { name: "Barcelos", type: "fast-food", cities: ["Accra", "Kumasi"] },
+   309→      { name: "Chicken Inn", type: "fast-food", cities: ["Accra", "Kumasi"] },
+   310→      { name: "Pizza Hut Ghana", type: "fast-food", cities: ["Accra"] },
+   311→    ],
+   312→    supermarkets: [
+   313→      { name: "Melcom", type: "supermarket", cities: ["Accra", "Kumasi", "Takoradi", "Tamale"] },
+   314→      { name: "MaxMart", type: "supermarket", cities: ["Accra"] },
+   315→      { name: "Shoprite Ghana", type: "supermarket", cities: ["Accra", "Kumasi"] },
+   316→      { name: "Palace Supermarket", type: "supermarket", cities: ["Accra"] },
+   317→      { name: "Koala Supermarket", type: "supermarket", cities: ["Accra"] },
+   318→    ],
+   319→    hospitals: [
+   320→      { name: "Korle Bu Teaching Hospital", type: "public", cities: ["Accra"] },
+   321→      { name: "Komfo Anokye Teaching Hospital", type: "public", cities: ["Kumasi"] },
+   322→      { name: "37 Military Hospital", type: "public", cities: ["Accra"] },
+   323→      { name: "Nyaho Medical Centre", type: "private", cities: ["Accra"] },
+   324→      { name: "Trust Hospital", type: "private", cities: ["Accra"] },
+   325→    ],
+   326→    pharmacies: [
+   327→      { name: "Ernest Chemist", type: "pharmacy", cities: ["Accra", "Kumasi", "Takoradi"] },
+   328→      { name: "Top Up Pharmacy", type: "pharmacy", cities: ["Accra", "Kumasi"] },
+   329→      { name: "Omega Pharmacy", type: "pharmacy", cities: ["Accra"] },
+   330→      { name: "Bester Pharmacy", type: "pharmacy", cities: ["Accra", "Kumasi"] },
+   331→    ],
+   332→    internetProviders: [
+   333→      {
+   334→        name: "MTN Ghana",
+   335→        type: "mobile-data",
+   336→        plans: [
+   337→          { name: "Daily 1GB", price: 5, currency: "GHS" },
+   338→          { name: "Weekly 5GB", price: 25, currency: "GHS" },
+   339→          { name: "Monthly 18GB", price: 100, currency: "GHS" },
+   340→          { name: "Monthly 50GB", price: 200, currency: "GHS" },
+   341→          { name: "Monthly 110GB", price: 350, currency: "GHS" },
+   342→        ],
+   343→      },
+   344→      {
+   345→        name: "Telecel Ghana (ex-Vodafone)",
+   346→        type: "mobile-data",
+   347→        plans: [
+   348→          { name: "Daily 1.5GB", price: 5, currency: "GHS" },
+   349→          { name: "Weekly 6GB", price: 20, currency: "GHS" },
+   350→          { name: "Monthly 30GB", price: 150, currency: "GHS" },
+   351→          { name: "Monthly 120GB", price: 350, currency: "GHS" },
+   352→        ],
+   353→      },
+   354→      {
+   355→        name: "AirtelTigo",
+   356→        type: "mobile-data",
+   357→        plans: [
+   358→          { name: "Daily 1GB", price: 5, currency: "GHS" },
+   359→          { name: "Weekly 6GB", price: 25, currency: "GHS" },
+   360→          { name: "Monthly 22GB", price: 100, currency: "GHS" },
+   361→        ],
+   362→      },
+   363→      {
+   364→        name: "Surfline Communications",
+   365→        type: "broadband",
+   366→        plans: [
+   367→          { name: "Home 25GB", price: 120, currency: "GHS" },
+   368→          { name: "Home 60GB", price: 250, currency: "GHS" },
+   369→          { name: "Unlimited", price: 350, currency: "GHS" },
+   370→        ],
+   371→      },
+   372→      {
+   373→        name: "Vodafone Fixed Broadband",
+   374→        type: "broadband",
+   375→        plans: [
+   376→          { name: "Fibre 15Mbps", price: 199, currency: "GHS" },
+   377→          { name: "Fibre 30Mbps", price: 299, currency: "GHS" },
+   378→          { name: "Fibre 60Mbps", price: 449, currency: "GHS" },
+   379→        ],
+   380→      },
+   381→    ],
+   382→    universities: [
+   383→      { name: "University of Ghana (Legon)", type: "public", city: "Accra", tuitionRange: "GH₵2,000 – GH₵6,000/yr" },
+   384→      { name: "Kwame Nkrumah University of Science and Technology (KNUST)", type: "public", city: "Kumasi", tuitionRange: "GH₵2,500 – GH₵7,000/yr" },
+   385→      { name: "University of Cape Coast (UCC)", type: "public", city: "Cape Coast", tuitionRange: "GH₵2,000 – GH₵5,500/yr" },
+   386→      { name: "Ashesi University", type: "private", city: "Berekuso", tuitionRange: "GH₵35,000 – GH₵50,000/yr" },
+   387→      { name: "GIMPA (Ghana Institute of Management and Public Administration)", type: "public", city: "Accra", tuitionRange: "GH₵8,000 – GH₵20,000/yr" },
+   388→    ],
+   389→    fuelStations: [
+   390→      { name: "Goil", type: "fuel", cities: ["All cities"] },
+   391→      { name: "TotalEnergies Ghana", type: "fuel", cities: ["All cities"] },
+   392→      { name: "Shell Vivo Energy Ghana", type: "fuel", cities: ["All cities"] },
+   393→      { name: "Star Oil", type: "fuel", cities: ["Accra", "Kumasi", "Takoradi"] },
+   394→      { name: "Allied Oil", type: "fuel", cities: ["Accra", "Kumasi"] },
+   395→    ],
+   396→    electricity: [
+   397→      { name: "Electricity Company of Ghana (ECG)", type: "electricity", coverage: "Southern Ghana (Accra, Kumasi, Takoradi)" },
+   398→      { name: "Northern Electricity Distribution Company (NEDCO)", type: "electricity", coverage: "Northern Ghana (Tamale, Bolgatanga, Wa)" },
+   399→      { name: "Enclave Power", type: "electricity", coverage: "Industrial enclaves" },
+   400→    ],
+   401→    water: [
+   402→      { name: "Ghana Water Company Limited (GWCL)", type: "water", coverage: "Nationwide urban" },
+   403→    ],
+   404→    tv: [
+   405→      {
+   406→        name: "DStv Ghana",
+   407→        type: "satellite-tv",
+   408→        packages: [
+   409→          { name: "DStv Access", price: 25, currency: "GHS" },
+   410→          { name: "DStv Family", price: 50, currency: "GHS" },
+   411→          { name: "DStv Compact", price: 105, currency: "GHS" },
+   412→          { name: "DStv Compact Plus", price: 170, currency: "GHS" },
+   413→          { name: "DStv Premium", price: 320, currency: "GHS" },
+   414→        ],
+   415→      },
+   416→      {
+   417→        name: "GOtv Ghana",
+   418→        type: "satellite-tv",
+   419→        packages: [
+   420→          { name: "GOtv Lite", price: 15, currency: "GHS" },
+   421→          { name: "GOtv Value", price: 32, currency: "GHS" },
+   422→          { name: "GOtv Plus", price: 50, currency: "GHS" },
+   423→          { name: "GOtv Max", price: 85, currency: "GHS" },
+   424→        ],
+   425→      },
+   426→      {
+   427→        name: "Multi TV (SABC)",
+   428→        type: "satellite-tv",
+   429→        packages: [
+   430→          { name: "Free-to-air", price: 0, currency: "GHS" },
+   431→        ],
+   432→      },
+   433→    ],
+   434→    insurance: [
+   435→      { name: "Enterprise Life", type: "insurance", services: ["Life", "Health", "Investments"] },
+   436→      { name: "SIC Insurance", type: "insurance", services: ["Auto", "Health", "Property", "Marine"] },
+   437→      { name: "Hollard Ghana", type: "insurance", services: ["Auto", "Life", "Health", "Property"] },
+   438→      { name: "Metropolitan Life", type: "insurance", services: ["Life", "Health", "Funeral"] },
+   439→    ],
+   440→    government: [
+   441→      { name: "Ghana Revenue Authority (GRA)", type: "tax", services: ["Income Tax", "VAT", "PAYE", "Customs Duties"] },
+   442→      { name: "National Health Insurance Authority (NHIA)", type: "social-security", services: ["NHIS membership"] },
+   443→      { name: "SSNIT (Social Security and National Insurance Trust)", type: "social-security", services: ["Pension", "Invalidity", "Survivors"] },
+   444→    ],
+   445→  },
+   446→
+   447→  // ========================================================================
+   448→  // CM — Cameroon
+   449→  // ========================================================================
+   450→  CM: {
+   451→    transport: [
+   452→      { name: "Bolt Cameroon", type: "ride-hailing", cities: ["Yaoundé", "Douala", "Bafoussam", "Bamenda"] },
+   453→      { name: "Yango", type: "ride-hailing", cities: ["Yaoundé", "Douala"] },
+   454→      { name: "Taxi Verts", type: "taxi", cities: ["Yaoundé", "Douala"] },
+   455→      { name: "STAO (Société de Transport Automobile d'Ohandja)", type: "bus", cities: ["Yaoundé", "Douala"] },
+   456→      { name: "Touristique Express", type: "intercity-bus", cities: ["Yaoundé", "Douala", "Bafoussam", "Bamenda", "Buea"] },
+   457→      { name: "Agences de voyage (Binam, Van Van)", type: "intercity-bus", cities: ["Yaoundé", "Douala", "Bafoussam", "Garoua", "Bamenda"] },
+   458→    ],
+   459→    restaurants: [
+   460→      { name: "Biggady", type: "fast-food", cities: ["Yaoundé", "Douala"] },
+   461→      { name: "Salon de Thé le Dôme", type: "restaurant", cities: ["Yaoundé"] },
+   462→      { name: "Aristocrat Bar Restaurant", type: "restaurant", cities: ["Yaoundé", "Douala"] },
+   463→      { name: "Buffalo Grill", type: "restaurant", cities: ["Douala"] },
+   464→      { name: "Häagen-Dazs Douala", type: "café", cities: ["Douala"] },
+   465→    ],
+   466→    supermarkets: [
+   467→      { name: "Casino (Groupe Doumbe)", type: "supermarket", cities: ["Yaoundé", "Douala"] },
+   468→      { name: "Boulangerie de l'Ouest", type: "supermarket", cities: ["Bafoussam"] },
+   469→      { name: "Mahima Supermarché", type: "supermarket", cities: ["Yaoundé", "Douala"] },
+   470→      { name: "Score Supermarché", type: "supermarket", cities: ["Yaoundé", "Douala"] },
+   471→      { name: "Carrefour Bonanjo", type: "supermarket", cities: ["Douala"] },
+   472→    ],
+   473→    hospitals: [
+   474→      { name: "Centre Hospitalier Universitaire (CHU) Yaoundé", type: "public", cities: ["Yaoundé"] },
+   475→      { name: "Hôpital Général de Yaoundé", type: "public", cities: ["Yaoundé"] },
+   476→      { name: "Hôpital Laquintinie de Douala", type: "public", cities: ["Douala"] },
+   477→      { name: "Clinique de l'Aéroport", type: "private", cities: ["Douala"] },
+   478→      { name: "Polyclinique Bastos", type: "private", cities: ["Yaoundé"] },
+   479→    ],
+   480→    pharmacies: [
+   481→      { name: "Pharmacie du Centre", type: "pharmacy", cities: ["Yaoundé"] },
+   482→      { name: "Pharmacie de l'Aéroport", type: "pharmacy", cities: ["Douala"] },
+   483→      { name: "Pharmacie Étoile", type: "pharmacy", cities: ["Yaoundé", "Douala"] },
+   484→      { name: "Pharmacie Bonanjo", type: "pharmacy", cities: ["Douala"] },
+   485→    ],
+   486→    internetProviders: [
+   487→      {
+   488→        name: "MTN Cameroon",
+   489→        type: "mobile-data",
+   490→        plans: [
+   491→          { name: "Daily 200MB", price: 200, currency: "XAF" },
+   492→          { name: "Weekly 2GB", price: 2000, currency: "XAF" },
+   493→          { name: "Monthly 10GB", price: 10000, currency: "XAF" },
+   494→          { name: "Monthly 50GB", price: 25000, currency: "XAF" },
+   495→        ],
+   496→      },
+   497→      {
+   498→        name: "Orange Cameroun",
+   499→        type: "mobile-data",
+   500→        plans: [
+   501→          { name: "Daily 200MB", price: 200, currency: "XAF" },
+   502→          { name: "Weekly 2GB", price: 2000, currency: "XAF" },
+   503→          { name: "Monthly 12GB", price: 10000, currency: "XAF" },
+   504→          { name: "Monthly 65GB", price: 30000, currency: "XAF" },
+   505→        ],
+   506→      },
+   507→      {
+   508→        name: "Camtel (Nexttel)",
+   509→        type: "mobile-data",
+   510→        plans: [
+   511→          { name: "Daily 300MB", price: 200, currency: "XAF" },
+   512→          { name: "Weekly 3GB", price: 2500, currency: "XAF" },
+   513→          { name: "Monthly 15GB", price: 12000, currency: "XAF" },
+   514→          { name: "Monthly 60GB", price: 30000, currency: "XAF" },
+   515→        ],
+   516→      },
+   517→      {
+   518→        name: "Yoomee (Camtel fixed)",
+   519→        type: "broadband",
+   520→        plans: [
+   521→          { name: "Home 10Mbps", price: 25000, currency: "XAF" },
+   522→          { name: "Home 20Mbps", price: 45000, currency: "XAF" },
+   523→        ],
+   524→      },
+   525→    ],
+   526→    universities: [
+   527→      { name: "Université de Yaoundé I", type: "public", city: "Yaoundé", tuitionRange: "FCFA 50,000 – FCFA 150,000/yr" },
+   528→      { name: "Université de Yaoundé II (Ngoa-Ekellé)", type: "public", city: "Yaoundé", tuitionRange: "FCFA 50,000 – FCFA 200,000/yr" },
+   529→      { name: "Université de Douala", type: "public", city: "Douala", tuitionRange: "FCFA 60,000 – FCFA 180,000/yr" },
+   530→      { name: "Université de Buea", type: "public", city: "Buea", tuitionRange: "FCFA 50,000 – FCFA 150,000/yr" },
+   531→      { name: "Catholic University of Cameroon (CATUC)", type: "private", city: "Bamenda", tuitionRange: "FCFA 600,000 – FCFA 1,200,000/yr" },
+   532→    ],
+   533→    fuelStations: [
+   534→      { name: "TotalEnergies Cameroun", type: "fuel", cities: ["All cities"] },
+   535→      { name: "Tradex (SNH group)", type: "fuel", cities: ["Yaoundé", "Douala", "Bafoussam", "Garoua"] },
+   536→      { name: "Bolloré Energy Cameroun", type: "fuel", cities: ["Yaoundé", "Douala"] },
+   537→      { name: "Goil Cameroun", type: "fuel", cities: ["Yaoundé", "Douala"] },
+   538→    ],
+   539→    electricity: [
+   540→      { name: "ENEO Cameroun", type: "electricity", coverage: "Nationwide (urban)" },
+   541→      { name: "EDC (Electricity Development Corporation)", type: "electricity", coverage: "Generation and transmission" },
+   542→    ],
+   543→    water: [
+   544→      { name: "CAMWATER (Cameroon Water Utilities Corporation)", type: "water", coverage: "Nationwide urban" },
+   545→    ],
+   546→    tv: [
+   547→      {
+   548→        name: "Canal+ Cameroun",
+   549→        type: "satellite-tv",
+   550→        packages: [
+   551→          { name: "Access", price: 9900, currency: "XAF" },
+   552→          { name: "Evolution", price: 14900, currency: "XAF" },
+   553→          { name: "Tout-Canal", price: 29900, currency: "XAF" },
+   554→        ],
+   555→      },
+   556→      {
+   557→        name: "DStv Cameroun",
+   558→        type: "satellite-tv",
+   559→        packages: [
+   560→          { name: "DStv Access", price: 5500, currency: "XAF" },
+   561→          { name: "DStv Family", price: 9900, currency: "XAF" },
+   562→          { name: "DStv Compact", price: 17500, currency: "XAF" },
+   563→          { name: "DStv Premium", price: 45000, currency: "XAF" },
+   564→        ],
+   565→      },
+   566→      {
+   567→        name: "CRTV (national broadcaster)",
+   568→        type: "cable-tv",
+   569→        packages: [
+   570→          { name: "Free-to-air", price: 0, currency: "XAF" },
+   571→        ],
+   572→      },
+   573→    ],
+   574→    insurance: [
+   575→      { name: "Activa Assurances Cameroun", type: "insurance", services: ["Health", "Auto", "Property", "Life"] },
+   576→      { name: "AXA Cameroun", type: "insurance", services: ["Health", "Auto", "Property", "Life"] },
+   577→      { name: "Saham Assurances Cameroun", type: "insurance", services: ["Auto", "Health", "Property"] },
+   578→    ],
+   579→    government: [
+   580→      { name: "Direction Générale des Impôts (DGI) Cameroun", type: "tax", services: ["Impôt sur le Revenu", "TVA", "Retenue à la Source"] },
+   581→      { name: "CNPS (Caisse Nationale de Prévoyance Sociale)", type: "social-security", services: ["Pensions", "Allocations familiales", "Risques professionnels"] },
+   582→      { name: "MINFI (Ministère des Finances)", type: "tax", services: ["Customs", "Land Tax"] },
+   583→    ],
+   584→  },
+   585→
+   586→  // ========================================================================
+   587→  // CI — Côte d'Ivoire
+   588→  // ========================================================================
+   589→  CI: {
+   590→    transport: [
+   591→      { name: "Yango", type: "ride-hailing", cities: ["Abidjan", "Yamoussoukro", "Bouaké"] },
+   592→      { name: "Heetch", type: "ride-hailing", cities: ["Abidjan"] },
+   593→      { name: "SOTRA (Société de Transport Abidjanais)", type: "bus", cities: ["Abidjan"] },
+   594→      { name: "UTB (Union des Transports de Bouaké)", type: "intercity-bus", cities: ["Abidjan", "Bouaké", "Yamoussoukro", "Korhogo"] },
+   595→      { name: "STC (Société des Transports Communaux)", type: "bus", cities: ["Abidjan"] },
+   596→    ],
+   597→    restaurants: [
+   598→      { name: "KFC Côte d'Ivoire", type: "fast-food", cities: ["Abidjan"] },
+   599→      { name: "Pizza Hut Abidjan", type: "fast-food", cities: ["Abidjan"] },
+   600→      { name: "La Plage", type: "restaurant", cities: ["Abidjan"] },
+   601→      { name: "Le Nid", type: "restaurant", cities: ["Abidjan", "Yamoussoukro"] },
+   602→      { name: "Café de Versailles", type: "restaurant", cities: ["Abidjan"] },
+   603→    ],
+   604→    supermarkets: [
+   605→      { name: "Carrefour Côte d'Ivoire (Céfa)", type: "supermarket", cities: ["Abidjan"] },
+   606→      { name: "Casino Côte d'Ivoire", type: "supermarket", cities: ["Abidjan", "Bouaké"] },
+   607→      { name: "CDCI (Compagnie de Distribution Côte d'Ivoire)", type: "supermarket", cities: ["Abidjan"] },
+   608→      { name: "Prosuma", type: "supermarket", cities: ["Abidjan", "Yamoussoukro"] },
+   609→      { name: "Super U Côte d'Ivoire", type: "supermarket", cities: ["Abidjan"] },
+   610→    ],
+   611→    hospitals: [
+   612→      { name: "CHU de Cocody", type: "public", cities: ["Abidjan"] },
+   613→      { name: "CHU de Treichville", type: "public", cities: ["Abidjan"] },
+   614→      { name: "Polyclinique Internationale Sainte-Anne-Marie (PISAM)", type: "private", cities: ["Abidjan"] },
+   615→      { name: "Clinique Claude-Antoine", type: "private", cities: ["Bouaké"] },
+   616→    ],
+   617→    pharmacies: [
+   618→      { name: "Pharmacie de la Riviera", type: "pharmacy", cities: ["Abidjan"] },
+   619→      { name: "Pharmacie des Deux Plateaux", type: "pharmacy", cities: ["Abidjan"] },
+   620→      { name: "Pharmacie du Plateau", type: "pharmacy", cities: ["Abidjan"] },
+   621→      { name: "Pharmacie Centrale de Bouaké", type: "pharmacy", cities: ["Bouaké"] },
+   622→    ],
+   623→    internetProviders: [
+   624→      {
+   625→        name: "Orange Côte d'Ivoire",
+   626→        type: "mobile-data",
+   627→        plans: [
+   628→          { name: "Journalier 200MB", price: 200, currency: "XOF" },
+   629→          { name: "Hebdo 2GB", price: 2000, currency: "XOF" },
+   630→          { name: "Mensuel 10GB", price: 10000, currency: "XOF" },
+   631→          { name: "Mensuel 70GB", price: 35000, currency: "XOF" },
+   632→        ],
+   633→      },
+   634→      {
+   635→        name: "MTN Côte d'Ivoire",
+   636→        type: "mobile-data",
+   637→        plans: [
+   638→          { name: "Journalier 200MB", price: 200, currency: "XOF" },
+   639→          { name: "Hebdo 2GB", price: 2000, currency: "XOF" },
+   640→          { name: "Mensuel 12GB", price: 11000, currency: "XOF" },
+   641→          { name: "Mensuel 80GB", price: 40000, currency: "XOF" },
+   642→        ],
+   643→      },
+   644→      {
+   645→        name: "Moov Africa Côte d'Ivoire",
+   646→        type: "mobile-data",
+   647→        plans: [
+   648→          { name: "Journalier 200MB", price: 200, currency: "XOF" },
+   649→          { name: "Hebdo 2GB", price: 2000, currency: "XOF" },
+   650→          { name: "Mensuel 12GB", price: 10000, currency: "XOF" },
+   651→          { name: "Mensuel 60GB", price: 30000, currency: "XOF" },
+   652→        ],
+   653→      },
+   654→      {
+   655→        name: "Orange Business Côte d'Ivoire ( fibre)",
+   656→        type: "broadband",
+   657→        plans: [
+   658→          { name: "Fibre 100Mbps", price: 40000, currency: "XOF" },
+   659→          { name: "Fibre 200Mbps", price: 65000, currency: "XOF" },
+   660→        ],
+   661→      },
+   662→    ],
+   663→    universities: [
+   664→      { name: "Université Félix Houphouët-Boigny", type: "public", city: "Abidjan", tuitionRange: "FCFA 50,000 – FCFA 200,000/yr" },
+   665→      { name: "Université Alassane Ouattara", type: "public", city: "Bouaké", tuitionRange: "FCFA 50,000 – FCFA 180,000/yr" },
+   666→      { name: "INP-HB (Institut National Polytechnique)", type: "public", city: "Yamoussoukro", tuitionRange: "FCFA 800,000 – FCFA 1,200,000/yr" },
+   667→      { name: "Université Nangui Abrogoua", type: "public", city: "Abidjan", tuitionRange: "FCFA 60,000 – FCFA 200,000/yr" },
+   668→    ],
+   669→    fuelStations: [
+   670→      { name: "TotalEnergies Côte d'Ivoire", type: "fuel", cities: ["All cities"] },
+   671→      { name: "Pétro Ivoire", type: "fuel", cities: ["All cities"] },
+   672→      { name: "Shell Vivo CI", type: "fuel", cities: ["Abidjan", "Bouaké", "Yamoussoukro"] },
+   673→      { name: "MRS CI", type: "fuel", cities: ["Abidjan", "Bouaké"] },
+   674→    ],
+   675→    electricity: [
+   676→      { name: "CIE (Compagnie Ivoirienne d'Électricité)", type: "electricity", coverage: "Nationwide" },
+   677→      { name: "CIPREL (Compagnie Ivoirienne de Production d'Électricité)", type: "electricity", coverage: "Generation" },
+   678→    ],
+   679→    water: [
+   680→      { name: "SODECI (Société de Distribution d'Eau de la Côte d'Ivoire)", type: "water", coverage: "Nationwide urban" },
+   681→    ],
+   682→    tv: [
+   683→      {
+   684→        name: "Canal+ Côte d'Ivoire",
+   685→        type: "satellite-tv",
+   686→        packages: [
+   687→          { name: "Access", price: 9900, currency: "XOF" },
+   688→          { name: "Evolution", price: 14900, currency: "XOF" },
+   689→          { name: "Tout-Canal", price: 29900, currency: "XOF" },
+   690→        ],
+   691→      },
+   692→      {
+   693→        name: "DStv Côte d'Ivoire",
+   694→        type: "satellite-tv",
+   695→        packages: [
+   696→          { name: "DStv Access", price: 5500, currency: "XOF" },
+   697→          { name: "DStv Family", price: 9900, currency: "XOF" },
+   698→          { name: "DStv Compact", price: 17500, currency: "XOF" },
+   699→          { name: "DStv Premium", price: 45000, currency: "XOF" },
+   700→        ],
+   701→      },
+   702→      {
+   703→        name: "RTI (Radiodiffusion Télévision Ivoirienne)",
+   704→        type: "cable-tv",
+   705→        packages: [
+   706→          { name: "Free-to-air", price: 0, currency: "XOF" },
+   707→        ],
+   708→      },
+   709→    ],
+   710→    insurance: [
+   711→      { name: "NSIA Assurances Côte d'Ivoire", type: "insurance", services: ["Health", "Auto", "Life", "Property"] },
+   712→      { name: "AXA Côte d'Ivoire", type: "insurance", services: ["Health", "Auto", "Property"] },
+   713→      { name: "Allianz Côte d'Ivoire", type: "insurance", services: ["Auto", "Health", "Life"] },
+   714→    ],
+   715→    government: [
+   716→      { name: "Direction Générale des Impôts (DGI) CI", type: "tax", services: ["Impôt sur le Revenu", "TVA", "Droits d'enregistrement"] },
+   717→      { name: "CNPS Côte d'Ivoire", type: "social-security", services: ["Pensions", "Allocations familiales", "Risques professionnels"] },
+   718→      { name: "Douanes Ivoiriennes", type: "customs", services: ["Droits de douane", "TVA import"] },
+   719→    ],
+   720→  },
+   721→
+   722→  // ========================================================================
+   723→  // SN — Senegal
+   724→  // ========================================================================
+   725→  SN: {
+   726→    transport: [
+   727→      { name: "Yango Sénégal", type: "ride-hailing", cities: ["Dakar", "Thiès", "Mbour"] },
+   728→      { name: "Heetch Sénégal", type: "ride-hailing", cities: ["Dakar"] },
+   729→      { name: "Dakar Dem Dikk (DDD)", type: "bus", cities: ["Dakar"] },
+   730→      { name: "Tata Sénégal", type: "intercity-bus", cities: ["Dakar", "Thiès", "Saint-Louis", "Touba"] },
+   731→      { name: "Taxi Jaune (Tata Bus)", type: "intercity-bus", cities: ["Dakar", "Touba", "Kaolack"] },
+   732→    ],
+   733→    restaurants: [
+   734→      { name: "KFC Dakar", type: "fast-food", cities: ["Dakar"] },
+   735→      { name: "Le Mermoz", type: "restaurant", cities: ["Dakar"] },
+   736→      { name: "Chez Loutcha", type: "restaurant", cities: ["Dakar"] },
+   737→      { name: "La Tabaski", type: "restaurant", cities: ["Dakar"] },
+   738→      { name: "Le Khaymandar", type: "restaurant", cities: ["Dakar"] },
+   739→    ],
+   740→    supermarkets: [
+   741→      { name: "Auchan Sénégal", type: "supermarket", cities: ["Dakar", "Thiès"] },
+   742→      { name: "Casino Sénégal", type: "supermarket", cities: ["Dakar"] },
+   743→      { name: "Leader Price Sénégal", type: "supermarket", cities: ["Dakar"] },
+   744→      { name: "Citydia Sénégal", type: "supermarket", cities: ["Dakar", "Thiès"] },
+   745→      { name: "Promocash", type: "supermarket", cities: ["Dakar"] },
+   746→    ],
+   747→    hospitals: [
+   748→      { name: "Hôpital Principal de Dakar", type: "public", cities: ["Dakar"] },
+   749→      { name: "Hôpital Aristide Le Dantec", type: "public", cities: ["Dakar"] },
+   750→      { name: "CHU de Fann", type: "public", cities: ["Dakar"] },
+   751→      { name: "Clinique du Cap", type: "private", cities: ["Dakar"] },
+   752→    ],
+   753→    pharmacies: [
+   754→      { name: "Pharmacie de la Médina", type: "pharmacy", cities: ["Dakar"] },
+   755→      { name: "Pharmacie du Plateau", type: "pharmacy", cities: ["Dakar"] },
+   756→      { name: "Pharmacie de l'Étoile", type: "pharmacy", cities: ["Dakar"] },
+   757→      { name: "Pharmacie de Thiès", type: "pharmacy", cities: ["Thiès"] },
+   758→    ],
+   759→    internetProviders: [
+   760→      {
+   761→        name: "Orange Sénégal",
+   762→        type: "mobile-data",
+   763→        plans: [
+   764→          { name: "Journalier 200MB", price: 200, currency: "XOF" },
+   765→          { name: "Hebdo 2GB", price: 2000, currency: "XOF" },
+   766→          { name: "Mensuel 10GB", price: 10000, currency: "XOF" },
+   767→          { name: "Mensuel 70GB", price: 35000, currency: "XOF" },
+   768→        ],
+   769→      },
+   770→      {
+   771→        name: "Free Sénégal",
+   772→        type: "mobile-data",
+   773→        plans: [
+   774→          { name: "Journalier 200MB", price: 200, currency: "XOF" },
+   775→          { name: "Hebdo 2GB", price: 2000, currency: "XOF" },
+   776→          { name: "Mensuel 12GB", price: 11000, currency: "XOF" },
+   777→          { name: "Mensuel 60GB", price: 30000, currency: "XOF" },
+   778→        ],
+   779→      },
+   780→      {
+   781→        name: "Expresso Sénégal",
+   782→        type: "mobile-data",
+   783→        plans: [
+   784→          { name: "Journalier 200MB", price: 200, currency: "XOF" },
+   785→          { name: "Mensuel 10GB", price: 10000, currency: "XOF" },
+   786→          { name: "Mensuel 50GB", price: 25000, currency: "XOF" },
+   787→        ],
+   788→      },
+   789→      {
+   790→        name: "Orange Fixe ( fibre)",
+   791→        type: "broadband",
+   792→        plans: [
+   793→          { name: "Fibre 100Mbps", price: 35000, currency: "XOF" },
+   794→          { name: "Fibre 200Mbps", price: 55000, currency: "XOF" },
+   795→        ],
+   796→      },
+   797→    ],
+   798→    universities: [
+   799→      { name: "Université Cheikh Anta Diop (UCAD)", type: "public", city: "Dakar", tuitionRange: "FCFA 50,000 – FCFA 200,000/yr" },
+   800→      { name: "Université Gaston Berger (UGB)", type: "public", city: "Saint-Louis", tuitionRange: "FCFA 60,000 – FCFA 200,000/yr" },
+   801→      { name: "Université Virtuelle du Sénégal (UVS)", type: "public", city: "Dakar", tuitionRange: "FCFA 100,000 – FCFA 250,000/yr" },
+   802→      { name: "Université Iba Der Thiam (Thiès)", type: "public", city: "Thiès", tuitionRange: "FCFA 50,000 – FCFA 200,000/yr" },
+   803→    ],
+   804→    fuelStations: [
+   805→      { name: "TotalEnergies Sénégal", type: "fuel", cities: ["All cities"] },
+   806→      { name: "Pétroline", type: "fuel", cities: ["Dakar", "Thiès", "Touba"] },
+   807→      { name: "Oilcom Sénégal", type: "fuel", cities: ["Dakar", "Thiès"] },
+   808→      { name: "Elton Oil", type: "fuel", cities: ["Dakar", "Kaolack"] },
+   809→    ],
+   810→    electricity: [
+   811→      { name: "SENELEC (Société Nationale d'Électricité du Sénégal)", type: "electricity", coverage: "Nationwide" },
+   812→    ],
+   813→    water: [
+   814→      { name: "SDE (Sénégalaise des Eaux)", type: "water", coverage: "Nationwide urban" },
+   815→    ],
+   816→    tv: [
+   817→      {
+   818→        name: "Canal+ Sénégal",
+   819→        type: "satellite-tv",
+   820→        packages: [
+   821→          { name: "Access", price: 9900, currency: "XOF" },
+   822→          { name: "Evolution", price: 14900, currency: "XOF" },
+   823→          { name: "Tout-Canal", price: 29900, currency: "XOF" },
+   824→        ],
+   825→      },
+   826→      {
+   827→        name: "DStv Sénégal",
+   828→        type: "satellite-tv",
+   829→        packages: [
+   830→          { name: "DStv Access", price: 5500, currency: "XOF" },
+   831→          { name: "DStv Family", price: 9900, currency: "XOF" },
+   832→          { name: "DStv Compact", price: 17500, currency: "XOF" },
+   833→          { name: "DStv Premium", price: 45000, currency: "XOF" },
+   834→        ],
+   835→      },
+   836→      {
+   837→        name: "2S TV / TFM (RTS)",
+   838→        type: "cable-tv",
+   839→        packages: [
+   840→          { name: "Free-to-air", price: 0, currency: "XOF" },
+   841→        ],
+   842→      },
+   843→    ],
+   844→    insurance: [
+   845→      { name: "NSIA Assurances Sénégal", type: "insurance", services: ["Health", "Auto", "Life", "Property"] },
+   846→      { name: "Allianz Sénégal", type: "insurance", services: ["Health", "Auto", "Property"] },
+   847→      { name: "SUNU Assurances", type: "insurance", services: ["Health", "Auto", "Life", "Education"] },
+   848→    ],
+   849→    government: [
+   850→      { name: "Direction Générale des Impôts et des Domaines (DGID) Sénégal", type: "tax", services: ["Impôt sur le Revenu", "TVA", "Taxe foncière"] },
+   851→      { name: "IPM (Impôt et Patente Mensuelle)", type: "tax", services: ["Patente", "Impôt forfaitaire"] },
+   852→      { name: "CSS (Caisse de Sécurité Sociale)", type: "social-security", services: ["Pensions", "Allocations familiales", "Risques professionnels"] },
+   853→    ],
+   854→  },
+   855→
+   856→  // ========================================================================
+   857→  // KE — Kenya
+   858→  // ========================================================================
+   859→  KE: {
+   860→    transport: [
+   861→      { name: "Uber Kenya", type: "ride-hailing", cities: ["Nairobi", "Mombasa", "Kisumu", "Nakuru"] },
+   862→      { name: "Bolt Kenya", type: "ride-hailing", cities: ["Nairobi", "Mombasa", "Kisumu", "Nakuru", "Eldoret"] },
+   863→      { name: "Little Cab", type: "ride-hailing", cities: ["Nairobi", "Mombasa"] },
+   864→      { name: "Matatu (paratransit)", type: "bus", cities: ["Nairobi", "Mombasa", "Kisumu", "Nakuru", "Eldoret"] },
+   865→      { name: "SWVL Kenya", type: "bus", cities: ["Nairobi"] },
+   866→      { name: "hAUKenya", type: "ride-hailing", cities: ["Nairobi"] },
+   867→    ],
+   868→    restaurants: [
+   869→      { name: "Java House", type: "restaurant", cities: ["Nairobi", "Mombasa", "Kisumu", "Eldoret"] },
+   870→      { name: "KFC Kenya", type: "fast-food", cities: ["Nairobi", "Mombasa", "Kisumu"] },
+   871→      { name: "Chicken Inn Kenya", type: "fast-food", cities: ["Nairobi", "Mombasa"] },
+   872→      { name: "Steers Kenya", type: "fast-food", cities: ["Nairobi", "Mombasa"] },
+   873→      { name: "Wimpy Kenya", type: "fast-food", cities: ["Nairobi"] },
+   874→      { name: "CJ's", type: "restaurant", cities: ["Nairobi"] },
+   875→    ],
+   876→    supermarkets: [
+   877→      { name: "Naivas", type: "supermarket", cities: ["Nairobi", "Mombasa", "Kisumu", "Nakuru", "Eldoret"] },
+   878→      { name: "Carrefour Kenya", type: "supermarket", cities: ["Nairobi", "Mombasa"] },
+   879→      { name: "Quickmart", type: "supermarket", cities: ["Nairobi", "Nakuru", "Eldoret"] },
+   880→      { name: "Eastmart", type: "supermarket", cities: ["Nairobi"] },
+   881→      { name: "Chandarana Foodplus", type: "supermarket", cities: ["Nairobi", "Mombasa"] },
+   882→    ],
+   883→    hospitals: [
+   884→      { name: "Kenyatta National Hospital (KNH)", type: "public", cities: ["Nairobi"] },
+   885→      { name: "Mama Lucy Kibaki Hospital", type: "public", cities: ["Nairobi"] },
+   886→      { name: "Aga Khan Hospital Nairobi", type: "private", cities: ["Nairobi", "Kisumu"] },
+   887→      { name: "Nairobi Hospital", type: "private", cities: ["Nairobi"] },
+   888→      { name: "Karen Hospital", type: "private", cities: ["Nairobi"] },
+   889→      { name: "Coast General Hospital", type: "public", cities: ["Mombasa"] },
+   890→    ],
+   891→    pharmacies: [
+   892→      { name: "Goodlife Pharmacy", type: "pharmacy", cities: ["Nairobi", "Mombasa", "Kisumu", "Nakuru"] },
+   893→      { name: "Haltons Pharmacy", type: "pharmacy", cities: ["Nairobi", "Mombasa"] },
+   894→      { name: "Pharma Plus", type: "pharmacy", cities: ["Nairobi"] },
+   895→      { name: "Healthy U", type: "pharmacy", cities: ["Nairobi", "Mombasa"] },
+   896→    ],
+   897→    internetProviders: [
+   898→      {
+   899→        name: "Safaricom",
+   900→        type: "mobile-data",
+   901→        plans: [
+   902→          { name: "Daily 500MB", price: 49, currency: "KES" },
+   903→          { name: "Weekly 2GB", price: 200, currency: "KES" },
+   904→          { name: "Monthly 15GB", price: 1000, currency: "KES" },
+   905→          { name: "Monthly 50GB", price: 3000, currency: "KES" },
+   906→          { name: "Monthly 200GB", price: 6000, currency: "KES" },
+   907→        ],
+   908→      },
+   909→      {
+   910→        name: "Airtel Kenya",
+   911→        type: "mobile-data",
+   912→        plans: [
+   913→          { name: "Daily 500MB", price: 49, currency: "KES" },
+   914→          { name: "Weekly 2GB", price: 200, currency: "KES" },
+   915→          { name: "Monthly 15GB", price: 1000, currency: "KES" },
+   916→          { name: "Monthly 60GB", price: 3000, currency: "KES" },
+   917→        ],
+   918→      },
+   919→      {
+   920→        name: "Telkom Kenya",
+   921→        type: "mobile-data",
+   922→        plans: [
+   923→          { name: "Daily 500MB", price: 49, currency: "KES" },
+   924→          { name: "Weekly 5GB", price: 250, currency: "KES" },
+   925→          { name: "Monthly 20GB", price: 1500, currency: "KES" },
+   926→        ],
+   927→      },
+   928→      {
+   929→        name: "Faiba (JTL)",
+   930→        type: "broadband",
+   931→        plans: [
+   932→          { name: "Home 10Mbps", price: 2500, currency: "KES" },
+   933→          { name: "Home 20Mbps", price: 3400, currency: "KES" },
+   934→          { name: "Home 50Mbps", price: 5400, currency: "KES" },
+   935→        ],
+   936→      },
+   937→      {
+   938→        name: "Safaricom Home Internet",
+   939→        type: "broadband",
+   940→        plans: [
+   941→          { name: "Home 10Mbps", price: 2900, currency: "KES" },
+   942→          { name: "Home 40Mbps", price: 4100, currency: "KES" },
+   943→        ],
+   944→      },
+   945→    ],
+   946→    universities: [
+   947→      { name: "University of Nairobi (UoN)", type: "public", city: "Nairobi", tuitionRange: "KSh 70,000 – KSh 250,000/yr" },
+   948→      { name: "Kenyatta University (KU)", type: "public", city: "Nairobi", tuitionRange: "KSh 60,000 – KSh 200,000/yr" },
+   949→      { name: "Jomo Kenyatta University of Agriculture and Technology (JKUAT)", type: "public", city: "Juja", tuitionRange: "KSh 80,000 – KSh 220,000/yr" },
+   950→      { name: "Strathmore University", type: "private", city: "Nairobi", tuitionRange: "KSh 200,000 – KSh 400,000/yr" },
+   951→      { name: "United States International University Africa (USIU-A)", type: "private", city: "Nairobi", tuitionRange: "KSh 250,000 – KSh 500,000/yr" },
+   952→    ],
+   953→    fuelStations: [
+   954→      { name: "TotalEnergies Kenya", type: "fuel", cities: ["All cities"] },
+   955→      { name: "Shell Vivo Energy Kenya", type: "fuel", cities: ["All cities"] },
+   956→      { name: "Rubis Energy Kenya", type: "fuel", cities: ["Nairobi", "Mombasa", "Kisumu", "Nakuru"] },
+   957→      { name: "National Oil Corporation of Kenya (NOCK)", type: "fuel", cities: ["Nairobi", "Mombasa"] },
+   958→      { name: "Gulf Energy", type: "fuel", cities: ["Nairobi", "Mombasa"] },
+   959→    ],
+   960→    electricity: [
+   961→      { name: "Kenya Power (KPLC)", type: "electricity", coverage: "Nationwide" },
+   962→      { name: "Rural Electrification and Renewable Energy Corporation (REREC)", type: "electricity", coverage: "Rural grid" },
+   963→    ],
+   964→    water: [
+   965→      { name: "Nairobi City Water and Sewerage Company (NCWSC)", type: "water", coverage: "Nairobi" },
+   966→      { name: "Mombasa Water Supply and Sanitation Company (MWASS)", type: "water", coverage: "Mombasa" },
+   967→    ],
+   968→    tv: [
+   969→      {
+   970→        name: "DStv Kenya",
+   971→        type: "satellite-tv",
+   972→        packages: [
+   973→          { name: "DStv Access", price: 1300, currency: "KES" },
+   974→          { name: "DStv Family", price: 2100, currency: "KES" },
+   975→          { name: "DStv Compact", price: 3300, currency: "KES" },
+   976→          { name: "DStv Compact Plus", price: 4700, currency: "KES" },
+   977→          { name: "DStv Premium", price: 7900, currency: "KES" },
+   978→        ],
+   979→      },
+   980→      {
+   981→        name: "GOtv Kenya",
+   982→        type: "satellite-tv",
+   983→        packages: [
+   984→          { name: "GOtv Lite", price: 720, currency: "KES" },
+   985→          { name: "GOtv Value", price: 1100, currency: "KES" },
+   986→          { name: "GOtv Plus", price: 1450, currency: "KES" },
+   987→          { name: "GOtv Max", price: 1850, currency: "KES" },
+   988→        ],
+   989→      },
+   990→      {
+   991→        name: "Zuku TV (Wananchi)",
+   992→        type: "cable-tv",
+   993→        packages: [
+   994→          { name: "Zuku Classic", price: 1500, currency: "KES" },
+   995→          { name: "Zuku Premium", price: 2000, currency: "KES" },
+   996→        ],
+   997→      },
+   998→      {
+   999→        name: "StarTimes Kenya",
+  1000→        type: "satellite-tv",
+  1001→        packages: [
+  1002→          { name: "Nova", price: 499, currency: "KES" },
+  1003→          { name: "Basic", price: 999, currency: "KES" },
+  1004→          { name: "Smart", price: 1499, currency: "KES" },
+  1005→          { name: "Super", price: 1999, currency: "KES" },
+  1006→        ],
+  1007→      },
+  1008→    ],
+  1009→    insurance: [
+  1010→      { name: "Jubilee Insurance Kenya", type: "insurance", services: ["Health", "Auto", "Life", "Travel"] },
+  1011→      { name: "Britam Holdings", type: "insurance", services: ["Health", "Life", "Property", "Investments"] },
+  1012→      { name: "CIC Insurance Group", type: "insurance", services: ["Health", "Auto", "Life", "Agriculture"] },
+  1013→      { name: "UAP Old Mutual", type: "insurance", services: ["Health", "Life", "Auto", "Investments"] },
+  1014→    ],
+  1015→    government: [
+  1016→      { name: "Kenya Revenue Authority (KRA)", type: "tax", services: ["PAYE", "VAT", "Corporate Tax", "Turnover Tax"] },
+  1017→      { name: "NHIF (National Hospital Insurance Fund)", type: "social-security", services: ["Health insurance"] },
+  1018→      { name: "NSSF (National Social Security Fund)", type: "social-security", services: ["Pension", "Invalidity", "Survivors"] },
+  1019→    ],
+  1020→  },
+  1021→
+  1022→  // ========================================================================
+  1023→  // UG — Uganda
+  1024→  // ========================================================================
+  1025→  UG: {
+  1026→    transport: [
+  1027→      { name: "Uber Uganda", type: "ride-hailing", cities: ["Kampala", "Entebbe", "Jinja"] },
+  1028→      { name: "Bolt Uganda", type: "ride-hailing", cities: ["Kampala", "Entebbe", "Jinja"] },
+  1029→      { name: "SafeBoda", type: "ride-hailing", cities: ["Kampala"] },
+  1030→      { name: "Easy Matatu", type: "ride-hailing", cities: ["Kampala"] },
+  1031→      { name: "Pioneer Easy Bus", type: "bus", cities: ["Kampala"] },
+  1032→      { name: "Jaguar Executive Coaches", type: "intercity-bus", cities: ["Kampala", "Jinja", "Mbale", "Gulu"] },
+  1033→    ],
+  1034→    restaurants: [
+  1035→      { name: "Café Javas", type: "restaurant", cities: ["Kampala", "Entebbe"] },
+  1036→      { name: "Java House Uganda", type: "restaurant", cities: ["Kampala"] },
+  1037→      { name: "KFC Uganda", type: "fast-food", cities: ["Kampala"] },
+  1038→      { name: "Café Bourbon", type: "restaurant", cities: ["Kampala"] },
+  1039→      { name: "The Iron Chef", type: "restaurant", cities: ["Kampala"] },
+  1040→    ],
+  1041→    supermarkets: [
+  1042→      { name: "Carrefour Uganda (Majid Al Futtaim)", type: "supermarket", cities: ["Kampala"] },
+  1043→      { name: "Capital Shoppers", type: "supermarket", cities: ["Kampala", "Entebbe"] },
+  1044→      { name: "Quality Supermarket", type: "supermarket", cities: ["Kampala", "Jinja"] },
+  1045→      { name: "Super Haido", type: "supermarket", cities: ["Kampala"] },
+  1046→      { name: "Payless Supermarket", type: "supermarket", cities: ["Kampala"] },
+  1047→    ],
+  1048→    hospitals: [
+  1049→      { name: "Mulago National Referral Hospital", type: "public", cities: ["Kampala"] },
+  1050→      { name: "International Hospital Kampala (IHK)", type: "private", cities: ["Kampala"] },
+  1051→      { name: "Nakasero Hospital", type: "private", cities: ["Kampala"] },
+  1052→      { name: "Paragon Hospital", type: "private", cities: ["Kampala"] },
+  1053→    ],
+  1054→    pharmacies: [
+  1055→      { name: "Abacus Pharma", type: "pharmacy", cities: ["Kampala", "Jinja"] },
+  1056→      { name: "Guardian Pharmacy", type: "pharmacy", cities: ["Kampala"] },
+  1057→      { name: "Medik Pharmacy", type: "pharmacy", cities: ["Kampala"] },
+  1058→      { name: "Ridge Pharmacy", type: "pharmacy", cities: ["Kampala"] },
+  1059→    ],
+  1060→    internetProviders: [
+  1061→      {
+  1062→        name: "MTN Uganda",
+  1063→        type: "mobile-data",
+  1064→        plans: [
+  1065→          { name: "Daily 500MB", price: 1500, currency: "UGX" },
+  1066→          { name: "Weekly 3GB", price: 8000, currency: "UGX" },
+  1067→          { name: "Monthly 15GB", price: 30000, currency: "UGX" },
+  1068→          { name: "Monthly 50GB", price: 100000, currency: "UGX" },
+  1069→        ],
+  1070→      },
+  1071→      {
+  1072→        name: "Airtel Uganda",
+  1073→        type: "mobile-data",
+  1074→        plans: [
+  1075→          { name: "Daily 500MB", price: 1500, currency: "UGX" },
+  1076→          { name: "Weekly 3GB", price: 8000, currency: "UGX" },
+  1077→          { name: "Monthly 15GB", price: 30000, currency: "UGX" },
+  1078→          { name: "Monthly 60GB", price: 120000, currency: "UGX" },
+  1079→        ],
+  1080→      },
+  1081→      {
+  1082→        name: "UTL (Uganda Telecom)",
+  1083→        type: "mobile-data",
+  1084→        plans: [
+  1085→          { name: "Daily 500MB", price: 1500, currency: "UGX" },
+  1086→          { name: "Monthly 10GB", price: 25000, currency: "UGX" },
+  1087→        ],
+  1088→      },
+  1089→      {
+  1090→        name: "Roke Telkom",
+  1091→        type: "broadband",
+  1092→        plans: [
+  1093→          { name: "Home 10Mbps", price: 110000, currency: "UGX" },
+  1094→          { name: "Home 30Mbps", price: 220000, currency: "UGX" },
+  1095→        ],
+  1096→      },
+  1097→    ],
+  1098→    universities: [
+  1099→      { name: "Makerere University", type: "public", city: "Kampala", tuitionRange: "USh 1.2M – USh 3M/yr" },
+  1100→      { name: "Mbarara University of Science and Technology (MUST)", type: "public", city: "Mbarara", tuitionRange: "USh 1.5M – USh 3M/yr" },
+  1101→      { name: "Kyambogo University", type: "public", city: "Kampala", tuitionRange: "USh 1M – USh 2.5M/yr" },
+  1102→      { name: "Uganda Christian University (UCU)", type: "private", city: "Mukono", tuitionRange: "USh 2.5M – USh 5M/yr" },
+  1103→      { name: "Uganda Martyrs University", type: "private", city: "Nkozi", tuitionRange: "USh 2M – USh 4M/yr" },
+  1104→    ],
+  1105→    fuelStations: [
+  1106→      { name: "TotalEnergies Uganda", type: "fuel", cities: ["All cities"] },
+  1107→      { name: "Shell Vivo Energy Uganda", type: "fuel", cities: ["All cities"] },
+  1108→      { name: "Stabex International", type: "fuel", cities: ["Kampala", "Jinja", "Mbale"] },
+  1109→      { name: "Hared Petroleum", type: "fuel", cities: ["Kampala"] },
+  1110→    ],
+  1111→    electricity: [
+  1112→      { name: "Umeme Limited", type: "electricity", coverage: "Nationwide distribution" },
+  1113→      { name: "UETCL (Uganda Electricity Transmission Company)", type: "electricity", coverage: "Transmission" },
+  1114→    ],
+  1115→    water: [
+  1116→      { name: "National Water and Sewerage Corporation (NWSC)", type: "water", coverage: "Nationwide urban" },
+  1117→    ],
+  1118→    tv: [
+  1119→      {
+  1120→        name: "DStv Uganda",
+  1121→        type: "satellite-tv",
+  1122→        packages: [
+  1123→          { name: "DStv Access", price: 28000, currency: "UGX" },
+  1124→          { name: "DStv Family", price: 45000, currency: "UGX" },
+  1125→          { name: "DStv Compact", price: 71000, currency: "UGX" },
+  1126→          { name: "DStv Premium", price: 169000, currency: "UGX" },
+  1127→        ],
+  1128→      },
+  1129→      {
+  1130→        name: "GOtv Uganda",
+  1131→        type: "satellite-tv",
+  1132→        packages: [
+  1133→          { name: "GOtv Lite", price: 15000, currency: "UGX" },
+  1134→          { name: "GOtv Value", price: 24000, currency: "UGX" },
+  1135→          { name: "GOtv Plus", price: 31000, currency: "UGX" },
+  1136→          { name: "GOtv Max", price: 40000, currency: "UGX" },
+  1137→        ],
+  1138→      },
+  1139→      {
+  1140→        name: "StarTimes Uganda",
+  1141→        type: "satellite-tv",
+  1142→        packages: [
+  1143→          { name: "Nova", price: 11000, currency: "UGX" },
+  1144→          { name: "Basic", price: 22000, currency: "UGX" },
+  1145→          { name: "Smart", price: 33000, currency: "UGX" },
+  1146→        ],
+  1147→      },
+  1148→    ],
+  1149→    insurance: [
+  1150→      { name: "Jubilee Insurance Uganda", type: "insurance", services: ["Health", "Auto", "Life"] },
+  1151→      { name: "UAP Old Mutual Uganda", type: "insurance", services: ["Health", "Life", "Auto", "Property"] },
+  1152→      { name: "ICEA Lion Uganda", type: "insurance", services: ["Health", "Auto", "Life", "Property"] },
+  1153→    ],
+  1154→    government: [
+  1155→      { name: "Uganda Revenue Authority (URA)", type: "tax", services: ["PAYE", "VAT", "Corporate Tax", "Withholding Tax"] },
+  1156→      { name: "NSSF Uganda", type: "social-security", services: ["Pension", "Invalidity", "Survivors", "Age benefit"] },
+  1157→    ],
+  1158→  },
+  1159→
+  1160→  // ========================================================================
+  1161→  // TZ — Tanzania
+  1162→  // ========================================================================
+  1163→  TZ: {
+  1164→    transport: [
+  1165→      { name: "Uber Tanzania", type: "ride-hailing", cities: ["Dar es Salaam"] },
+  1166→      { name: "Bolt Tanzania", type: "ride-hailing", cities: ["Dar es Salaam", "Arusha", "Mwanza", "Dodoma"] },
+  1167→      { name: "Little Tanzania", type: "ride-hailing", cities: ["Dar es Salaam"] },
+  1168→      { name: "Dala-dala (paratransit)", type: "bus", cities: ["Dar es Salaam", "Arusha", "Mwanza", "Dodoma"] },
+  1169→      { name: "UDA (United Dar es Salaam Bus Co.)", type: "bus", cities: ["Dar es Salaam"] },
+  1170→      { name: "Sumry (intercity coaches)", type: "intercity-bus", cities: ["Dar es Salaam", "Mbeya", "Mwanza", "Arusha"] },
+  1171→    ],
+  1172→    restaurants: [
+  1173→      { name: "KFC Tanzania", type: "fast-food", cities: ["Dar es Salaam"] },
+  1174→      { name: "Steers Tanzania", type: "fast-food", cities: ["Dar es Salaam", "Arusha"] },
+  1175→      { name: "Chicken Inn Tanzania", type: "fast-food", cities: ["Dar es Salaam"] },
+  1176→      { name: "Cape Town Fish Market", type: "restaurant", cities: ["Dar es Salaam"] },
+  1177→      { name: "Samaki Samaki", type: "restaurant", cities: ["Dar es Salaam", "Arusha"] },
+  1178→    ],
+  1179→    supermarkets: [
+  1180→      { name: "Shoprite Tanzania", type: "supermarket", cities: ["Dar es Salaam", "Arusha"] },
+  1181→      { name: "Game Stores (Walmart)", type: "supermarket", cities: ["Dar es Salaam"] },
+  1182→      { name: "Village Supermarket", type: "supermarket", cities: ["Dar es Salaam"] },
+  1183→      { name: "Shoppers Supermarket", type: "supermarket", cities: ["Dar es Salaam", "Arusha"] },
+  1184→      { name: "Ushindi Supermarket", type: "supermarket", cities: ["Dar es Salaam"] },
+  1185→    ],
+  1186→    hospitals: [
+  1187→      { name: "Muhimbili National Hospital (MNH)", type: "public", cities: ["Dar es Salaam"] },
+  1188→      { name: "Aga Khan Hospital Dar es Salaam", type: "private", cities: ["Dar es Salaam"] },
+  1189→      { name: "TMJ Hospital", type: "private", cities: ["Dar es Salaam"] },
+  1190→      { name: "Kilimanjaro Christian Medical Centre (KCMC)", type: "public", cities: ["Moshi"] },
+  1191→    ],
+  1192→    pharmacies: [
+  1193→      { name: "AA Pharmacy", type: "pharmacy", cities: ["Dar es Salaam", "Arusha"] },
+  1194→      { name: "Pharmascope", type: "pharmacy", cities: ["Dar es Salaam"] },
+  1195→      { name: "Salama Pharmacy", type: "pharmacy", cities: ["Dar es Salaam"] },
+  1196→      { name: "Sayansi Pharmacy", type: "pharmacy", cities: ["Dar es Salaam"] },
+  1197→    ],
+  1198→    internetProviders: [
+  1199→      {
+  1200→        name: "Vodacom Tanzania",
+  1201→        type: "mobile-data",
+  1202→        plans: [
+  1203→          { name: "Daily 500MB", price: 1000, currency: "TZS" },
+  1204→          { name: "Weekly 3GB", price: 5000, currency: "TZS" },
+  1205→          { name: "Monthly 12GB", price: 15000, currency: "TZS" },
+  1206→          { name: "Monthly 50GB", price: 50000, currency: "TZS" },
+  1207→        ],
+  1208→      },
+  1209→      {
+  1210→        name: "Airtel Tanzania",
+  1211→        type: "mobile-data",
+  1212→        plans: [
+  1213→          { name: "Daily 500MB", price: 1000, currency: "TZS" },
+  1214→          { name: "Weekly 3GB", price: 5000, currency: "TZS" },
+  1215→          { name: "Monthly 12GB", price: 15000, currency: "TZS" },
+  1216→          { name: "Monthly 60GB", price: 55000, currency: "TZS" },
+  1217→        ],
+  1218→      },
+  1219→      {
+  1220→        name: "Tigo Tanzania (Halotel group)",
+  1221→        type: "mobile-data",
+  1222→        plans: [
+  1223→          { name: "Daily 500MB", price: 1000, currency: "TZS" },
+  1224→          { name: "Weekly 3GB", price: 5000, currency: "TZS" },
+  1225→          { name: "Monthly 15GB", price: 15000, currency: "TZS" },
+  1226→        ],
+  1227→      },
+  1228→      {
+  1229→        name: "Halotel",
+  1230→        type: "mobile-data",
+  1231→        plans: [
+  1232→          { name: "Daily 500MB", price: 1000, currency: "TZS" },
+  1233→          { name: "Monthly 12GB", price: 15000, currency: "TZS" },
+  1234→        ],
+  1235→      },
+  1236→      {
+  1237→        name: "TTCL (Tanzania Telecommunication Corporation)",
+  1238→        type: "broadband",
+  1239→        plans: [
+  1240→          { name: "Home 10Mbps", price: 50000, currency: "TZS" },
+  1241→          { name: "Home 30Mbps", price: 100000, currency: "TZS" },
+  1242→        ],
+  1243→      },
+  1244→    ],
+  1245→    universities: [
+  1246→      { name: "University of Dar es Salaam (UDSM)", type: "public", city: "Dar es Salaam", tuitionRange: "TSh 1.2M – TSh 3M/yr" },
+  1247→      { name: "Sokoine University of Agriculture (SUA)", type: "public", city: "Morogoro", tuitionRange: "TSh 1.3M – TSh 2.5M/yr" },
+  1248→      { name: "Open University of Tanzania (OUT)", type: "public", city: "Dar es Salaam", tuitionRange: "TSh 800K – TSh 1.8M/yr" },
+  1249→      { name: "University of Dodoma (UDOM)", type: "public", city: "Dodoma", tuitionRange: "TSh 1M – TSh 2.5M/yr" },
+  1250→      { name: "St. Augustine University of Tanzania (SAUT)", type: "private", city: "Mwanza", tuitionRange: "TSh 1.5M – TSh 3M/yr" },
+  1251→    ],
+  1252→    fuelStations: [
+  1253→      { name: "TotalEnergies Tanzania", type: "fuel", cities: ["All cities"] },
+  1254→      { name: "Puma Energy Tanzania", type: "fuel", cities: ["All cities"] },
+  1255→      { name: "Oryx Energies Tanzania", type: "fuel", cities: ["Dar es Salaam", "Mwanza", "Arusha"] },
+  1256→      { name: "Camel Oil Tanzania", type: "fuel", cities: ["Dar es Salaam", "Mwanza"] },
+  1257→    ],
+  1258→    electricity: [
+  1259→      { name: "TANESCO (Tanzania Electric Supply Company)", type: "electricity", coverage: "Nationwide" },
+  1260→    ],
+  1261→    water: [
+  1262→      { name: "DAWASA (Dar es Salaam Water and Sewerage Authority)", type: "water", coverage: "Dar es Salaam" },
+  1263→      { name: "DAWASA regional utilities", type: "water", coverage: "Other urban areas" },
+  1264→    ],
+  1265→    tv: [
+  1266→      {
+  1267→        name: "DStv Tanzania",
+  1268→        type: "satellite-tv",
+  1269→        packages: [
+  1270→          { name: "DStv Access", price: 14000, currency: "TZS" },
+  1271→          { name: "DStv Family", price: 23000, currency: "TZS" },
+  1272→          { name: "DStv Compact", price: 36000, currency: "TZS" },
+  1273→          { name: "DStv Premium", price: 88000, currency: "TZS" },
+  1274→        ],
+  1275→      },
+  1276→      {
+  1277→        name: "Azam TV",
+  1278→        type: "satellite-tv",
+  1279→        packages: [
+  1280→          { name: "Azam Play", price: 10000, currency: "TZS" },
+  1281→          { name: "Azam Plus", price: 20000, currency: "TZS" },
+  1282→          { name: "Azam Premium", price: 30000, currency: "TZS" },
+  1283→        ],
+  1284→      },
+  1285→      {
+  1286→        name: "StarTimes Tanzania",
+  1287→        type: "satellite-tv",
+  1288→        packages: [
+  1289→          { name: "Nova", price: 6000, currency: "TZS" },
+  1290→          { name: "Basic", price: 12000, currency: "TZS" },
+  1291→          { name: "Smart", price: 18000, currency: "TZS" },
+  1292→        ],
+  1293→      },
+  1294→    ],
+  1295→    insurance: [
+  1296→      { name: "Jubilee Insurance Tanzania", type: "insurance", services: ["Health", "Auto", "Life"] },
+  1297→      { name: "AAR Insurance Tanzania", type: "insurance", services: ["Health", "Travel"] },
+  1298→      { name: "Resolution Insurance Tanzania", type: "insurance", services: ["Health", "Auto", "Property"] },
+  1299→    ],
+  1300→    government: [
+  1301→      { name: "Tanzania Revenue Authority (TRA)", type: "tax", services: ["PAYE", "VAT", "Corporate Tax", "Skills Development Levy"] },
+  1302→      { name: "NSSF Tanzania", type: "social-security", services: ["Pension", "Health Insurance", "Invalidity"] },
+  1303→    ],
+  1304→  },
+  1305→
+  1306→  // ========================================================================
+  1307→  // RW — Rwanda
+  1308→  // ========================================================================
+  1309→  RW: {
+  1310→    transport: [
+  1311→      { name: "Yego (Move)", type: "ride-hailing", cities: ["Kigali", "Musanze", "Huye"] },
+  1312→      { name: "Volkswagen Move", type: "ride-hailing", cities: ["Kigali"] },
+  1313→      { name: "Bolt Rwanda", type: "ride-hailing", cities: ["Kigali"] },
+  1314→      { name: "City Bus Kigali", type: "bus", cities: ["Kigali"] },
+  1315→      { name: "Royal Express", type: "intercity-bus", cities: ["Kigali", "Musanze", "Huye", "Rubavu"] },
+  1316→    ],
+  1317→    restaurants: [
+  1318→      { name: "KFC Rwanda", type: "fast-food", cities: ["Kigali"] },
+  1319→      { name: "Bourbon Coffee", type: "café", cities: ["Kigali"] },
+  1320→      { name: "The Hut", type: "restaurant", cities: ["Kigali"] },
+  1321→      { name: "Heaven Restaurant", type: "restaurant", cities: ["Kigali"] },
+  1322→      { name: "Pili Pili", type: "restaurant", cities: ["Kigali"] },
+  1323→    ],
+  1324→    supermarkets: [
+  1325→      { name: "Simba Supermarket", type: "supermarket", cities: ["Kigali", "Musanze"] },
+  1326→      { name: "Carrefour Rwanda", type: "supermarket", cities: ["Kigali"] },
+  1327→      { name: "Brussels Supermarket", type: "supermarket", cities: ["Kigali"] },
+  1328→      { name: "Ndoli Supermarket", type: "supermarket", cities: ["Kigali"] },
+  1329→      { name: "Suka Supermarket", type: "supermarket", cities: ["Kigali"] },
+  1330→    ],
+  1331→    hospitals: [
+  1332→      { name: "King Faisal Hospital Kigali", type: "private", cities: ["Kigali"] },
+  1333→      { name: "CHUK (University Teaching Hospital Kigali)", type: "public", cities: ["Kigali"] },
+  1334→      { name: "Kanombe Military Hospital", type: "public", cities: ["Kigali"] },
+  1335→      { name: "CHUB (University Teaching Hospital Butare)", type: "public", cities: ["Huye"] },
+  1336→    ],
+  1337→    pharmacies: [
+  1338→      { name: "Pharmacie Conseil Plus", type: "pharmacy", cities: ["Kigali"] },
+  1339→      { name: "Pharmaplus", type: "pharmacy", cities: ["Kigali"] },
+  1340→      { name: "Pharmacie de la Paix", type: "pharmacy", cities: ["Kigali"] },
+  1341→      { name: "Pharmacie du Carrefour", type: "pharmacy", cities: ["Kigali"] },
+  1342→    ],
+  1343→    internetProviders: [
+  1344→      {
+  1345→        name: "MTN Rwanda",
+  1346→        type: "mobile-data",
+  1347→        plans: [
+  1348→          { name: "Daily 500MB", price: 200, currency: "RWF" },
+  1349→          { name: "Weekly 3GB", price: 2000, currency: "RWF" },
+  1350→          { name: "Monthly 15GB", price: 8000, currency: "RWF" },
+  1351→          { name: "Monthly 50GB", price: 22000, currency: "RWF" },
+  1352→        ],
+  1353→      },
+  1354→      {
+  1355→        name: "Airtel Rwanda",
+  1356→        type: "mobile-data",
+  1357→        plans: [
+  1358→          { name: "Daily 500MB", price: 200, currency: "RWF" },
+  1359→          { name: "Weekly 3GB", price: 2000, currency: "RWF" },
+  1360→          { name: "Monthly 15GB", price: 8000, currency: "RWF" },
+  1361→          { name: "Monthly 60GB", price: 25000, currency: "RWF" },
+  1362→        ],
+  1363→      },
+  1364→      {
+  1365→        name: "Canisius (broadband)",
+  1366→        type: "broadband",
+  1367→        plans: [
+  1368→          { name: "Home 10Mbps", price: 25000, currency: "RWF" },
+  1369→          { name: "Home 30Mbps", price: 50000, currency: "RWF" },
+  1370→        ],
+  1371→      },
+  1372→    ],
+  1373→    universities: [
+  1374→      { name: "University of Rwanda (UR)", type: "public", city: "Kigali", tuitionRange: "RF 600,000 – RF 1,200,000/yr" },
+  1375→      { name: "Carnegie Mellon University Africa", type: "private", city: "Kigali", tuitionRange: "RF 8,000,000 – RF 12,000,000/yr" },
+  1376→      { name: "Kigali Independent University (ULK)", type: "private", city: "Kigali", tuitionRange: "RF 1,200,000 – RF 2,000,000/yr" },
+  1377→      { name: "University of Rwanda - College of Science and Technology", type: "public", city: "Kigali", tuitionRange: "RF 700,000 – RF 1,300,000/yr" },
+  1378→    ],
+  1379→    fuelStations: [
+  1380→      { name: "SP Rwanda (Société Pétrolière)", type: "fuel", cities: ["All cities"] },
+  1381→      { name: "TotalEnergies Rwanda", type: "fuel", cities: ["All cities"] },
+  1382→      { name: "Hashi Energy Rwanda", type: "fuel", cities: ["Kigali", "Musanze"] },
+  1383→      { name: "Lake Oil Rwanda", type: "fuel", cities: ["Kigali", "Rubavu"] },
+  1384→    ],
+  1385→    electricity: [
+  1386→      { name: "REG (Rwanda Energy Group) — EUCL", type: "electricity", coverage: "Nationwide" },
+  1387→    ],
+  1388→    water: [
+  1389→      { name: "WASAC (Water and Sanitation Corporation)", type: "water", coverage: "Nationwide urban" },
+  1390→    ],
+  1391→    tv: [
+  1392→      {
+  1393→        name: "DStv Rwanda",
+  1394→        type: "satellite-tv",
+  1395→        packages: [
+  1396→          { name: "DStv Access", price: 6500, currency: "RWF" },
+  1397→          { name: "DStv Family", price: 11000, currency: "RWF" },
+  1398→          { name: "DStv Compact", price: 17000, currency: "RWF" },
+  1399→          { name: "DStv Premium", price: 42000, currency: "RWF" },
+  1400→        ],
+  1401→      },
+  1402→      {
+  1403→        name: "StarTimes Rwanda",
+  1404→        type: "satellite-tv",
+  1405→        packages: [
+  1406→          { name: "Nova", price: 3000, currency: "RWF" },
+  1407→          { name: "Basic", price: 6000, currency: "RWF" },
+  1408→          { name: "Smart", price: 9000, currency: "RWF" },
+  1409→        ],
+  1410→      },
+  1411→      {
+  1412→        name: "TVR (Televison Rwanda)",
+  1413→        type: "cable-tv",
+  1414→        packages: [
+  1415→          { name: "Free-to-air", price: 0, currency: "RWF" },
+  1416→        ],
+  1417→      },
+  1418→    ],
+  1419→    insurance: [
+  1420→      { name: "Radiant Insurance", type: "insurance", services: ["Health", "Auto", "Life", "Property"] },
+  1421→      { name: "Soras Assurance", type: "insurance", services: ["Health", "Auto", "Life", "Property"] },
+  1422→      { name: "BK General Insurance", type: "insurance", services: ["Health", "Auto", "Property"] },
+  1423→    ],
+  1424→    government: [
+  1425→      { name: "Rwanda Revenue Authority (RRA)", type: "tax", services: ["PAYE", "VAT", "Corporate Income Tax", "Withholding Tax"] },
+  1426→      { name: "RSSB (Rwanda Social Security Board)", type: "social-security", services: ["Pension", "Maternity Leave", "Occupational Hazards"] },
+  1427→    ],
+  1428→  },
+  1429→
+  1430→  // ========================================================================
+  1431→  // ZA — South Africa
+  1432→  // ========================================================================
+  1433→  ZA: {
+  1434→    transport: [
+  1435→      { name: "Uber South Africa", type: "ride-hailing", cities: ["Johannesburg", "Cape Town", "Durban", "Pretoria", "Port Elizabeth"] },
+  1436→      { name: "Bolt South Africa", type: "ride-hailing", cities: ["Johannesburg", "Cape Town", "Durban"] },
+  1437→      { name: "DiDi South Africa", type: "ride-hailing", cities: ["Cape Town"] },
+  1438→      { name: "Gautrain", type: "train", cities: ["Johannesburg", "Pretoria"] },
+  1439→      { name: "Metrorail", type: "train", cities: ["Johannesburg", "Cape Town", "Durban"] },
+  1440→      { name: "Rea Vaya BRT", type: "bus", cities: ["Johannesburg"] },
+  1441→      { name: "MyCiTi BRT", type: "bus", cities: ["Cape Town"] },
+  1442→    ],
+  1443→    restaurants: [
+  1444→      { name: "Nando's", type: "fast-food", cities: ["Johannesburg", "Cape Town", "Durban", "Pretoria", "Port Elizabeth", "Bloemfontein"] },
+  1445→      { name: "Steers", type: "fast-food", cities: ["All cities"] },
+  1446→      { name: "Wimpy", type: "fast-food", cities: ["All cities"] },
+  1447→      { name: "KFC South Africa", type: "fast-food", cities: ["All cities"] },
+  1448→      { name: "Mugg & Bean", type: "restaurant", cities: ["Johannesburg", "Cape Town", "Durban"] },
+  1449→      { name: "Spur Steak Ranches", type: "restaurant", cities: ["All cities"] },
+  1450→    ],
+  1451→    supermarkets: [
+  1452→      { name: "Shoprite", type: "supermarket", cities: ["All cities"] },
+  1453→      { name: "Pick n Pay", type: "supermarket", cities: ["All cities"] },
+  1454→      { name: "Checkers", type: "supermarket", cities: ["All cities"] },
+  1455→      { name: "Woolworths Food", type: "supermarket", cities: ["Johannesburg", "Cape Town", "Durban", "Pretoria"] },
+  1456→      { name: "SPAR South Africa", type: "supermarket", cities: ["All cities"] },
+  1457→      { name: "Boxer Superstores", type: "supermarket", cities: ["All cities"] },
+  1458→    ],
+  1459→    hospitals: [
+  1460→      { name: "Netcare Group", type: "private", cities: ["Johannesburg", "Cape Town", "Durban", "Pretoria"] },
+  1461→      { name: "Mediclinic", type: "private", cities: ["Johannesburg", "Cape Town", "Stellenbosch", "Pretoria"] },
+  1462→      { name: "Life Healthcare", type: "private", cities: ["Johannesburg", "Cape Town", "Durban"] },
+  1463→      { name: "Chris Hani Baragwanath Hospital", type: "public", cities: ["Johannesburg"] },
+  1464→      { name: "Groote Schuur Hospital", type: "public", cities: ["Cape Town"] },
+  1465→    ],
+  1466→    pharmacies: [
+  1467→      { name: "Clicks Pharmacy", type: "pharmacy", cities: ["All cities"] },
+  1468→      { name: "Dis-Chem Pharmacies", type: "pharmacy", cities: ["Johannesburg", "Cape Town", "Durban", "Pretoria"] },
+  1469→      { name: "Alpha Pharm", type: "pharmacy", cities: ["All cities"] },
+  1470→      { name: "Medirite Pharmacy", type: "pharmacy", cities: ["All cities"] },
+  1471→    ],
+  1472→    internetProviders: [
+  1473→      {
+  1474→        name: "Vodacom South Africa",
+  1475→        type: "mobile-data",
+  1476→        plans: [
+  1477→          { name: "Monthly 1GB", price: 99, currency: "ZAR" },
+  1478→          { name: "Monthly 5GB", price: 299, currency: "ZAR" },
+  1479→          { name: "Monthly 20GB", price: 499, currency: "ZAR" },
+  1480→          { name: "Monthly 50GB", price: 799, currency: "ZAR" },
+  1481→        ],
+  1482→      },
+  1483→      {
+  1484→        name: "MTN South Africa",
+  1485→        type: "mobile-data",
+  1486→        plans: [
+  1487→          { name: "Monthly 1GB", price: 99, currency: "ZAR" },
+  1488→          { name: "Monthly 5GB", price: 279, currency: "ZAR" },
+  1489→          { name: "Monthly 20GB", price: 469, currency: "ZAR" },
+  1490→          { name: "Monthly 50GB", price: 749, currency: "ZAR" },
+  1491→        ],
+  1492→      },
+  1493→      {
+  1494→        name: "Cell C",
+  1495→        type: "mobile-data",
+  1496→        plans: [
+  1497→          { name: "Monthly 1GB", price: 89, currency: "ZAR" },
+  1498→          { name: "Monthly 5GB", price: 249, currency: "ZAR" },
+  1499→          { name: "Monthly 20GB", price: 449, currency: "ZAR" },
+  1500→        ],
+  1501→      },
+  1502→      {
+  1503→        name: "Telkom (Mobile & Fixed)",
+  1504→        type: "mobile-data",
+  1505→        plans: [
+  1506→          { name: "Monthly 2GB", price: 149, currency: "ZAR" },
+  1507→          { name: "Monthly 10GB", price: 399, currency: "ZAR" },
+  1508→          { name: "Monthly 40GB", price: 599, currency: "ZAR" },
+  1509→        ],
+  1510→      },
+  1511→      {
+  1512→        name: "Rain (5G fixed)",
+  1513→        type: "broadband",
+  1514→        plans: [
+  1515→          { name: "Unlimited 19", price: 250, currency: "ZAR" },
+  1516→          { name: "Unlimited 5G", price: 559, currency: "ZAR" },
+  1517→        ],
+  1518→      },
+  1519→      {
+  1520→        name: "Vumatel / Openserve fibre",
+  1521→        type: "broadband",
+  1522→        plans: [
+  1523→          { name: "Fibre 20Mbps", price: 599, currency: "ZAR" },
+  1524→          { name: "Fibre 50Mbps", price: 799, currency: "ZAR" },
+  1525→          { name: "Fibre 100Mbps", price: 999, currency: "ZAR" },
+  1526→        ],
+  1527→      },
+  1528→    ],
+  1529→    universities: [
+  1530→      { name: "University of Cape Town (UCT)", type: "public", city: "Cape Town", tuitionRange: "R 30,000 – R 80,000/yr" },
+  1531→      { name: "University of the Witwatersrand (Wits)", type: "public", city: "Johannesburg", tuitionRange: "R 35,000 – R 90,000/yr" },
+  1532→      { name: "Stellenbosch University (SU)", type: "public", city: "Stellenbosch", tuitionRange: "R 35,000 – R 80,000/yr" },
+  1533→      { name: "University of Pretoria (UP)", type: "public", city: "Pretoria", tuitionRange: "R 35,000 – R 85,000/yr" },
+  1534→      { name: "University of KwaZulu-Natal (UKZN)", type: "public", city: "Durban", tuitionRange: "R 30,000 – R 80,000/yr" },
+  1535→    ],
+  1536→    fuelStations: [
+  1537→      { name: "Sasol", type: "fuel", cities: ["All cities"] },
+  1538→      { name: "Engen", type: "fuel", cities: ["All cities"] },
+  1539→      { name: "Shell South Africa", type: "fuel", cities: ["All cities"] },
+  1540→      { name: "BP South Africa", type: "fuel", cities: ["All cities"] },
+  1541→      { name: "TotalEnergies South Africa", type: "fuel", cities: ["All cities"] },
+  1542→      { name: "Caltex (Astron Energy)", type: "fuel", cities: ["All cities"] },
+  1543→    ],
+  1544→    electricity: [
+  1545→      { name: "Eskom", type: "electricity", coverage: "Nationwide (generation + transmission + many distribution areas)" },
+  1546→      { name: "City Power Johannesburg", type: "electricity", coverage: "Johannesburg" },
+  1547→      { name: "City of Cape Town Electricity", type: "electricity", coverage: "Cape Town" },
+  1548→      { name: "eThekwini Electricity", type: "electricity", coverage: "Durban" },
+  1549→      { name: "Tshwane Electricity", type: "electricity", coverage: "Pretoria" },
+  1550→    ],
+  1551→    water: [
+  1552→      { name: "Rand Water", type: "water", coverage: "Gauteng (Johannesburg, Pretoria)" },
+  1553→      { name: "City of Cape Town Water", type: "water", coverage: "Cape Town" },
+  1554→      { name: "eThekwini Water and Sanitation", type: "water", coverage: "Durban" },
+  1555→    ],
+  1556→    tv: [
+  1557→      {
+  1558→        name: "DStv South Africa",
+  1559→        type: "satellite-tv",
+  1560→        packages: [
+  1561→          { name: "DStv Access", price: 129, currency: "ZAR" },
+  1562→          { name: "DStv Family", price: 319, currency: "ZAR" },
+  1563→          { name: "DStv Compact", price: 549, currency: "ZAR" },
+  1564→          { name: "DStv Compact Plus", price: 739, currency: "ZAR" },
+  1565→          { name: "DStv Premium", price: 939, currency: "ZAR" },
+  1566→        ],
+  1567→      },
+  1568→      {
+  1569→        name: "GOtv South Africa",
+  1570→        type: "satellite-tv",
+  1571→        packages: [
+  1572→          { name: "GOtv Lite", price: 49, currency: "ZAR" },
+  1573→          { name: "GOtv Value", price: 99, currency: "ZAR" },
+  1574→          { name: "GOtv Plus", price: 159, currency: "ZAR" },
+  1575→          { name: "GOtv Max", price: 199, currency: "ZAR" },
+  1576→        ],
+  1577→      },
+  1578→      {
+  1579→        name: "Showmax (streaming)",
+  1580→        type: "streaming",
+  1581→        packages: [
+  1582→          { name: "Showmax Standard", price: 99, currency: "ZAR" },
+  1583→          { name: "Showmax Premier", price: 199, currency: "ZAR" },
+  1584→        ],
+  1585→      },
+  1586→      {
+  1587→        name: "Openview (free-to-air)",
+  1588→        type: "satellite-tv",
+  1589→        packages: [
+  1590→          { name: "Free-to-air", price: 0, currency: "ZAR" },
+  1591→        ],
+  1592→      },
+  1593→    ],
+  1594→    insurance: [
+  1595→      { name: "Old Mutual", type: "insurance", services: ["Life", "Health", "Investments", "Annuities"] },
+  1596→      { name: "Sanlam", type: "insurance", services: ["Life", "Health", "Investments", "Retirement"] },
+  1597→      { name: "Discovery Health", type: "insurance", services: ["Medical Aid", "Life", "Income Protection"] },
+  1598→      { name: "Santam", type: "insurance", services: ["Auto", "Property", "Business", "Liability"] },
+  1599→      { name: "Outsurance", type: "insurance", services: ["Auto", "Home", "Life", "Business"] },
+  1600→    ],
+  1601→    government: [
+  1602→      { name: "SARS (South African Revenue Service)", type: "tax", services: ["Income Tax", "VAT", "PAYE", "Customs", "Corporate Tax"] },
+  1603→      { name: " UIF (Unemployment Insurance Fund)", type: "social-security", services: ["Unemployment benefits", "Maternity", "Illness"] },
+  1604→      { name: "SASSA (South African Social Security Agency)", type: "social-security", services: ["Grants (Old Age, Child, Disability)"] },
+  1605→    ],
+  1606→  },
+  1607→
+  1608→  // ========================================================================
+  1609→  // EG — Egypt
+  1610→  // ========================================================================
+  1611→  EG: {
+  1612→    transport: [
+  1613→      { name: "Uber Egypt", type: "ride-hailing", cities: ["Cairo", "Alexandria", "Giza", "Mansoura", "Tanta"] },
+  1614→      { name: "Bolt Egypt", type: "ride-hailing", cities: ["Cairo", "Alexandria"] },
+  1615→      { name: "inDrive", type: "ride-hailing", cities: ["Cairo", "Alexandria", "Aswan"] },
+  1616→      { name: "Careem", type: "ride-hailing", cities: ["Cairo", "Alexandria", "Giza"] },
+  1617→      { name: "Cairo Metro", type: "train", cities: ["Cairo"] },
+  1618→      { name: "Alexandria Tram", type: "train", cities: ["Alexandria"] },
+  1619→    ],
+  1620→    restaurants: [
+  1621→      { name: "KFC Egypt", type: "fast-food", cities: ["Cairo", "Alexandria", "Giza"] },
+  1622→      { name: "McDonald's Egypt", type: "fast-food", cities: ["Cairo", "Alexandria", "Giza"] },
+  1623→      { name: "Mo'men", type: "fast-food", cities: ["Cairo", "Alexandria"] },
+  1624→      { name: "Abou El Sid", type: "restaurant", cities: ["Cairo"] },
+  1625→      { name: "Koshary Abou Tarek", type: "restaurant", cities: ["Cairo"] },
+  1626→    ],
+  1627→    supermarkets: [
+  1628→      { name: "Carrefour Egypt", type: "supermarket", cities: ["Cairo", "Alexandria", "Giza"] },
+  1629→      { name: "Spinneys Egypt", type: "supermarket", cities: ["Cairo", "Alexandria"] },
+  1630→      { name: "Kheir Zaman", type: "supermarket", cities: ["Cairo", "Giza"] },
+  1631→      { name: "Gourmet Egypt", type: "supermarket", cities: ["Cairo"] },
+  1632→      { name: "BIM Egypt", type: "supermarket", cities: ["Cairo", "Alexandria"] },
+  1633→    ],
+  1634→    hospitals: [
+  1635→      { name: "As-Salam International Hospital", type: "private", cities: ["Cairo"] },
+  1636→      { name: "Saudi German Hospital Cairo", type: "private", cities: ["Cairo"] },
+  1637→      { name: "Cleopatra Hospital", type: "private", cities: ["Cairo"] },
+  1638→      { name: "Kasr Al Ainy Hospital (Cairo University)", type: "public", cities: ["Cairo"] },
+  1639→      { name: "Alexandria Main University Hospital", type: "public", cities: ["Alexandria"] },
+  1640→    ],
+  1641→    pharmacies: [
+  1642→      { name: "El-Ezaby Pharmacy", type: "pharmacy", cities: ["Cairo", "Alexandria", "Giza"] },
+  1643→      { name: "Eshti Pharmacy", type: "pharmacy", cities: ["Cairo"] },
+  1644→      { name: "Dr. Nutrition", type: "pharmacy", cities: ["Cairo", "Alexandria"] },
+  1645→      { name: "Seif Pharmacy", type: "pharmacy", cities: ["Cairo", "Alexandria"] },
+  1646→    ],
+  1647→    internetProviders: [
+  1648→      {
+  1649→        name: "Vodafone Egypt",
+  1650→        type: "mobile-data",
+  1651→        plans: [
+  1652→          { name: "Daily 500MB", price: 10, currency: "EGP" },
+  1653→          { name: "Weekly 5GB", price: 60, currency: "EGP" },
+  1654→          { name: "Monthly 25GB", price: 200, currency: "EGP" },
+  1655→          { name: "Monthly 80GB", price: 400, currency: "EGP" },
+  1656→        ],
+  1657→      },
+  1658→      {
+  1659→        name: "Orange Egypt",
+  1660→        type: "mobile-data",
+  1661→        plans: [
+  1662→          { name: "Daily 500MB", price: 10, currency: "EGP" },
+  1663→          { name: "Weekly 5GB", price: 60, currency: "EGP" },
+  1664→          { name: "Monthly 30GB", price: 200, currency: "EGP" },
+  1665→          { name: "Monthly 90GB", price: 400, currency: "EGP" },
+  1666→        ],
+  1667→      },
+  1668→      {
+  1669→        name: "Etisalat Egypt",
+  1670→        type: "mobile-data",
+  1671→        plans: [
+  1672→          { name: "Daily 500MB", price: 10, currency: "EGP" },
+  1673→          { name: "Weekly 5GB", price: 60, currency: "EGP" },
+  1674→          { name: "Monthly 25GB", price: 200, currency: "EGP" },
+  1675→          { name: "Monthly 100GB", price: 450, currency: "EGP" },
+  1676→        ],
+  1677→      },
+  1678→      {
+  1679→        name: "WE (Telecom Egypt)",
+  1680→        type: "broadband",
+  1681→        plans: [
+  1682→          { name: "ADSL 30Mbps", price: 250, currency: "EGP" },
+  1683→          { name: "ADSL 50Mbps", price: 400, currency: "EGP" },
+  1684→          { name: "Fibre 100Mbps", price: 600, currency: "EGP" },
+  1685→        ],
+  1686→      },
+  1687→    ],
+  1688→    universities: [
+  1689→      { name: "Cairo University", type: "public", city: "Giza", tuitionRange: "E£ 3,000 – E£ 12,000/yr (Egyptians)" },
+  1690→      { name: "American University in Cairo (AUC)", type: "private", city: "Cairo", tuitionRange: "E£ 300,000 – E£ 600,000/yr" },
+  1691→      { name: "Ain Shams University", type: "public", city: "Cairo", tuitionRange: "E£ 3,000 – E£ 14,000/yr" },
+  1692→      { name: "Alexandria University", type: "public", city: "Alexandria", tuitionRange: "E£ 3,000 – E£ 12,000/yr" },
+  1693→      { name: "German University in Cairo (GUC)", type: "private", city: "Cairo", tuitionRange: "E£ 110,000 – E£ 180,000/yr" },
+  1694→    ],
+  1695→    fuelStations: [
+  1696→      { name: "Misr Petroleum", type: "fuel", cities: ["All cities"] },
+  1697→      { name: "Shell Egypt", type: "fuel", cities: ["All cities"] },
+  1698→      { name: "TotalEnergies Egypt", type: "fuel", cities: ["Cairo", "Alexandria", "Giza"] },
+  1699→      { name: "BP Egypt", type: "fuel", cities: ["Cairo", "Alexandria"] },
+  1700→      { name: "Champion (ENOC)", type: "fuel", cities: ["Cairo"] },
+  1701→    ],
+  1702→    electricity: [
+  1703→      { name: "EEHC (Egyptian Electricity Holding Company)", type: "electricity", coverage: "Nationwide (7 distribution companies)" },
+  1704→      { name: "North Cairo Electricity Distribution", type: "electricity", coverage: "North Cairo" },
+  1705→      { name: "South Cairo Electricity Distribution", type: "electricity", coverage: "South Cairo" },
+  1706→      { name: "Alexandria Electricity Distribution", type: "electricity", coverage: "Alexandria" },
+  1707→    ],
+  1708→    water: [
+  1709→      { name: "HCWW (Holding Company for Water and Wastewater)", type: "water", coverage: "Nationwide urban" },
+  1710→    ],
+  1711→    tv: [
+  1712→      {
+  1713→        name: "OSN (Orbit Showtime Network)",
+  1714→        type: "satellite-tv",
+  1715→        packages: [
+  1716→          { name: "OSN Starter", price: 75, currency: "EGP" },
+  1717→          { name: "OSN Plus", price: 130, currency: "EGP" },
+  1718→          { name: "OSN Premier", price: 200, currency: "EGP" },
+  1719→        ],
+  1720→      },
+  1721→      {
+  1722→        name: "beIN Sports Connect",
+  1723→        type: "streaming",
+  1724→        packages: [
+  1725→          { name: "Monthly", price: 200, currency: "EGP" },
+  1726→          { name: "Annual", price: 1800, currency: "EGP" },
+  1727→        ],
+  1728→      },
+  1729→      {
+  1730→        name: "Nilesat (free-to-air)",
+  1731→        type: "satellite-tv",
+  1732→        packages: [
+  1733→          { name: "Free-to-air", price: 0, currency: "EGP" },
+  1734→        ],
+  1735→      },
+  1736→    ],
+  1737→    insurance: [
+  1738→      { name: "Allianz Egypt", type: "insurance", services: ["Life", "Health", "Auto", "Property"] },
+  1739→      { name: "AXA Egypt", type: "insurance", services: ["Life", "Health", "Savings"] },
+  1740→      { name: "GIG Egypt (Gulf Insurance Group)", type: "insurance", services: ["Health", "Auto", "Property", "Life"] },
+  1741→      { name: "MetLife Alico Egypt", type: "insurance", services: ["Life", "Health", "Retirement"] },
+  1742→    ],
+  1743→    government: [
+  1744→      { name: "ETA (Egyptian Tax Authority)", type: "tax", services: ["Income Tax", "VAT", "Stamp Duty", "Payroll Tax"] },
+  1745→      { name: "NOSI (National Organization for Social Insurance)", type: "social-security", services: ["Pension", "Invalidity", "Survivors"] },
+  1746→    ],
+  1747→  },
+  1748→
+  1749→  // ========================================================================
+  1750→  // MA — Morocco
+  1751→  // ========================================================================
+  1752→  MA: {
+  1753→    transport: [
+  1754→      { name: "Careem Maroc", type: "ride-hailing", cities: ["Casablanca", "Rabat", "Marrakech", "Tangier"] },
+  1755→      { name: "Robo", type: "ride-hailing", cities: ["Casablanca", "Rabat"] },
+  1756→      { name: "Heetch Maroc", type: "ride-hailing", cities: ["Casablanca", "Rabat", "Marrakech"] },
+  1757→      { name: "Casa Tramway", type: "train", cities: ["Casablanca"] },
+  1758→      { name: "Rabat-Salé Tramway", type: "train", cities: ["Rabat", "Salé"] },
+  1759→      { name: "ONCF (trains) + Al Bidaoui", type: "train", cities: ["Casablanca", "Rabat", "Kenitra", "Tangier", "Fès", "Marrakech"] },
+  1760→      { name: "CTM (intercity coach)", type: "intercity-bus", cities: ["Casablanca", "Rabat", "Marrakech", "Fès", "Tangier", "Agadir"] },
+  1761→    ],
+  1762→    restaurants: [
+  1763→      { name: "McDonald's Maroc", type: "fast-food", cities: ["Casablanca", "Rabat", "Marrakech", "Fès", "Tangier"] },
+  1764→      { name: "KFC Maroc", type: "fast-food", cities: ["Casablanca", "Rabat", "Marrakech"] },
+  1765→      { name: "La Sqala", type: "restaurant", cities: ["Casablanca"] },
+  1766→      { name: "Café Clock", type: "restaurant", cities: ["Marrakech", "Casablanca"] },
+  1767→      { name: "Le Riad", type: "restaurant", cities: ["Marrakech"] },
+  1768→    ],
+  1769→    supermarkets: [
+  1770→      { name: "Marjane (Marjane Holdco)", type: "supermarket", cities: ["Casablanca", "Rabat", "Marrakech", "Fès", "Tangier", "Agadir"] },
+  1771→      { name: "Carrefour Marjane", type: "supermarket", cities: ["Casablanca", "Rabat", "Marrakech"] },
+  1772→      { name: "Aswak Assalam", type: "supermarket", cities: ["Casablanca", "Rabat", "Fès", "Tangier"] },
+  1773→      { name: "BIM Maroc", type: "supermarket", cities: ["All cities"] },
+  1774→      { name: "Atacadao (Auchan)", type: "supermarket", cities: ["Casablanca", "Rabat"] },
+  1775→    ],
+  1776→    hospitals: [
+  1777→      { name: "CHU Ibn Sina (Rabat)", type: "public", cities: ["Rabat", "Salé"] },
+  1778→      { name: "CHU Ibn Rochd (Casablanca)", type: "public", cities: ["Casablanca"] },
+  1779→      { name: "Clinique du Souiss", type: "private", cities: ["Rabat"] },
+  1780→      { name: "Cheikh Zaid Hospital", type: "private", cities: ["Rabat"] },
+  1781→      { name: "Clinique Chantilly", type: "private", cities: ["Casablanca"] },
+  1782→    ],
+  1783→    pharmacies: [
+  1784→      { name: "Pharmacie de la Poste", type: "pharmacy", cities: ["Casablanca", "Rabat"] },
+  1785→      { name: "Al Amal Pharmacy", type: "pharmacy", cities: ["Casablanca"] },
+  1786→      { name: "Pharmacie du Marché", type: "pharmacy", cities: ["Rabat"] },
+  1787→      { name: "Pharmacie Centrale Marrakech", type: "pharmacy", cities: ["Marrakech"] },
+  1788→    ],
+  1789→    internetProviders: [
+  1790→      {
+  1791→        name: "Maroc Telecom (IAM)",
+  1792→        type: "mobile-data",
+  1793→        plans: [
+  1794→          { name: "Daily 500MB", price: 5, currency: "MAD" },
+  1795→          { name: "Weekly 5GB", price: 30, currency: "MAD" },
+  1796→          { name: "Monthly 20GB", price: 100, currency: "MAD" },
+  1797→          { name: "Monthly 100GB", price: 300, currency: "MAD" },
+  1798→        ],
+  1799→      },
+  1800→      {
+  1801→        name: "Orange Maroc",
+  1802→        type: "mobile-data",
+  1803→        plans: [
+  1804→          { name: "Daily 500MB", price: 5, currency: "MAD" },
+  1805→          { name: "Weekly 5GB", price: 30, currency: "MAD" },
+  1806→          { name: "Monthly 20GB", price: 100, currency: "MAD" },
+  1807→          { name: "Monthly 80GB", price: 250, currency: "MAD" },
+  1808→        ],
+  1809→      },
+  1810→      {
+  1811→        name: "Inwi",
+  1812→        type: "mobile-data",
+  1813→        plans: [
+  1814→          { name: "Daily 500MB", price: 5, currency: "MAD" },
+  1815→          { name: "Weekly 5GB", price: 25, currency: "MAD" },
+  1816→          { name: "Monthly 30GB", price: 99, currency: "MAD" },
+  1817→          { name: "Monthly 100GB", price: 250, currency: "MAD" },
+  1818→        ],
+  1819→      },
+  1820→      {
+  1821→        name: "Maroc Telecom Fibre",
+  1822→        type: "broadband",
+  1823→        plans: [
+  1824→          { name: "Fibre 50Mbps", price: 299, currency: "MAD" },
+  1825→          { name: "Fibre 100Mbps", price: 399, currency: "MAD" },
+  1826→          { name: "Fibre 200Mbps", price: 599, currency: "MAD" },
+  1827→        ],
+  1828→      },
+  1829→    ],
+  1830→    universities: [
+  1831→      { name: "University of Al Quaraouiyine", type: "public", city: "Fès", tuitionRange: "DH 3,000 – DH 8,000/yr" },
+  1832→      { name: "Mohammed V University (Rabat)", type: "public", city: "Rabat", tuitionRange: "DH 4,000 – DH 12,000/yr" },
+  1833→      { name: "Hassan II University (Casablanca)", type: "public", city: "Casablanca", tuitionRange: "DH 4,000 – DH 12,000/yr" },
+  1834→      { name: "Al Akhawayn University", type: "private", city: "Ifrane", tuitionRange: "DH 65,000 – DH 90,000/yr" },
+  1835→      { name: "Université Privée de Marrakech (UPM)", type: "private", city: "Marrakech", tuitionRange: "DH 30,000 – DH 60,000/yr" },
+  1836→    ],
+  1837→    fuelStations: [
+  1838→      { name: "Afriquia (Akwa Group)", type: "fuel", cities: ["All cities"] },
+  1839→      { name: "TotalEnergies Maroc", type: "fuel", cities: ["All cities"] },
+  1840→      { name: "Shell Vivo Maroc", type: "fuel", cities: ["All cities"] },
+  1841→      { name: "BP Maroc (Winxo)", type: "fuel", cities: ["Casablanca", "Rabat", "Marrakech"] },
+  1842→      { name: "Lasmi", type: "fuel", cities: ["Casablanca", "Marrakech"] },
+  1843→    ],
+  1844→    electricity: [
+  1845→      { name: "ONEE (Office National de l'Électricité et de l'Eau Potable)", type: "electricity", coverage: "Nationwide" },
+  1846→      { name: "LYDEC (Casablanca concession)", type: "electricity", coverage: "Casablanca" },
+  1847→      { name: "REDAL (Rabat concession)", type: "electricity", coverage: "Rabat, Salé" },
+  1848→      { name: "AMENDIS (Tangier, Tetouan concession)", type: "electricity", coverage: "Tangier, Tetouan" },
+  1849→    ],
+  1850→    water: [
+  1851→      { name: "ONEE — Eau", type: "water", coverage: "Nationwide" },
+  1852→      { name: "LYDEC", type: "water", coverage: "Casablanca" },
+  1853→      { name: "REDAL", type: "water", coverage: "Rabat, Salé" },
+  1854→    ],
+  1855→    tv: [
+  1856→      {
+  1857→        name: "OSN Maroc",
+  1858→        type: "satellite-tv",
+  1859→        packages: [
+  1860→          { name: "OSN Starter", price: 99, currency: "MAD" },
+  1861→          { name: "OSN Plus", price: 169, currency: "MAD" },
+  1862→          { name: "OSN Premier", price: 259, currency: "MAD" },
+  1863→        ],
+  1864→      },
+  1865→      {
+  1866→        name: "beIN Sports (Maroc)",
+  1867→        type: "streaming",
+  1868→        packages: [
+  1869→          { name: "beIN Sports Connect", price: 150, currency: "MAD" },
+  1870→        ],
+  1871→      },
+  1872→      {
+  1873→        name: "Maroc Telecom TV (IPTV)",
+  1874→        type: "cable-tv",
+  1875→        packages: [
+  1876→          { name: "Basic", price: 99, currency: "MAD" },
+  1877→          { name: "Premium", price: 199, currency: "MAD" },
+  1878→        ],
+  1879→      },
+  1880→      {
+  1881→        name: "SNRT (free-to-air)",
+  1882→        type: "satellite-tv",
+  1883→        packages: [
+  1884→          { name: "Free-to-air", price: 0, currency: "MAD" },
+  1885→        ],
+  1886→      },
+  1887→    ],
+  1888→    insurance: [
+  1889→      { name: "Wafa Assurance", type: "insurance", services: ["Life", "Health", "Auto", "Property", "Retirement"] },
+  1890→      { name: "RMA Watanya", type: "insurance", services: ["Auto", "Health", "Life", "Property", "Marine"] },
+  1891→      { name: "Saham Assurance (Sanlam)", type: "insurance", services: ["Health", "Auto", "Life", "Property"] },
+  1892→      { name: "AXA Assurance Maroc", type: "insurance", services: ["Health", "Auto", "Life", "Property"] },
+  1893→    ],
+  1894→    government: [
+  1895→      { name: "DGI Maroc (Direction Générale des Impôts)", type: "tax", services: ["Impôt sur le Revenu (IR)", "TVA", "Impôt sur les Sociétés (IS)", "Taxes locales"] },
+  1896→      { name: "CNSS (Caisse Nationale de Sécurité Sociale)", type: "social-security", services: ["Allocations familiales", "Pensions", "Risques professionnels"] },
+  1897→      { name: "CNOPS (Caisse Nationale des Organismes de Prévoyance Sociale)", type: "social-security", services: ["Health insurance (public sector)"] },
+  1898→      { name: "Douanes Marocaines (ADII)", type: "customs", services: ["Droits de douane", "TVA import", "Droits de consommation"] },
+  1899→    ],
+  1900→  },
+  1901→
+  1902→  // ========================================================================
+  1903→  // ET — Ethiopia
+  1904→  // ========================================================================
+  1905→  ET: {
+  1906→    transport: [
+  1907→      { name: "Ride", type: "ride-hailing", cities: ["Addis Ababa"] },
+  1908→      { name: "ZayRide", type: "ride-hailing", cities: ["Addis Ababa"] },
+  1909→      { name: "EseyOr", type: "ride-hailing", cities: ["Addis Ababa"] },
+  1910→      { name: "Feres", type: "ride-hailing", cities: ["Addis Ababa"] },
+  1911→      { name: "Addis Ababa Light Rail", type: "train", cities: ["Addis Ababa"] },
+  1912→      { name: "Selam Bus (intercity)", type: "intercity-bus", cities: ["Addis Ababa", "Adama", "Hawassa", "Bahir Dar", "Mekelle"] },
+  1913→    ],
+  1914→    restaurants: [
+  1915→      { name: "Yod Abyssinia", type: "restaurant", cities: ["Addis Ababa"] },
+  1916→      { name: "2000 Habesha", type: "restaurant", cities: ["Addis Ababa"] },
+  1917→      { name: "Cafe Addis", type: "café", cities: ["Addis Ababa"] },
+  1918→      { name: "KFC Ethiopia", type: "fast-food", cities: ["Addis Ababa"] },
+  1919→      { name: "Lucy Restaurant", type: "restaurant", cities: ["Addis Ababa"] },
+  1920→    ],
+  1921→    supermarkets: [
+  1922→      { name: "Bambu Supermarket", type: "supermarket", cities: ["Addis Ababa"] },
+  1923→      { name: "Friendship Supermarket", type: "supermarket", cities: ["Addis Ababa"] },
+  1924→      { name: "Shoa Supermarket", type: "supermarket", cities: ["Addis Ababa", "Adama"] },
+  1925→      { name: "Neway Supermarket", type: "supermarket", cities: ["Addis Ababa"] },
+  1926→      { name: "Fantu Supermarket", type: "supermarket", cities: ["Addis Ababa"] },
+  1927→    ],
+  1928→    hospitals: [
+  1929→      { name: "Tikur Anbessa (Black Lion) Specialized Hospital", type: "public", cities: ["Addis Ababa"] },
+  1930→      { name: "St. Paul's Hospital Millennium Medical College", type: "public", cities: ["Addis Ababa"] },
+  1931→      { name: "Bethzatha Hospital", type: "private", cities: ["Addis Ababa"] },
+  1932→      { name: "Korean Hospital", type: "private", cities: ["Addis Ababa"] },
+  1933→      { name: "Hayat Hospital", type: "private", cities: ["Addis Ababa"] },
+  1934→    ],
+  1935→    pharmacies: [
+  1936→      { name: "Hasi Pharmacy", type: "pharmacy", cities: ["Addis Ababa"] },
+  1937→      { name: "Bega Pharmacy", type: "pharmacy", cities: ["Addis Ababa"] },
+  1938→      { name: "Addis Pharmacy", type: "pharmacy", cities: ["Addis Ababa"] },
+  1939→      { name: "Bionorica Pharmacy", type: "pharmacy", cities: ["Addis Ababa"] },
+  1940→    ],
+  1941→    internetProviders: [
+  1942→      {
+  1943→        name: "Ethio Telecom",
+  1944→        type: "mobile-data",
+  1945→        plans: [
+  1946→          { name: "Daily 200MB", price: 8, currency: "ETB" },
+  1947→          { name: "Weekly 2GB", price: 60, currency: "ETB" },
+  1948→          { name: "Monthly 10GB", price: 350, currency: "ETB" },
+  1949→          { name: "Monthly 50GB", price: 1200, currency: "ETB" },
+  1950→        ],
+  1951→      },
+  1952→      {
+  1953→        name: "Safaricom Ethiopia",
+  1954→        type: "mobile-data",
+  1955→        plans: [
+  1956→          { name: "Daily 200MB", price: 8, currency: "ETB" },
+  1957→          { name: "Weekly 2GB", price: 60, currency: "ETB" },
+  1958→          { name: "Monthly 10GB", price: 350, currency: "ETB" },
+  1959→          { name: "Monthly 60GB", price: 1500, currency: "ETB" },
+  1960→        ],
+  1961→      },
+  1962→      {
+  1963→        name: "Ethio Telecom Fixed Broadband",
+  1964→        type: "broadband",
+  1965→        plans: [
+  1966→          { name: "ADSL 8Mbps", price: 1500, currency: "ETB" },
+  1967→          { name: "Fibre 25Mbps", price: 4000, currency: "ETB" },
+  1968→        ],
+  1969→      },
+  1970→    ],
+  1971→    universities: [
+  1972→      { name: "Addis Ababa University (AAU)", type: "public", city: "Addis Ababa", tuitionRange: "Br 3,000 – Br 12,000/yr" },
+  1973→      { name: "Mekelle University", type: "public", city: "Mekelle", tuitionRange: "Br 3,000 – Br 10,000/yr" },
+  1974→      { name: "Jimma University", type: "public", city: "Jimma", tuitionRange: "Br 3,000 – Br 11,000/yr" },
+  1975→      { name: "Bahir Dar University", type: "public", city: "Bahir Dar", tuitionRange: "Br 3,000 – Br 10,000/yr" },
+  1976→      { name: "Unity University", type: "private", city: "Addis Ababa", tuitionRange: "Br 25,000 – Br 60,000/yr" },
+  1977→    ],
+  1978→    fuelStations: [
+  1979→      { name: "TotalEnergies Ethiopia", type: "fuel", cities: ["All cities"] },
+  1980→      { name: "NOC (National Oil Ethiopia)", type: "fuel", cities: ["All cities"] },
+  1981→      { name: "Yetebaberut Behbret Sened (YBS)", type: "fuel", cities: ["Addis Ababa", "Adama", "Hawassa"] },
+  1982→      { name: "Oil Libya Ethiopia", type: "fuel", cities: ["Addis Ababa", "Mekelle", "Bahir Dar"] },
+  1983→      { name: "Kobil Ethiopia", type: "fuel", cities: ["Addis Ababa"] },
+  1984→    ],
+  1985→    electricity: [
+  1986→      { name: "EEU (Ethiopian Electric Utility)", type: "electricity", coverage: "Nationwide distribution" },
+  1987→      { name: "EEP (Ethiopian Electric Power)", type: "electricity", coverage: "Generation and transmission" },
+  1988→    ],
+  1989→    water: [
+  1990→      { name: "AAWSA (Addis Ababa Water and Sewerage Authority)", type: "water", coverage: "Addis Ababa" },
+  1991→      { name: "Regional Water Bureaus", type: "water", coverage: "Other regions" },
+  1992→    ],
+  1993→    tv: [
+  1994→      {
+  1995→        name: "DStv Ethiopia",
+  1996→        type: "satellite-tv",
+  1997→        packages: [
+  1998→          { name: "DStv Access", price: 350, currency: "ETB" },
+  1999→          { name: "DStv Family", price: 600, currency: "ETB" },
+  2000→          { name: "DStv Compact", price: 950, currency: "ETB" },
+
+[showing lines 1-2000 of 2362; use offset=2001 with limit to continue reading]

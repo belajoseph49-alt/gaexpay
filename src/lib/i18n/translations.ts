@@ -2258,6 +2258,16 @@ const en: Record<string, string> = {
   "marketplace.relatedProducts": "You may also like",
   "marketplace.addedToCart": "Added to cart",
   "marketplace.codeCopied": "Promo code copied",
+
+  // Social, Messaging, Live, Staking, GAEX, Seller, Notifications
+  "social.title": "Social Feed",
+  "social.subtitle": "Connect with friends and share updates",
+  "messaging.title": "Messages",
+  "messaging.subtitle": "Chat with your contacts",
+  "live.title": "Live Streaming",
+  "live.subtitle": "Watch and stream live content",
+  "gaexToken.title": "GAEX Token",
+  "gaexToken.subtitle": "Trade and stake GAEX tokens",
 };
 
 // ---------------------------------------------------------------------------

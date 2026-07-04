@@ -7,6 +7,7 @@ import {
   PiggyBank, Wallet2, CalendarClock, Store, FileText, Trophy, Calendar,
   MapPin, Bitcoin, Repeat, Globe, DollarSign, AtSign, Banknote, Building2,
   Briefcase, Landmark, Code2, UserCheck, Crown, Network, ShoppingBag,
+  MessageSquare, Lock, Coins, Radio, Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp, type View } from "@/lib/store";
@@ -77,6 +78,28 @@ const NAV: NavGroup[] = [
       { id: "merchant", label: "Merchant Dashboard", icon: Store, badge: "Pro", featureFlag: "merchant_dashboard" },
       { id: "business-pro", label: "Business Pro", icon: Briefcase, badge: "Pro", featureFlag: "business_pro" },
       { id: "treasury", label: "Treasury", icon: Landmark, badge: "L4", featureFlag: "treasury" },
+    ],
+  },
+  {
+    section: "Community",
+    items: [
+      { id: "social", label: "Social", icon: Users, featureFlag: "social" },
+      { id: "messaging", label: "Messages", icon: MessageSquare, featureFlag: "messaging" },
+      { id: "live", label: "Live", icon: Radio, featureFlag: "live_streaming" },
+    ],
+  },
+  {
+    section: "Crypto & Finance",
+    items: [
+      { id: "staking", label: "Staking", icon: Lock, featureFlag: "staking" },
+      { id: "gaex-token", label: "GAEX Token", icon: Coins, badge: "NEW", featureFlag: "gaex_token" },
+    ],
+  },
+  {
+    section: "Commerce",
+    items: [
+      { id: "seller-dashboard", label: "Seller Dashboard", icon: Store, featureFlag: "seller_dashboard" },
+      { id: "notifications", label: "Notifications", icon: Bell },
     ],
   },
   {

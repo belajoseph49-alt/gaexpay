@@ -1,0 +1,952 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→import { useState, useEffect } from "react";
+     4→     4→import { motion, AnimatePresence } from "framer-motion";
+     5→     5→import {
+     6→     6→  SendHorizontal, ArrowDownToLine, ArrowUpFromLine, QrCode, Search, UserPlus,
+     7→     7→  Smartphone, Landmark, Wallet as WalletIcon, Check, ShieldCheck, ChevronRight,
+     8→     8→  ChevronLeft, Loader2, Copy, Share2, Repeat, Contact as ContactIcon,
+     9→     9→  Users, UserCheck, Phone, Mail, Plus, Info,
+    10→    10→} from "lucide-react";
+    11→    11→import { Card } from "@/components/ui/card";
+    12→    12→import { Button } from "@/components/ui/button";
+    13→    13→import { Input } from "@/components/ui/input";
+    14→    14→import { Label } from "@/components/ui/label";
+    15→    15→import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+    16→    16→import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+    17→    17→import { Badge } from "@/components/ui/badge";
+    18→    18→import { useFetch } from "@/hooks/use-fetch";
+    19→    19→import { formatMoney, CURRENCIES, MOBILE_MONEY_PROVIDERS, BANKS } from "@/lib/gaexpay";
+    20→    20→import { useApp } from "@/lib/store";
+    21→    21→import { Skeleton } from "@/components/ui/skeleton";
+    22→    22→import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+    23→    23→import { Confetti } from "@/components/gaexpay/confetti";
+    24→    24→import { useContacts, type DeviceContact } from "@/hooks/use-contacts";
+    25→    25→import { toast } from "sonner";
+    26→    26→import { cn } from "@/lib/utils";
+    27→    27→import {
+    28→    28→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    29→    29→} from "@/components/ui/select";
+    30→    30→import { useFormatMoney } from "@/hooks/use-format-money";
+    31→    31→
+    32→    32→export function SendView() {
+    33→    33→  return (
+    34→    34→    <div className="space-y-4 sm:space-y-6">
+    35→    35→      <div>
+    36→    36→        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Send & Receive</h1>
+    37→    37→        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Transfer money instantly, request payments, top up or withdraw</p>
+    38→    38→      </div>
+    39→    39→      <Tabs defaultValue="send">
+    40→    40→        <TabsList className="grid w-full grid-cols-4">
+    41→    41→          <TabsTrigger value="send" className="text-xs sm:text-sm"><SendHorizontal className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Send</span></TabsTrigger>
+    42→    42→          <TabsTrigger value="request" className="text-xs sm:text-sm"><ArrowDownToLine className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Request</span></TabsTrigger>
+    43→    43→          <TabsTrigger value="topup" className="text-xs sm:text-sm"><ArrowDownToLine className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Top Up</span></TabsTrigger>
+    44→    44→          <TabsTrigger value="withdraw" className="text-xs sm:text-sm"><ArrowUpFromLine className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Withdraw</span></TabsTrigger>
+    45→    45→        </TabsList>
+    46→    46→        <TabsContent value="send" className="mt-3 sm:mt-4"><SendFlow /></TabsContent>
+    47→    47→        <TabsContent value="request" className="mt-3 sm:mt-4"><RequestFlow /></TabsContent>
+    48→    48→        <TabsContent value="topup" className="mt-3 sm:mt-4"><TopUpFlow /></TabsContent>
+    49→    49→        <TabsContent value="withdraw" className="mt-3 sm:mt-4"><WithdrawFlow /></TabsContent>
+    50→    50→      </Tabs>
+    51→    51→    </div>
+    52→    52→  );
+    53→    53→}
+    54→    54→
+    55→    55→function SendFlow() {
+    56→    56→  const { data: contactsData, reload: reloadContacts } = useFetch<any>("/api/contacts");
+    57→    57→  const { data: wData } = useFetch<{ wallets: any[] }>("/api/wallets");
+    58→    58→  const {
+    59→    59→    deviceContacts, loading: contactsLoading, supported: contactsSupported,
+    60→    60→    pickContacts, checkMembership, addManualContact,
+    61→    61→  } = useContacts();
+    62→    62→  const [step, setStep] = useState(0);
+    63→    63→  const { fmt, symbol, currency: userCur } = useFormatMoney();
+    64→    64→  const [recipient, setRecipient] = useState<any>(null);
+    65→    65→  const [amount, setAmount] = useState("");
+    66→    66→  const [currency, setCurrency] = useState("NGN");
+    67→    67→  const [method, setMethod] = useState("wallet");
+    68→    68→  const [provider, setProvider] = useState("mtn");
+    69→    69→  const [note, setNote] = useState("");
+    70→    70→  const [otp, setOtp] = useState("");
+    71→    71→  const [loading, setLoading] = useState(false);
+    72→    72→  const [done, setDone] = useState<any>(null);
+    73→    73→  const [search, setSearch] = useState("");
+    74→    74→  const [showManualAdd, setShowManualAdd] = useState(false);
+    75→    75→  const [manualName, setManualName] = useState("");
+    76→    76→  const [manualPhone, setManualPhone] = useState("");
+    77→    77→  const [manualEmail, setManualEmail] = useState("");
+    78→    78→  const [checkedContacts, setCheckedContacts] = useState<any>(null);
+    79→    79→  const [checkingContacts, setCheckingContacts] = useState(false);
+    80→    80→  const [activeTab, setActiveTab] = useState<"contacts" | "gaexpay" | "beneficiaries" | "recent">("gaexpay");
+    81→    81→
+    82→    82→  const beneficiaries = contactsData?.beneficiaries ?? [];
+    83→    83→  const gaexpayMembers = contactsData?.gaexpayMembers ?? [];
+    84→    84→  const recentRecipients = contactsData?.recentRecipients ?? [];
+    85→    85→  const wallets = wData?.wallets ?? [];
+    86→    86→
+    87→    87→  // Filter logic
+    88→    88→  const filteredBeneficiaries = search
+    89→    89→    ? beneficiaries.filter((b: any) =>
+    90→    90→        b.name?.toLowerCase().includes(search.toLowerCase()) ||
+    91→    91→        b.account?.toLowerCase().includes(search.toLowerCase()) ||
+    92→    92→        b.bank?.toLowerCase().includes(search.toLowerCase()))
+    93→    93→    : beneficiaries;
+    94→    94→
+    95→    95→  const filteredMembers = search
+    96→    96→    ? gaexpayMembers.filter((m: any) =>
+    97→    97→        `${m.firstName} ${m.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
+    98→    98→        m.phone?.includes(search) ||
+    99→    99→        m.email?.toLowerCase().includes(search.toLowerCase()) ||
+   100→   100→        m.username?.toLowerCase().includes(search.toLowerCase()))
+   101→   101→    : gaexpayMembers;
+   102→   102→
+   103→   103→  const filteredRecent = search
+   104→   104→    ? recentRecipients.filter((r: any) =>
+   105→   105→        r.name?.toLowerCase().includes(search.toLowerCase()) ||
+   106→   106→        r.account?.includes(search))
+   107→   107→    : recentRecipients;
+   108→   108→
+   109→   109→  const filteredDeviceContacts = search
+   110→   110→    ? deviceContacts.filter((c: DeviceContact) =>
+   111→   111→        c.name?.toLowerCase().includes(search.toLowerCase()) ||
+   112→   112→        c.phone?.includes(search) ||
+   113→   113→        c.email?.toLowerCase().includes(search.toLowerCase()))
+   114→   114→    : deviceContacts;
+   115→   115→
+   116→   116→  // Handle picking device contacts
+   117→   117→  const handlePickContacts = async () => {
+   118→   118→    const contacts = await pickContacts();
+   119→   119→    if (contacts.length === 0) {
+   120→   120→      if (!contactsSupported) {
+   121→   121→        toast.info("Contact picker not supported on this browser. Use manual entry below.");
+   122→   122→        setShowManualAdd(true);
+   123→   123→      }
+   124→   124→      return;
+   125→   125→    }
+   126→   126→    setCheckingContacts(true);
+   127→   127→    const result = await checkMembership(contacts);
+   128→   128→    setCheckedContacts(result);
+   129→   129→    setCheckingContacts(false);
+   130→   130→    toast.success(`${result.memberCount} of ${result.totalChecked} contacts are on GaexPay!`);
+   131→   131→    setActiveTab("contacts");
+   132→   132→  };
+   133→   133→
+   134→   134→  // Handle manual contact add
+   135→   135→  const handleManualAdd = () => {
+   136→   136→    if (!manualName.trim()) {
+   137→   137→      toast.error("Please enter a name");
+   138→   138→      return;
+   139→   139→    }
+   140→   140→    if (!manualPhone.trim() && !manualEmail.trim()) {
+   141→   141→      toast.error("Please enter a phone or email");
+   142→   142→      return;
+   143→   143→    }
+   144→   144→    addManualContact({ name: manualName.trim(), phone: manualPhone.trim() || undefined, email: manualEmail.trim() || undefined });
+   145→   145→    setManualName(""); setManualPhone(""); setManualEmail("");
+   146→   146→    setShowManualAdd(false);
+   147→   147→    toast.success("Contact added");
+   148→   148→  };
+   149→   149→
+   150→   150→  // Check device contacts for membership
+   151→   151→  useEffect(() => {
+   152→   152→    if (deviceContacts.length > 0 && !checkedContacts) {
+   153→   153→      setCheckingContacts(true);
+   154→   154→      checkMembership(deviceContacts).then((result) => {
+   155→   155→        setCheckedContacts(result);
+   156→   156→        setCheckingContacts(false);
+   157→   157→      });
+   158→   158→    }
+   159→   159→  }, [deviceContacts, checkedContacts, checkMembership]);
+   160→   160→
+   161→   161→  const submit = async () => {
+   162→   162→    setLoading(true);
+   163→   163→    try {
+   164→   164→      const res = await fetch("/api/transfer", {
+   165→   165→        method: "POST",
+   166→   166→        headers: { "Content-Type": "application/json" },
+   167→   167→        body: JSON.stringify({ amount: Number(amount), currency, recipient, method, provider, note }),
+   168→   168→      });
+   169→   169→      const data = await res.json();
+   170→   170→      if (data.success) {
+   171→   171→        setDone(data.transaction);
+   172→   172→        setStep(4);
+   173→   173→      } else {
+   174→   174→        toast.error(data.error || "Transfer failed");
+   175→   175→      }
+   176→   176→    } catch {
+   177→   177→      toast.error("Something went wrong");
+   178→   178→    } finally {
+   179→   179→      setLoading(false);
+   180→   180→    }
+   181→   181→  };
+   182→   182→
+   183→   183→  const reset = () => {
+   184→   184→    setStep(0); setRecipient(null); setAmount(""); setNote(""); setOtp(""); setDone(null);
+   185→   185→  };
+   186→   186→
+   187→   187→  const selectRecipient = (r: any) => {
+   188→   188→    setRecipient(r);
+   189→   189→    setMethod(r.method || r.type || "wallet");
+   190→   190→    setStep(1);
+   191→   191→  };
+   192→   192→
+   193→   193→  return (
+   194→   194→    <Card className="mx-auto max-w-2xl p-4 sm:p-6">
+   195→   195→      {/* Steps indicator */}
+   196→   196→      <div className="mb-6 flex items-center justify-between">
+   197→   197→        {["Recipient", "Amount", "Review", "Verify"].map((s, i) => (
+   198→   198→          <div key={s} className="flex flex-1 items-center">
+   199→   199→            <div className={cn(
+   200→   200→              "grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-semibold transition",
+   201→   201→              i < step ? "bg-primary text-primary-foreground" : i === step ? "bg-primary text-primary-foreground ring-4 ring-primary/20" : "bg-muted text-muted-foreground",
+   202→   202→            )}>
+   203→   203→              {i < step ? <Check className="h-4 w-4" /> : i + 1}
+   204→   204→            </div>
+   205→   205→            <span className={cn("ml-2 hidden sm:inline text-xs font-medium", i === step ? "text-foreground" : "text-muted-foreground")}>{s}</span>
+   206→   206→            {i < 3 && <div className={cn("mx-2 h-0.5 flex-1 rounded", i < step ? "bg-primary" : "bg-muted")} />}
+   207→   207→          </div>
+   208→   208→        ))}
+   209→   209→      </div>
+   210→   210→
+   211→   211→      <AnimatePresence mode="wait">
+   212→   212→        {/* Step 0: Recipient — NEW DESIGN */}
+   213→   213→        {step === 0 && (
+   214→   214→          <motion.div key="s0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+   215→   215→            <h3 className="font-semibold mb-1">Who are you sending to?</h3>
+   216→   216→            <p className="text-sm text-muted-foreground mb-4">Pick from contacts, GaexPay members, or enter new details</p>
+   217→   217→
+   218→   218→            {/* Action buttons row */}
+   219→   219→            <div className="mb-4 grid grid-cols-2 gap-2">
+   220→   220→              {/* Access phone contacts */}
+   221→   221→              <Button
+   222→   222→                variant="outline"
+   223→   223→                className="h-12"
+   224→   224→                onClick={handlePickContacts}
+   225→   225→                disabled={contactsLoading}
+   226→   226→                suppressHydrationWarning
+   227→   227→              >
+   228→   228→                <span className="flex items-center justify-center" suppressHydrationWarning>
+   229→   229→                  <Loader2 className={cn("h-4 w-4 mr-2", contactsLoading ? "animate-spin" : "hidden")} />
+   230→   230→                  <ContactIcon className={cn("h-4 w-4 mr-2", contactsLoading ? "hidden" : "")} />
+   231→   231→                  Contacts
+   232→   232→                </span>
+   233→   233→              </Button>
+   234→   234→
+   235→   235→              {/* New recipient */}
+   236→   236→              <Button
+   237→   237→                variant="outline"
+   238→   238→                className="h-12"
+   239→   239→                onClick={() => setShowManualAdd(!showManualAdd)}
+   240→   240→                suppressHydrationWarning
+   241→   241→              >
+   242→   242→                <span className="flex items-center justify-center" suppressHydrationWarning>
+   243→   243→                  <UserPlus className="h-4 w-4 mr-2" />
+   244→   244→                  New Recipient
+   245→   245→                </span>
+   246→   246→              </Button>
+   247→   247→            </div>
+   248→   248→
+   249→   249→            {/* Manual add form */}
+   250→   250→            {showManualAdd && (
+   251→   251→              <motion.div
+   252→   252→                initial={{ opacity: 0, height: 0 }}
+   253→   253→                animate={{ opacity: 1, height: "auto" }}
+   254→   254→                exit={{ opacity: 0, height: 0 }}
+   255→   255→                className="mb-4 rounded-lg border bg-muted/30 p-4 space-y-3"
+   256→   256→              >
+   257→   257→                <p className="text-xs font-medium text-muted-foreground">Enter recipient details manually</p>
+   258→   258→                <Input placeholder="Full name" value={manualName} onChange={(e) => setManualName(e.target.value)} />
+   259→   259→                <div className="grid grid-cols-2 gap-2">
+   260→   260→                  <div className="relative">
+   261→   261→                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+   262→   262→                    <Input placeholder="Phone" className="pl-9" value={manualPhone} onChange={(e) => setManualPhone(e.target.value)} />
+   263→   263→                  </div>
+   264→   264→                  <div className="relative">
+   265→   265→                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+   266→   266→                    <Input placeholder="Email" className="pl-9" value={manualEmail} onChange={(e) => setManualEmail(e.target.value)} />
+   267→   267→                  </div>
+   268→   268→                </div>
+   269→   269→                <div className="flex gap-2">
+   270→   270→                  <Button size="sm" variant="ghost" onClick={() => setShowManualAdd(false)}>Cancel</Button>
+   271→   271→                  <Button size="sm" onClick={handleManualAdd}>
+   272→   272→                    <Plus className="h-3.5 w-3.5 mr-1" /> Add Contact
+   273→   273→                  </Button>
+   274→   274→                </div>
+   275→   275→              </motion.div>
+   276→   276→            )}
+   277→   277→
+   278→   278→            {/* Search bar */}
+   279→   279→            <div className="relative mb-4">
+   280→   280→              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+   281→   281→              <Input
+   282→   282→                placeholder="Search name, phone, email, account..."
+   283→   283→                className="pl-9"
+   284→   284→                value={search}
+   285→   285→                onChange={(e) => setSearch(e.target.value)}
+   286→   286→              />
+   287→   287→            </div>
+   288→   288→
+   289→   289→            {/* Tabs: GaexPay Members | Contacts | Saved | Recent */}
+   290→   290→            <div className="mb-3 flex gap-1.5 flex-wrap">
+   291→   291→              {[
+   292→   292→                { id: "gaexpay", label: "GaexPay", icon: UserCheck, count: filteredMembers.length },
+   293→   293→                { id: "contacts", label: "Contacts", icon: ContactIcon, count: checkedContacts ? checkedContacts.totalChecked : deviceContacts.length },
+   294→   294→                { id: "beneficiaries", label: "Saved", icon: Users, count: filteredBeneficiaries.length },
+   295→   295→                { id: "recent", label: "Recent", icon: Repeat, count: filteredRecent.length },
+   296→   296→              ].map((t) => {
+   297→   297→                const Icon = t.icon;
+   298→   298→                const isActive = activeTab === t.id;
+   299→   299→                return (
+   300→   300→                  <button
+   301→   301→                    key={t.id}
+   302→   302→                    onClick={() => setActiveTab(t.id as any)}
+   303→   303→                    className={cn(
+   304→   304→                      "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition",
+   305→   305→                      isActive ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground",
+   306→   306→                    )}
+   307→   307→                  >
+   308→   308→                    <Icon className="h-3.5 w-3.5" />
+   309→   309→                    {t.label}
+   310→   310→                    {t.count > 0 && (
+   311→   311→                      <span className={cn(
+   312→   312→                        "rounded-full px-1.5 py-0.5 text-[9px] font-bold",
+   313→   313→                        isActive ? "bg-primary text-primary-foreground" : "bg-muted-foreground/20",
+   314→   314→                      )}>
+   315→   315→                        {t.count}
+   316→   316→                      </span>
+   317→   317→                    )}
+   318→   318→                  </button>
+   319→   319→                );
+   320→   320→              })}
+   321→   321→            </div>
+   322→   322→
+   323→   323→            {/* Content per tab */}
+   324→   324→            <div className="space-y-1.5 max-h-72 overflow-y-auto overscroll-contain no-scrollbar" style={{ WebkitOverflowScrolling: "touch" }}>
+   325→   325→
+   326→   326→              {/* GaexPay Members tab */}
+   327→   327→              {activeTab === "gaexpay" && (
+   328→   328→                <>
+   329→   329→                  {filteredMembers.length === 0 && !contactsData && [1, 2, 3].map((i) => <Skeleton key={i} className="h-14" />)}
+   330→   330→                  {filteredMembers.length === 0 && contactsData && (
+   331→   331→                    <div className="grid place-items-center py-8 text-center">
+   332→   332→                      <UserCheck className="h-8 w-8 text-muted-foreground/40 mb-2" />
+   333→   333→                      <p className="text-sm text-muted-foreground">No GaexPay members found</p>
+   334→   334→                      <p className="text-xs text-muted-foreground mt-1">Invite friends to join GaexPay!</p>
+   335→   335→                    </div>
+   336→   336→                  )}
+   337→   337→                  {filteredMembers.map((m: any) => (
+   338→   338→                    <button
+   339→   339→                      key={m.id}
+   340→   340→                      onClick={() => selectRecipient({
+   341→   341→                        name: `${m.firstName} ${m.lastName}`,
+   342→   342→                        account: m.phone,
+   343→   343→                        bank: "GaexPay",
+   344→   344→                        type: "gaexpay",
+   345→   345→                        method: "wallet",
+   346→   346→                        gaexpayUserId: m.id,
+   347→   347→                      })}
+   348→   348→                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+   349→   349→                    >
+   350→   350→                      <Avatar className="h-10 w-10">
+   351→   351→                        <AvatarFallback className="bg-emerald-500/15 text-emerald-600 text-xs font-semibold">
+   352→   352→                          {m.firstName[0]}{m.lastName[0]}
+   353→   353→                        </AvatarFallback>
+   354→   354→                      </Avatar>
+   355→   355→                      <div className="flex-1 min-w-0">
+   356→   356→                        <div className="flex items-center gap-1.5">
+   357→   357→                          <p className="text-sm font-medium truncate">{m.firstName} {m.lastName}</p>
+   358→   358→                          {m.kycStatus === "verified" && (
+   359→   359→                            <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[9px] shrink-0">
+   360→   360→                              <Check className="h-2.5 w-2.5 mr-0.5" /> KYC
+   361→   361→                            </Badge>
+   362→   362→                          )}
+   363→   363→                        </div>
+   364→   364→                        <p className="text-xs text-muted-foreground truncate">
+   365→   365→                          {m.username ? `@${m.username}` : m.phone}
+   366→   366→                        </p>
+   367→   367→                      </div>
+   368→   368→                      <Badge className="bg-emerald-500/10 text-emerald-600 border-0 shrink-0">
+   369→   369→                        <WalletIcon className="h-3 w-3 mr-0.5" /> Instant
+   370→   370→                      </Badge>
+   371→   371→                    </button>
+   372→   372→                  ))}
+   373→   373→                </>
+   374→   374→              )}
+   375→   375→
+   376→   376→              {/* Device Contacts tab */}
+   377→   377→              {activeTab === "contacts" && (
+   378→   378→                <>
+   379→   379→                  {checkingContacts && (
+   380→   380→                    <div className="flex items-center justify-center py-8 gap-2">
+   381→   381→                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+   382→   382→                      <p className="text-sm text-muted-foreground">Checking GaexPay membership...</p>
+   383→   383→                    </div>
+   384→   384→                  )}
+   385→   385→                  {!checkingContacts && deviceContacts.length === 0 && (
+   386→   386→                    <div className="grid place-items-center py-8 text-center">
+   387→   387→                      <ContactIcon className="h-8 w-8 text-muted-foreground/40 mb-2" />
+   388→   388→                      <p className="text-sm text-muted-foreground">No contacts imported yet</p>
+   389→   389→                      <Button size="sm" variant="outline" className="mt-3" onClick={handlePickContacts}>
+   390→   390→                        <ContactIcon className="h-4 w-4 mr-1.5" /> Import Contacts
+   391→   391→                      </Button>
+   392→   392→                    </div>
+   393→   393→                  )}
+   394→   394→                  {/* Show contacts that are GaexPay members first */}
+   395→   395→                  {checkedContacts?.members?.map((mc: any) => (
+   396→   396→                    <button
+   397→   397→                      key={mc.gaexpayUser.id}
+   398→   398→                      onClick={() => selectRecipient({
+   399→   399→                        name: mc.contactName,
+   400→   400→                        account: mc.gaexpayUser.phone,
+   401→   401→                        bank: "GaexPay",
+   402→   402→                        type: "gaexpay",
+   403→   403→                        method: "wallet",
+   404→   404→                        gaexpayUserId: mc.gaexpayUser.id,
+   405→   405→                      })}
+   406→   406→                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+   407→   407→                    >
+   408→   408→                      <Avatar className="h-10 w-10">
+   409→   409→                        <AvatarFallback className="bg-emerald-500/15 text-emerald-600 text-xs font-semibold">
+   410→   410→                          {mc.contactName.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+   411→   411→                        </AvatarFallback>
+   412→   412→                      </Avatar>
+   413→   413→                      <div className="flex-1 min-w-0">
+   414→   414→                        <div className="flex items-center gap-1.5">
+   415→   415→                          <p className="text-sm font-medium truncate">{mc.contactName}</p>
+   416→   416→                          <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[9px] shrink-0">
+   417→   417→                            <UserCheck className="h-2.5 w-2.5 mr-0.5" /> GaexPay
+   418→   418→                          </Badge>
+   419→   419→                        </div>
+   420→   420→                        <p className="text-xs text-muted-foreground truncate">{mc.phone || mc.email}</p>
+   421→   421→                      </div>
+   422→   422→                      <Badge className="bg-emerald-500/10 text-emerald-600 border-0 shrink-0">
+   423→   423→                        <WalletIcon className="h-3 w-3 mr-0.5" /> Instant
+   424→   424→                      </Badge>
+   425→   425→                    </button>
+   426→   426→                  ))}
+   427→   427→                  {/* Non-member contacts */}
+   428→   428→                  {checkedContacts?.nonMembers?.filter((nmc: any) =>
+   429→   429→                    !search || nmc.name?.toLowerCase().includes(search.toLowerCase()) || nmc.phone?.includes(search)
+   430→   430→                  ).map((nmc: any, i: number) => (
+   431→   431→                    <button
+   432→   432→                      key={i}
+   433→   433→                      onClick={() => selectRecipient({
+   434→   434→                        name: nmc.name,
+   435→   435→                        account: nmc.phone || nmc.email,
+   436→   436→                        bank: nmc.phone ? "Mobile Money" : "Email",
+   437→   437→                        type: nmc.phone ? "momo" : "email",
+   438→   438→                        method: nmc.phone ? "momo" : "wallet",
+   439→   439→                      })}
+   440→   440→                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+   441→   441→                    >
+   442→   442→                      <Avatar className="h-10 w-10">
+   443→   443→                        <AvatarFallback className="bg-muted text-muted-foreground text-xs font-semibold">
+   444→   444→                          {nmc.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+   445→   445→                        </AvatarFallback>
+   446→   446→                      </Avatar>
+   447→   447→                      <div className="flex-1 min-w-0">
+   448→   448→                        <p className="text-sm font-medium truncate">{nmc.name}</p>
+   449→   449→                        <p className="text-xs text-muted-foreground truncate">{nmc.phone || nmc.email}</p>
+   450→   450→                      </div>
+   451→   451→                      <Badge variant="outline" className="text-[10px] shrink-0">
+   452→   452→                        {nmc.phone ? <Smartphone className="h-3 w-3 mr-0.5" /> : <Mail className="h-3 w-3 mr-0.5" />}
+   453→   453→                        {nmc.phone ? "MoMo" : "Invite"}
+   454→   454→                      </Badge>
+   455→   455→                    </button>
+   456→   456→                  ))}
+   457→   457→                  {/* Device contacts not yet checked */}
+   458→   458→                  {!checkedContacts && filteredDeviceContacts.map((c, i) => (
+   459→   459→                    <button
+   460→   460→                      key={i}
+   461→   461→                      onClick={() => selectRecipient({
+   462→   462→                        name: c.name,
+   463→   463→                        account: c.phone || c.email,
+   464→   464→                        bank: c.phone ? "Mobile Money" : "Email",
+   465→   465→                        type: c.phone ? "momo" : "email",
+   466→   466→                        method: c.phone ? "momo" : "wallet",
+   467→   467→                      })}
+   468→   468→                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+   469→   469→                    >
+   470→   470→                      <Avatar className="h-10 w-10">
+   471→   471→                        <AvatarFallback className="bg-muted text-muted-foreground text-xs font-semibold">
+   472→   472→                          {c.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+   473→   473→                        </AvatarFallback>
+   474→   474→                      </Avatar>
+   475→   475→                      <div className="flex-1 min-w-0">
+   476→   476→                        <p className="text-sm font-medium truncate">{c.name}</p>
+   477→   477→                        <p className="text-xs text-muted-foreground truncate">{c.phone || c.email}</p>
+   478→   478→                      </div>
+   479→   479→                    </button>
+   480→   480→                  ))}
+   481→   481→                </>
+   482→   482→              )}
+   483→   483→
+   484→   484→              {/* Saved Beneficiaries tab */}
+   485→   485→              {activeTab === "beneficiaries" && (
+   486→   486→                <>
+   487→   487→                  {filteredBeneficiaries.length === 0 && contactsData && (
+   488→   488→                    <div className="grid place-items-center py-8 text-center">
+   489→   489→                      <Users className="h-8 w-8 text-muted-foreground/40 mb-2" />
+   490→   490→                      <p className="text-sm text-muted-foreground">No saved beneficiaries yet</p>
+   491→   491→                    </div>
+   492→   492→                  )}
+   493→   493→                  {filteredBeneficiaries.length === 0 && !contactsData && [1, 2, 3].map((i) => <Skeleton key={i} className="h-14" />)}
+   494→   494→                  {filteredBeneficiaries.map((b: any) => (
+   495→   495→                    <button
+   496→   496→                      key={b.id}
+   497→   497→                      onClick={() => selectRecipient(b)}
+   498→   498→                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+   499→   499→                    >
+   500→   500→                      <Avatar className="h-10 w-10">
+   501→   501→                        <AvatarFallback className={cn(
+   502→   502→                          "text-xs font-semibold",
+   503→   503→                          b.isGaexpayMember ? "bg-emerald-500/15 text-emerald-600" : "bg-primary/10 text-primary",
+   504→   504→                        )}>
+   505→   505→                          {b.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+   506→   506→                        </AvatarFallback>
+   507→   507→                      </Avatar>
+   508→   508→                      <div className="flex-1 min-w-0">
+   509→   509→                        <div className="flex items-center gap-1.5">
+   510→   510→                          <p className="text-sm font-medium truncate">{b.name}</p>
+   511→   511→                          {b.isGaexpayMember && (
+   512→   512→                            <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[9px] shrink-0">
+   513→   513→                              <UserCheck className="h-2.5 w-2.5 mr-0.5" /> GaexPay
+   514→   514→                            </Badge>
+   515→   515→                          )}
+   516→   516→                        </div>
+   517→   517→                        <p className="text-xs text-muted-foreground truncate">{b.account} · {b.bank || b.type}</p>
+   518→   518→                      </div>
+   519→   519→                      <Badge variant="outline" className="capitalize text-[10px] shrink-0">{b.type}</Badge>
+   520→   520→                    </button>
+   521→   521→                  ))}
+   522→   522→                </>
+   523→   523→              )}
+   524→   524→
+   525→   525→              {/* Recent Recipients tab */}
+   526→   526→              {activeTab === "recent" && (
+   527→   527→                <>
+   528→   528→                  {filteredRecent.length === 0 && contactsData && (
+   529→   529→                    <div className="grid place-items-center py-8 text-center">
+   530→   530→                      <Repeat className="h-8 w-8 text-muted-foreground/40 mb-2" />
+   531→   531→                      <p className="text-sm text-muted-foreground">No recent recipients</p>
+   532→   532→                    </div>
+   533→   533→                  )}
+   534→   534→                  {filteredRecent.map((r: any, i: number) => (
+   535→   535→                    <button
+   536→   536→                      key={i}
+   537→   537→                      onClick={() => selectRecipient({
+   538→   538→                        name: r.name,
+   539→   539→                        account: r.account,
+   540→   540→                        bank: r.bank,
+   541→   541→                        type: r.method,
+   542→   542→                        method: r.method,
+   543→   543→                        provider: r.provider,
+   544→   544→                      })}
+   545→   545→                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+   546→   546→                    >
+   547→   547→                      <Avatar className="h-10 w-10">
+   548→   548→                        <AvatarFallback className="bg-muted text-muted-foreground text-xs font-semibold">
+   549→   549→                          {r.name?.split(" ").map((n: string) => n[0]).slice(0, 2).join("") || "?"}
+   550→   550→                        </AvatarFallback>
+   551→   551→                      </Avatar>
+   552→   552→                      <div className="flex-1 min-w-0">
+   553→   553→                        <p className="text-sm font-medium truncate">{r.name}</p>
+   554→   554→                        <p className="text-xs text-muted-foreground truncate">
+   555→   555→                          {r.account || r.bank} · {r.method}
+   556→   556→                        </p>
+   557→   557→                      </div>
+   558→   558→                      <Badge variant="outline" className="capitalize text-[10px] shrink-0">
+   559→   559→                        <Repeat className="h-3 w-3 mr-0.5" /> Again
+   560→   560→                      </Badge>
+   561→   561→                    </button>
+   562→   562→                  ))}
+   563→   563→                </>
+   564→   564→              )}
+   565→   565→            </div>
+   566→   566→
+   567→   567→            {/* Payment method info */}
+   568→   568→            <div className="mt-4 flex items-start gap-2 rounded-lg bg-sky-500/10 p-3 text-xs text-sky-700 dark:text-sky-400">
+   569→   569→              <Info className="h-4 w-4 shrink-0 mt-0.5" />
+   570→   570→              <span>
+   571→   571→                <strong>GaexPay members</strong> get instant, free transfers. For others, choose Bank Transfer or Mobile Money — fees apply.
+   572→   572→              </span>
+   573→   573→            </div>
+   574→   574→          </motion.div>
+   575→   575→        )}
+   576→   576→
+   577→   577→        {/* Step 1: Amount */}
+   578→   578→        {step === 1 && (
+   579→   579→          <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+   580→   580→            <h3 className="font-semibold mb-1">Enter amount</h3>
+   581→   581→            <p className="text-sm text-muted-foreground mb-4">Sending to {recipient?.name}</p>
+   582→   582→
+   583→   583→            {method === "momo" && (
+   584→   584→              <div className="mb-4">
+   585→   585→                <Label className="text-xs">Provider</Label>
+   586→   586→                <div className="mt-1.5 grid grid-cols-3 gap-2">
+   587→   587→                  {MOBILE_MONEY_PROVIDERS.map((p) => (
+   588→   588→                    <button
+   589→   589→                      key={p.id}
+   590→   590→                      onClick={() => setProvider(p.id)}
+   591→   591→                      className={cn(
+   592→   592→                        "rounded-lg border p-2 text-center text-xs transition",
+   593→   593→                        provider === p.id ? "border-primary ring-2 ring-primary/20" : "hover:bg-muted",
+   594→   594→                      )}
+   595→   595→                      style={provider === p.id ? { borderColor: p.color } : {}}
+   596→   596→                    >
+   597→   597→                      <div className="h-6 w-full rounded mb-1" style={{ background: p.color }} />
+   598→   598→                      {p.name}
+   599→   599→                    </button>
+   600→   600→                  ))}
+   601→   601→                </div>
+   602→   602→              </div>
+   603→   603→            )}
+   604→   604→
+   605→   605→            <div className="rounded-2xl border bg-muted/30 p-6 text-center">
+   606→   606→              <div className="flex items-center justify-center gap-2">
+   607→   607→                <Select value={currency} onValueChange={setCurrency}>
+   608→   608→                  <SelectTrigger className="w-24 h-9"><SelectValue /></SelectTrigger>
+   609→   609→                  <SelectContent>
+   610→   610→                    {CURRENCIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>)}
+   611→   611→                  </SelectContent>
+   612→   612→                </Select>
+   613→   613→                <Input
+   614→   614→                  type="number"
+   615→   615→                  value={amount}
+   616→   616→                  onChange={(e) => setAmount(e.target.value)}
+   617→   617→                  placeholder="0.00"
+   618→   618→                  className="flex-1 border-0 bg-transparent text-3xl font-bold tabular-nums text-center focus-visible:ring-0"
+   619→   619→                />
+   620→   620→              </div>
+   621→   621→              <p className="mt-2 text-xs text-muted-foreground">
+   622→   622→                Available: {formatMoney(wallets.find((w) => w.currency === currency)?.balance ?? 0, currency)}
+   623→   623→              </p>
+   624→   624→            </div>
+   625→   625→
+   626→   626→            <div className="mt-3 flex gap-2">
+   627→   627→              {[5000, 10000, 25000, 50000].map((v) => (
+   628→   628→                <button
+   629→   629→                  key={v}
+   630→   630→                  onClick={() => setAmount(String(v))}
+   631→   631→                  className="flex-1 rounded-lg border py-1.5 text-xs font-medium hover:bg-muted transition"
+   632→   632→                >
+   633→   633→                  {symbol}{v.toLocaleString()}
+   634→   634→                </button>
+   635→   635→              ))}
+   636→   636→            </div>
+   637→   637→
+   638→   638→            <div className="mt-4 space-y-2">
+   639→   639→              <Label className="text-xs">Note (optional)</Label>
+   640→   640→              <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="What's this for?" />
+   641→   641→            </div>
+   642→   642→
+   643→   643→            <div className="mt-6 flex gap-2">
+   644→   644→              <Button variant="outline" onClick={() => setStep(0)} className="flex-1">
+   645→   645→                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+   646→   646→              </Button>
+   647→   647→              <Button onClick={() => setStep(2)} disabled={!amount || Number(amount) <= 0} className="flex-1">
+   648→   648→                Continue <ChevronRight className="h-4 w-4 ml-1" />
+   649→   649→              </Button>
+   650→   650→            </div>
+   651→   651→          </motion.div>
+   652→   652→        )}
+   653→   653→
+   654→   654→        {/* Step 2: Review */}
+   655→   655→        {step === 2 && (
+   656→   656→          <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+   657→   657→            <h3 className="font-semibold mb-1">Review transfer</h3>
+   658→   658→            <p className="text-sm text-muted-foreground mb-4">Please confirm the details below</p>
+   659→   659→
+   660→   660→            <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
+   661→   661→              <Row label="Recipient" value={recipient?.name} />
+   662→   662→              <Row label="Account" value={recipient?.account || recipient?.bank} />
+   663→   663→              <Row label="Method" value={method === "momo" ? `Mobile Money · ${provider.toUpperCase()}` : method === "bank" ? "Bank Transfer" : "GaexPay Wallet"} />
+   664→   664→              <Row label="Amount" value={formatMoney(Number(amount), currency)} />
+   665→   665→              <Row label="Fee" value={method === "bank" ? formatMoney(Math.min(Number(amount) * 0.005, 5000), currency) : method === "momo" ? formatMoney(Number(amount) * 0.01, currency) : "Free"} />
+   666→   666→              <div className="border-t pt-3">
+   667→   667→                <Row label="Total" value={formatMoney(Number(amount) + (method === "bank" ? Math.min(Number(amount) * 0.005, 5000) : method === "momo" ? Number(amount) * 0.01 : 0), currency)} bold />
+   668→   668→              </div>
+   669→   669→            </div>
+   670→   670→
+   671→   671→            <div className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-400">
+   672→   672→              <ShieldCheck className="h-4 w-4 shrink-0" />
+   673→   673→              Protected by GaexPay Buyer Protection & end-to-end encryption.
+   674→   674→            </div>
+   675→   675→
+   676→   676→            <div className="mt-6 flex gap-2">
+   677→   677→              <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
+   678→   678→                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+   679→   679→              </Button>
+   680→   680→              <Button onClick={() => setStep(3)} className="flex-1">Confirm & Continue</Button>
+   681→   681→            </div>
+   682→   682→          </motion.div>
+   683→   683→        )}
+   684→   684→
+   685→   685→        {/* Step 3: OTP */}
+   686→   686→        {step === 3 && (
+   687→   687→          <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+   688→   688→            <div className="text-center">
+   689→   689→              <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-primary/10">
+   690→   690→                <ShieldCheck className="h-7 w-7 text-primary" />
+   691→   691→              </div>
+   692→   692→              <h3 className="font-semibold">Verify it's you</h3>
+   693→   693→              <p className="mt-1 text-sm text-muted-foreground">
+   694→   694→                Enter the 6-digit code sent to your registered phone & email
+   695→   695→              </p>
+   696→   696→            </div>
+   697→   697→
+   698→   698→            <div className="my-6 flex justify-center">
+   699→   699→              <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+   700→   700→                <InputOTPGroup>
+   701→   701→                  <InputOTPSlot index={0} />
+   702→   702→                  <InputOTPSlot index={1} />
+   703→   703→                  <InputOTPSlot index={2} />
+   704→   704→                  <InputOTPSlot index={3} />
+   705→   705→                  <InputOTPSlot index={4} />
+   706→   706→                  <InputOTPSlot index={5} />
+   707→   707→                </InputOTPGroup>
+   708→   708→              </InputOTP>
+   709→   709→            </div>
+   710→   710→
+   711→   711→            <p className="text-center text-xs text-muted-foreground">
+   712→   712→              Didn't get a code? <button className="text-primary font-medium">Resend in 0:42</button>
+   713→   713→            </p>
+   714→   714→            <p className="mt-1 text-center text-xs text-muted-foreground">
+   715→   715→              Demo: enter any 6 digits to continue
+   716→   716→            </p>
+   717→   717→
+   718→   718→            <div className="mt-6 flex gap-2">
+   719→   719→              <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
+   720→   720→                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+   721→   721→              </Button>
+   722→   722→              <Button onClick={submit} disabled={otp.length < 6 || loading} className="flex-1">
+   723→   723→                {loading ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Sending...</> : "Confirm Transfer"}
+   724→   724→              </Button>
+   725→   725→            </div>
+   726→   726→          </motion.div>
+   727→   727→        )}
+   728→   728→
+   729→   729→        {/* Step 4: Success */}
+   730→   730→        {step === 4 && done && (
+   731→   731→          <motion.div key="s4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+   732→   732→            <Confetti trigger={true} />
+   733→   733→            <div className="text-center">
+   734→   734→              <motion.div
+   735→   735→                initial={{ scale: 0 }}
+   736→   736→                animate={{ scale: 1 }}
+   737→   737→                transition={{ type: "spring", delay: 0.1 }}
+   738→   738→                className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white pulse-glow"
+   739→   739→              >
+   740→   740→                <Check className="h-8 w-8" strokeWidth={3} />
+   741→   741→              </motion.div>
+   742→   742→              <h3 className="text-xl font-bold">Transfer Successful!</h3>
+   743→   743→              <p className="mt-1 text-sm text-muted-foreground">
+   744→   744→                {formatMoney(Number(amount), currency)} sent to {recipient?.name}
+   745→   745→              </p>
+   746→   746→            </div>
+   747→   747→
+   748→   748→            <div className="my-5 space-y-2 rounded-xl border bg-muted/30 p-4 text-sm">
+   749→   749→              <Row label="Reference" value={done.reference} />
+   750→   750→              <Row label="Recipient" value={recipient?.name} />
+   751→   751→              <Row label="Amount" value={formatMoney(Number(amount), currency)} />
+   752→   752→              <Row label="Fee" value={formatMoney(done.fee, currency)} />
+   753→   753→              <Row label="Date" value={new Date(done.completedAt).toLocaleString()} />
+   754→   754→              <Row label="Status" value="Completed" />
+   755→   755→            </div>
+   756→   756→
+   757→   757→            <div className="flex gap-2">
+   758→   758→              <Button variant="outline" className="flex-1" onClick={() => { navigator.clipboard?.writeText(done.reference); toast.success("Reference copied"); }}>
+   759→   759→                <Copy className="h-4 w-4 mr-1.5" /> Copy Ref
+   760→   760→              </Button>
+   761→   761→              <Button variant="outline" className="flex-1">
+   762→   762→                <Share2 className="h-4 w-4 mr-1.5" /> Share
+   763→   763→              </Button>
+   764→   764→              <Button className="flex-1" onClick={reset}>
+   765→   765→                <Repeat className="h-4 w-4 mr-1.5" /> Send Again
+   766→   766→              </Button>
+   767→   767→            </div>
+   768→   768→          </motion.div>
+   769→   769→        )}
+   770→   770→      </AnimatePresence>
+   771→   771→    </Card>
+   772→   772→  );
+   773→   773→}
+   774→   774→
+   775→   775→function Row({ label, value, bold }: { label: string; value?: string; bold?: boolean }) {
+   776→   776→  return (
+   777→   777→    <div className="flex items-center justify-between">
+   778→   778→      <span className="text-xs text-muted-foreground">{label}</span>
+   779→   779→      <span className={cn("text-sm", bold ? "font-bold" : "font-medium")}>{value || "—"}</span>
+   780→   780→    </div>
+   781→   781→  );
+   782→   782→}
+   783→   783→
+   784→   784→function RequestFlow() {
+   785→   785→  const { data: wData } = useFetch<{ wallets: any[] }>("/api/wallets");
+   786→   786→  const wallets = wData?.wallets ?? [];
+   787→   787→  const [amount, setAmount] = useState("");
+   788→   788→  const [currency, setCurrency] = useState("NGN");
+   789→   789→  const [note, setNote] = useState("");
+   790→   790→  const [link, setLink] = useState("");
+   791→   791→
+   792→   792→  const generate = () => {
+   793→   793→    setLink(`https://gaexpay.com/pay/req/${currency}${amount}-${Date.now().toString(36)}`);
+   794→   794→    toast.success("Payment request link generated");
+   795→   795→  };
+   796→   796→
+   797→   797→  return (
+   798→   798→    <Card className="mx-auto max-w-2xl p-4 sm:p-6">
+   799→   799→      <h3 className="font-semibold text-base sm:text-lg">Request Money</h3>
+   800→   800→      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 mb-4">Generate a payment link or QR code to receive funds</p>
+   801→   801→
+   802→   802→      <div className="rounded-xl sm:rounded-2xl border bg-muted/30 p-4 sm:p-6 text-center">
+   803→   803→        <div className="flex items-center justify-center gap-2">
+   804→   804→          <Select value={currency} onValueChange={setCurrency}>
+   805→   805→            <SelectTrigger className="w-20 sm:w-24 h-10"><SelectValue /></SelectTrigger>
+   806→   806→            <SelectContent>
+   807→   807→              {CURRENCIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>)}
+   808→   808→            </SelectContent>
+   809→   809→          </Select>
+   810→   810→          <Input
+   811→   811→            type="number"
+   812→   812→            value={amount}
+   813→   813→            onChange={(e) => setAmount(e.target.value)}
+   814→   814→            placeholder="0.00"
+   815→   815→            className="flex-1 border-0 bg-transparent text-2xl sm:text-3xl font-bold tabular-nums text-center focus-visible:ring-0"
+   816→   816→          />
+   817→   817→        </div>
+   818→   818→      </div>
+   819→   819→
+   820→   820→      <div className="mt-4 space-y-2">
+   821→   821→        <Label className="text-xs">Note for payer</Label>
+   822→   822→        <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Dinner split, rent contribution" />
+   823→   823→      </div>
+   824→   824→
+   825→   825→      <Button className="mt-4 w-full h-11" onClick={generate}>Generate Request Link</Button>
+   826→   826→
+   827→   827→      {link && (
+   828→   828→        <div className="mt-4 space-y-3">
+   829→   829→          <div className="flex items-center gap-2 rounded-lg border bg-muted/30 p-3">
+   830→   830→            <QrCode className="h-7 w-7 text-primary shrink-0" />
+   831→   831→            <Input readOnly value={link} className="border-0 bg-transparent text-xs" />
+   832→   832→            <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard?.writeText(link); toast.success("Link copied"); }}>
+   833→   833→              <Copy className="h-4 w-4" />
+   834→   834→            </Button>
+   835→   835→          </div>
+   836→   836→          <div className="grid grid-cols-3 gap-2">
+   837→   837→            <Button variant="outline" size="sm" className="h-9"><Share2 className="h-3.5 w-3.5 mr-1" /> WhatsApp</Button>
+   838→   838→            <Button variant="outline" size="sm" className="h-9"><Share2 className="h-3.5 w-3.5 mr-1" /> Email</Button>
+   839→   839→            <Button variant="outline" size="sm" className="h-9"><Copy className="h-3.5 w-3.5 mr-1" /> Copy</Button>
+   840→   840→          </div>
+   841→   841→        </div>
+   842→   842→      )}
+   843→   843→    </Card>
+   844→   844→  );
+   845→   845→}
+   846→   846→
+   847→   847→function TopUpFlow() {
+   848→   848→  return (
+   849→   849→    <Card className="mx-auto max-w-2xl p-4 sm:p-6">
+   850→   850→      <h3 className="font-semibold text-base sm:text-lg">Top Up Wallet</h3>
+   851→   851→      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 mb-4">Add funds from card, bank or mobile money</p>
+   852→   852→      <div className="grid gap-2.5 sm:gap-3 sm:grid-cols-2">
+   853→   853→        {[
+   854→   854→          { icon: Landmark, title: "Bank Transfer", desc: "Free · Instant", color: "bg-emerald-500/15 text-emerald-500" },
+   855→   855→          { icon: Smartphone, title: "Mobile Money", desc: "MTN, Orange, Airtel", color: "bg-amber-500/15 text-amber-500" },
+   856→   856→          { icon: WalletIcon, title: "Debit Card", desc: "Visa, Mastercard", color: "bg-violet-500/15 text-violet-500" },
+   857→   857→          { icon: QrCode, title: "Voucher / Code", desc: "Redeem a code", color: "bg-sky-500/15 text-sky-500" },
+   858→   858→        ].map((m) => {
+   859→   859→          const Icon = m.icon;
+   860→   860→          return (
+   861→   861→            <button key={m.title} className="flex items-center gap-3 rounded-xl border p-3 sm:p-4 text-left transition hover:border-primary/40 hover:bg-muted/30">
+   862→   862→              <div className={cn("grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-lg shrink-0", m.color)}>
+   863→   863→                <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+   864→   864→              </div>
+   865→   865→              <div className="min-w-0 flex-1">
+   866→   866→                <p className="text-sm font-semibold">{m.title}</p>
+   867→   867→                <p className="text-[11px] sm:text-xs text-muted-foreground">{m.desc}</p>
+   868→   868→              </div>
+   869→   869→              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+   870→   870→            </button>
+   871→   871→          );
+   872→   872→        })}
+   873→   873→      </div>
+   874→   874→    </Card>
+   875→   875→  );
+   876→   876→}
+   877→   877→
+   878→   878→function WithdrawFlow() {
+   879→   879→  const { fmt, symbol, currency: userCur } = useFormatMoney();
+   880→   880→  const { data: walletData } = useFetch<{ wallets: any[]; totalNGN: number }>("/api/wallets");
+   881→   881→  const { data: benData } = useFetch<{ beneficiaries: any[] }>("/api/beneficiaries");
+   882→   882→  const [amount, setAmount] = useState("");
+   883→   883→  const [destination, setDestination] = useState("");
+   884→   884→
+   885→   885→  const wallets = walletData?.wallets ?? [];
+   886→   886→  const beneficiaries = benData?.beneficiaries ?? [];
+   887→   887→  const defaultWallet = wallets.find((w) => w.isDefault) || wallets[0];
+   888→   888→  const availableBalance = defaultWallet?.balance ?? 0;
+   889→   889→  const dailyLimit = 5000000;
+   890→   890→  const dailyLimitLeft = Math.max(0, dailyLimit - availableBalance * 0.1);
+   891→   891→
+   892→   892→  // Filter beneficiaries for withdrawal destinations (bank + momo)
+   893→   893→  const withdrawalDestinations = beneficiaries.filter((b) => b.type === "bank" || b.type === "momo");
+   894→   894→
+   895→   895→  const handleWithdraw = async () => {
+   896→   896→    if (!amount || Number(amount) <= 0) {
+   897→   897→      toast.error("Enter a valid amount");
+   898→   898→      return;
+   899→   899→    }
+   900→   900→    if (Number(amount) > availableBalance) {
+   901→   901→      toast.error("Insufficient balance");
+   902→   902→      return;
+   903→   903→    }
+   904→   904→    toast.success(`Withdrawing ${symbol}${Number(amount).toLocaleString()} to your account`);
+   905→   905→    setAmount("");
+   906→   906→  };
+   907→   907→
+   908→   908→  return (
+   909→   909→    <Card className="mx-auto max-w-2xl p-4 sm:p-6">
+   910→   910→      <h3 className="font-semibold text-base sm:text-lg">Withdraw Funds</h3>
+   911→   911→      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 mb-4">Cash out to bank or mobile money</p>
+   912→   912→      <div className="space-y-4">
+   913→   913→        <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+   914→   914→          <div className="rounded-xl border p-3 sm:p-4">
+   915→   915→            <p className="text-[11px] sm:text-xs text-muted-foreground">Available</p>
+   916→   916→            <p className="text-base sm:text-xl font-bold tabular-nums">{fmt(availableBalance)}</p>
+   917→   917→          </div>
+   918→   918→          <div className="rounded-xl border p-3 sm:p-4">
+   919→   919→            <p className="text-[11px] sm:text-xs text-muted-foreground">Daily limit left</p>
+   920→   920→            <p className="text-base sm:text-xl font-bold tabular-nums">{fmt(dailyLimitLeft)}</p>
+   921→   921→          </div>
+   922→   922→        </div>
+   923→   923→        <div className="space-y-1.5">
+   924→   924→          <Label className="text-xs sm:text-sm">Withdraw to</Label>
+   925→   925→          {withdrawalDestinations.length > 0 ? (
+   926→   926→            <Select value={destination} onValueChange={setDestination}>
+   927→   927→              <SelectTrigger className="h-11"><SelectValue placeholder="Select destination" /></SelectTrigger>
+   928→   928→              <SelectContent>
+   929→   929→                {withdrawalDestinations.map((b) => (
+   930→   930→                  <SelectItem key={b.id} value={b.id}>
+   931→   931→                    {b.bank || b.type} · {b.account}
+   932→   932→                  </SelectItem>
+   933→   933→                ))}
+   934→   934→              </SelectContent>
+   935→   935→            </Select>
+   936→   936→          ) : (
+   937→   937→            <div className="rounded-lg border border-dashed p-4 text-center">
+   938→   938→              <p className="text-xs text-muted-foreground mb-2">No saved bank or mobile money accounts</p>
+   939→   939→              <Button size="sm" variant="outline" onClick={() => useApp.getState().setView("send")}>Add beneficiary</Button>
+   940→   940→            </div>
+   941→   941→          )}
+   942→   942→        </div>
+   943→   943→        <div className="space-y-1.5">
+   944→   944→          <Label className="text-xs sm:text-sm">Amount ({userCur})</Label>
+   945→   945→          <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" className="h-11 text-base sm:text-lg font-semibold" />
+   946→   946→        </div>
+   947→   947→        <Button className="w-full h-11" onClick={handleWithdraw} disabled={!amount || !destination}>Continue</Button>
+   948→   948→      </div>
+   949→   949→    </Card>
+   950→   950→  );
+   951→   951→}
+   952→   952→

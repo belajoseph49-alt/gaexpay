@@ -1,0 +1,702 @@
+     1→    59→function SendFlow() {
+     2→    60→  const { data: contactsData, reload: reloadContacts } = useFetch<any>("/api/contacts");
+     3→    61→  const { data: wData } = useFetch<{ wallets: any[] }>("/api/wallets");
+     4→    62→  const {
+     5→    63→    deviceContacts, loading: contactsLoading, supported: contactsSupported,
+     6→    64→    pickContacts, checkMembership, addManualContact,
+     7→    65→  } = useContacts();
+     8→    66→  const [step, setStep] = useState(0);
+     9→    67→  const { fmt, symbol, currency: userCur } = useFormatMoney();
+    10→    68→  const [recipient, setRecipient] = useState<any>(null);
+    11→    69→  const [amount, setAmount] = useState("");
+    12→    70→  const [currency, setCurrency] = useState("NGN");
+    13→    71→  const [method, setMethod] = useState("wallet");
+    14→    72→  const [provider, setProvider] = useState("mtn");
+    15→    73→  const [note, setNote] = useState("");
+    16→    74→  const [otp, setOtp] = useState("");
+    17→    75→  const [loading, setLoading] = useState(false);
+    18→    76→  const [done, setDone] = useState<any>(null);
+    19→    77→  const [search, setSearch] = useState("");
+    20→    78→  const [showManualAdd, setShowManualAdd] = useState(false);
+    21→    79→  const [manualName, setManualName] = useState("");
+    22→    80→  const [manualPhone, setManualPhone] = useState("");
+    23→    81→  const [manualEmail, setManualEmail] = useState("");
+    24→    82→  const [checkedContacts, setCheckedContacts] = useState<any>(null);
+    25→    83→  const [checkingContacts, setCheckingContacts] = useState(false);
+    26→    84→  const [activeTab, setActiveTab] = useState<"contacts" | "gaexpay" | "beneficiaries" | "recent">("gaexpay");
+    27→    85→
+    28→    86→  const beneficiaries = contactsData?.beneficiaries ?? [];
+    29→    87→  const gaexpayMembers = contactsData?.gaexpayMembers ?? [];
+    30→    88→  const recentRecipients = contactsData?.recentRecipients ?? [];
+    31→    89→  const wallets = wData?.wallets ?? [];
+    32→    90→
+    33→    91→  // Filter logic
+    34→    92→  const filteredBeneficiaries = search
+    35→    93→    ? beneficiaries.filter((b: any) =>
+    36→    94→        b.name?.toLowerCase().includes(search.toLowerCase()) ||
+    37→    95→        b.account?.toLowerCase().includes(search.toLowerCase()) ||
+    38→    96→        b.bank?.toLowerCase().includes(search.toLowerCase()))
+    39→    97→    : beneficiaries;
+    40→    98→
+    41→    99→  const filteredMembers = search
+    42→   100→    ? gaexpayMembers.filter((m: any) =>
+    43→   101→        `${m.firstName} ${m.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
+    44→   102→        m.phone?.includes(search) ||
+    45→   103→        m.email?.toLowerCase().includes(search.toLowerCase()) ||
+    46→   104→        m.username?.toLowerCase().includes(search.toLowerCase()))
+    47→   105→    : gaexpayMembers;
+    48→   106→
+    49→   107→  const filteredRecent = search
+    50→   108→    ? recentRecipients.filter((r: any) =>
+    51→   109→        r.name?.toLowerCase().includes(search.toLowerCase()) ||
+    52→   110→        r.account?.includes(search))
+    53→   111→    : recentRecipients;
+    54→   112→
+    55→   113→  const filteredDeviceContacts = search
+    56→   114→    ? deviceContacts.filter((c: DeviceContact) =>
+    57→   115→        c.name?.toLowerCase().includes(search.toLowerCase()) ||
+    58→   116→        c.phone?.includes(search) ||
+    59→   117→        c.email?.toLowerCase().includes(search.toLowerCase()))
+    60→   118→    : deviceContacts;
+    61→   119→
+    62→   120→  // Handle picking device contacts
+    63→   121→  const handlePickContacts = async () => {
+    64→   122→    const contacts = await pickContacts();
+    65→   123→    if (contacts.length === 0) {
+    66→   124→      if (!contactsSupported) {
+    67→   125→        toast.info("Contact picker not supported on this browser. Use manual entry below.");
+    68→   126→        setShowManualAdd(true);
+    69→   127→      }
+    70→   128→      return;
+    71→   129→    }
+    72→   130→    setCheckingContacts(true);
+    73→   131→    const result = await checkMembership(contacts);
+    74→   132→    setCheckedContacts(result);
+    75→   133→    setCheckingContacts(false);
+    76→   134→    toast.success(`${result.memberCount} of ${result.totalChecked} contacts are on GaexPay!`);
+    77→   135→    setActiveTab("contacts");
+    78→   136→  };
+    79→   137→
+    80→   138→  // Handle manual contact add
+    81→   139→  const handleManualAdd = () => {
+    82→   140→    if (!manualName.trim()) {
+    83→   141→      toast.error("Please enter a name");
+    84→   142→      return;
+    85→   143→    }
+    86→   144→    if (!manualPhone.trim() && !manualEmail.trim()) {
+    87→   145→      toast.error("Please enter a phone or email");
+    88→   146→      return;
+    89→   147→    }
+    90→   148→    addManualContact({ name: manualName.trim(), phone: manualPhone.trim() || undefined, email: manualEmail.trim() || undefined });
+    91→   149→    setManualName(""); setManualPhone(""); setManualEmail("");
+    92→   150→    setShowManualAdd(false);
+    93→   151→    toast.success("Contact added");
+    94→   152→  };
+    95→   153→
+    96→   154→  // Check device contacts for membership
+    97→   155→  useEffect(() => {
+    98→   156→    if (deviceContacts.length > 0 && !checkedContacts) {
+    99→   157→      setCheckingContacts(true);
+   100→   158→      checkMembership(deviceContacts).then((result) => {
+   101→   159→        setCheckedContacts(result);
+   102→   160→        setCheckingContacts(false);
+   103→   161→      });
+   104→   162→    }
+   105→   163→  }, [deviceContacts, checkedContacts, checkMembership]);
+   106→   164→
+   107→   165→  const submit = async () => {
+   108→   166→    setLoading(true);
+   109→   167→    try {
+   110→   168→      const res = await fetch("/api/transfer", {
+   111→   169→        method: "POST",
+   112→   170→        headers: { "Content-Type": "application/json" },
+   113→   171→        body: JSON.stringify({ amount: Number(amount), currency, recipient, method, provider, note }),
+   114→   172→      });
+   115→   173→      const data = await res.json();
+   116→   174→      if (data.success) {
+   117→   175→        setDone(data.transaction);
+   118→   176→        setStep(4);
+   119→   177→      } else {
+   120→   178→        toast.error(data.error || "Transfer failed");
+   121→   179→      }
+   122→   180→    } catch {
+   123→   181→      toast.error("Something went wrong");
+   124→   182→    } finally {
+   125→   183→      setLoading(false);
+   126→   184→    }
+   127→   185→  };
+   128→   186→
+   129→   187→  const reset = () => {
+   130→   188→    setStep(0); setRecipient(null); setAmount(""); setNote(""); setOtp(""); setDone(null);
+   131→   189→  };
+   132→   190→
+   133→   191→  const selectRecipient = (r: any) => {
+   134→   192→    setRecipient(r);
+   135→   193→    setMethod(r.method || r.type || "wallet");
+   136→   194→    setStep(1);
+   137→   195→  };
+   138→   196→
+   139→   197→  return (
+   140→   198→    <Card className="mx-auto max-w-2xl p-4 sm:p-6">
+   141→   199→      {/* Steps indicator */}
+   142→   200→      <div className="mb-6 flex items-center justify-between">
+   143→   201→        {["Recipient", "Amount", "Review", "Verify"].map((s, i) => (
+   144→   202→          <div key={s} className="flex flex-1 items-center">
+   145→   203→            <div className={cn(
+   146→   204→              "grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-semibold transition",
+   147→   205→              i < step ? "bg-primary text-primary-foreground" : i === step ? "bg-primary text-primary-foreground ring-4 ring-primary/20" : "bg-muted text-muted-foreground",
+   148→   206→            )}>
+   149→   207→              {i < step ? <Check className="h-4 w-4" /> : i + 1}
+   150→   208→            </div>
+   151→   209→            <span className={cn("ml-2 hidden sm:inline text-xs font-medium", i === step ? "text-foreground" : "text-muted-foreground")}>{s}</span>
+   152→   210→            {i < 3 && <div className={cn("mx-2 h-0.5 flex-1 rounded", i < step ? "bg-primary" : "bg-muted")} />}
+   153→   211→          </div>
+   154→   212→        ))}
+   155→   213→      </div>
+   156→   214→
+   157→   215→      <AnimatePresence mode="wait">
+   158→   216→        {/* Step 0: Recipient — NEW DESIGN */}
+   159→   217→        {step === 0 && (
+   160→   218→          <motion.div key="s0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+   161→   219→            <h3 className="font-semibold mb-1">Who are you sending to?</h3>
+   162→   220→            <p className="text-sm text-muted-foreground mb-4">Pick from contacts, GaexPay members, or enter new details</p>
+   163→   221→
+   164→   222→            {/* Action buttons row */}
+   165→   223→            <div className="mb-4 grid grid-cols-2 gap-2">
+   166→   224→              {/* Access phone contacts */}
+   167→   225→              <Button
+   168→   226→                variant="outline"
+   169→   227→                className="h-12"
+   170→   228→                onClick={handlePickContacts}
+   171→   229→                disabled={contactsLoading}
+   172→   230→                suppressHydrationWarning
+   173→   231→              >
+   174→   232→                <span className="flex items-center justify-center" suppressHydrationWarning>
+   175→   233→                  <Loader2 className={cn("h-4 w-4 mr-2", contactsLoading ? "animate-spin" : "hidden")} />
+   176→   234→                  <ContactIcon className={cn("h-4 w-4 mr-2", contactsLoading ? "hidden" : "")} />
+   177→   235→                  Contacts
+   178→   236→                </span>
+   179→   237→              </Button>
+   180→   238→
+   181→   239→              {/* New recipient */}
+   182→   240→              <Button
+   183→   241→                variant="outline"
+   184→   242→                className="h-12"
+   185→   243→                onClick={() => setShowManualAdd(!showManualAdd)}
+   186→   244→                suppressHydrationWarning
+   187→   245→              >
+   188→   246→                <span className="flex items-center justify-center" suppressHydrationWarning>
+   189→   247→                  <UserPlus className="h-4 w-4 mr-2" />
+   190→   248→                  New Recipient
+   191→   249→                </span>
+   192→   250→              </Button>
+   193→   251→            </div>
+   194→   252→
+   195→   253→            {/* Manual add form */}
+   196→   254→            {showManualAdd && (
+   197→   255→              <motion.div
+   198→   256→                initial={{ opacity: 0, height: 0 }}
+   199→   257→                animate={{ opacity: 1, height: "auto" }}
+   200→   258→                exit={{ opacity: 0, height: 0 }}
+   201→   259→                className="mb-4 rounded-lg border bg-muted/30 p-4 space-y-3"
+   202→   260→              >
+   203→   261→                <p className="text-xs font-medium text-muted-foreground">Enter recipient details manually</p>
+   204→   262→                <Input placeholder="Full name" value={manualName} onChange={(e) => setManualName(e.target.value)} />
+   205→   263→                <div className="grid grid-cols-2 gap-2">
+   206→   264→                  <div className="relative">
+   207→   265→                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+   208→   266→                    <Input placeholder="Phone" className="pl-9" value={manualPhone} onChange={(e) => setManualPhone(e.target.value)} />
+   209→   267→                  </div>
+   210→   268→                  <div className="relative">
+   211→   269→                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+   212→   270→                    <Input placeholder="Email" className="pl-9" value={manualEmail} onChange={(e) => setManualEmail(e.target.value)} />
+   213→   271→                  </div>
+   214→   272→                </div>
+   215→   273→                <div className="flex gap-2">
+   216→   274→                  <Button size="sm" variant="ghost" onClick={() => setShowManualAdd(false)}>Cancel</Button>
+   217→   275→                  <Button size="sm" onClick={handleManualAdd}>
+   218→   276→                    <Plus className="h-3.5 w-3.5 mr-1" /> Add Contact
+   219→   277→                  </Button>
+   220→   278→                </div>
+   221→   279→              </motion.div>
+   222→   280→            )}
+   223→   281→
+   224→   282→            {/* Search bar */}
+   225→   283→            <div className="relative mb-4">
+   226→   284→              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+   227→   285→              <Input
+   228→   286→                placeholder="Search name, phone, email, account..."
+   229→   287→                className="pl-9"
+   230→   288→                value={search}
+   231→   289→                onChange={(e) => setSearch(e.target.value)}
+   232→   290→              />
+   233→   291→            </div>
+   234→   292→
+   235→   293→            {/* Tabs: GaexPay Members | Contacts | Saved | Recent */}
+   236→   294→            <div className="mb-3 flex gap-1.5 flex-wrap">
+   237→   295→              {[
+   238→   296→                { id: "gaexpay", label: "GaexPay", icon: UserCheck, count: filteredMembers.length },
+   239→   297→                { id: "contacts", label: "Contacts", icon: ContactIcon, count: checkedContacts ? checkedContacts.totalChecked : deviceContacts.length },
+   240→   298→                { id: "beneficiaries", label: "Saved", icon: Users, count: filteredBeneficiaries.length },
+   241→   299→                { id: "recent", label: "Recent", icon: Repeat, count: filteredRecent.length },
+   242→   300→              ].map((t) => {
+   243→   301→                const Icon = t.icon;
+   244→   302→                const isActive = activeTab === t.id;
+   245→   303→                return (
+   246→   304→                  <button
+   247→   305→                    key={t.id}
+   248→   306→                    onClick={() => setActiveTab(t.id as any)}
+   249→   307→                    className={cn(
+   250→   308→                      "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition",
+   251→   309→                      isActive ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground",
+   252→   310→                    )}
+   253→   311→                  >
+   254→   312→                    <Icon className="h-3.5 w-3.5" />
+   255→   313→                    {t.label}
+   256→   314→                    {t.count > 0 && (
+   257→   315→                      <span className={cn(
+   258→   316→                        "rounded-full px-1.5 py-0.5 text-[9px] font-bold",
+   259→   317→                        isActive ? "bg-primary text-primary-foreground" : "bg-muted-foreground/20",
+   260→   318→                      )}>
+   261→   319→                        {t.count}
+   262→   320→                      </span>
+   263→   321→                    )}
+   264→   322→                  </button>
+   265→   323→                );
+   266→   324→              })}
+   267→   325→            </div>
+   268→   326→
+   269→   327→            {/* Content per tab */}
+   270→   328→            <div className="space-y-1.5 max-h-72 overflow-y-auto overscroll-contain no-scrollbar" style={{ WebkitOverflowScrolling: "touch" }}>
+   271→   329→
+   272→   330→              {/* GaexPay Members tab */}
+   273→   331→              {activeTab === "gaexpay" && (
+   274→   332→                <>
+   275→   333→                  {filteredMembers.length === 0 && !contactsData && [1, 2, 3].map((i) => <Skeleton key={i} className="h-14" />)}
+   276→   334→                  {filteredMembers.length === 0 && contactsData && (
+   277→   335→                    <div className="grid place-items-center py-8 text-center">
+   278→   336→                      <UserCheck className="h-8 w-8 text-muted-foreground/40 mb-2" />
+   279→   337→                      <p className="text-sm text-muted-foreground">No GaexPay members found</p>
+   280→   338→                      <p className="text-xs text-muted-foreground mt-1">Invite friends to join GaexPay!</p>
+   281→   339→                    </div>
+   282→   340→                  )}
+   283→   341→                  {filteredMembers.map((m: any) => (
+   284→   342→                    <button
+   285→   343→                      key={m.id}
+   286→   344→                      onClick={() => selectRecipient({
+   287→   345→                        name: `${m.firstName} ${m.lastName}`,
+   288→   346→                        account: m.phone,
+   289→   347→                        bank: "GaexPay",
+   290→   348→                        type: "gaexpay",
+   291→   349→                        method: "wallet",
+   292→   350→                        gaexpayUserId: m.id,
+   293→   351→                      })}
+   294→   352→                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+   295→   353→                    >
+   296→   354→                      <Avatar className="h-10 w-10">
+   297→   355→                        <AvatarFallback className="bg-emerald-500/15 text-emerald-600 text-xs font-semibold">
+   298→   356→                          {m.firstName[0]}{m.lastName[0]}
+   299→   357→                        </AvatarFallback>
+   300→   358→                      </Avatar>
+   301→   359→                      <div className="flex-1 min-w-0">
+   302→   360→                        <div className="flex items-center gap-1.5">
+   303→   361→                          <p className="text-sm font-medium truncate">{m.firstName} {m.lastName}</p>
+   304→   362→                          {m.kycStatus === "verified" && (
+   305→   363→                            <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[9px] shrink-0">
+   306→   364→                              <Check className="h-2.5 w-2.5 mr-0.5" /> KYC
+   307→   365→                            </Badge>
+   308→   366→                          )}
+   309→   367→                        </div>
+   310→   368→                        <p className="text-xs text-muted-foreground truncate">
+   311→   369→                          {m.username ? `@${m.username}` : m.phone}
+   312→   370→                        </p>
+   313→   371→                      </div>
+   314→   372→                      <Badge className="bg-emerald-500/10 text-emerald-600 border-0 shrink-0">
+   315→   373→                        <WalletIcon className="h-3 w-3 mr-0.5" /> Instant
+   316→   374→                      </Badge>
+   317→   375→                    </button>
+   318→   376→                  ))}
+   319→   377→                </>
+   320→   378→              )}
+   321→   379→
+   322→   380→              {/* Device Contacts tab */}
+   323→   381→              {activeTab === "contacts" && (
+   324→   382→                <>
+   325→   383→                  {checkingContacts && (
+   326→   384→                    <div className="flex items-center justify-center py-8 gap-2">
+   327→   385→                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+   328→   386→                      <p className="text-sm text-muted-foreground">Checking GaexPay membership...</p>
+   329→   387→                    </div>
+   330→   388→                  )}
+   331→   389→                  {!checkingContacts && deviceContacts.length === 0 && (
+   332→   390→                    <div className="grid place-items-center py-8 text-center">
+   333→   391→                      <ContactIcon className="h-8 w-8 text-muted-foreground/40 mb-2" />
+   334→   392→                      <p className="text-sm text-muted-foreground">No contacts imported yet</p>
+   335→   393→                      <Button size="sm" variant="outline" className="mt-3" onClick={handlePickContacts}>
+   336→   394→                        <ContactIcon className="h-4 w-4 mr-1.5" /> Import Contacts
+   337→   395→                      </Button>
+   338→   396→                    </div>
+   339→   397→                  )}
+   340→   398→                  {/* Show contacts that are GaexPay members first */}
+   341→   399→                  {checkedContacts?.members?.map((mc: any) => (
+   342→   400→                    <button
+   343→   401→                      key={mc.gaexpayUser.id}
+   344→   402→                      onClick={() => selectRecipient({
+   345→   403→                        name: mc.contactName,
+   346→   404→                        account: mc.gaexpayUser.phone,
+   347→   405→                        bank: "GaexPay",
+   348→   406→                        type: "gaexpay",
+   349→   407→                        method: "wallet",
+   350→   408→                        gaexpayUserId: mc.gaexpayUser.id,
+   351→   409→                      })}
+   352→   410→                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+   353→   411→                    >
+   354→   412→                      <Avatar className="h-10 w-10">
+   355→   413→                        <AvatarFallback className="bg-emerald-500/15 text-emerald-600 text-xs font-semibold">
+   356→   414→                          {mc.contactName.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+   357→   415→                        </AvatarFallback>
+   358→   416→                      </Avatar>
+   359→   417→                      <div className="flex-1 min-w-0">
+   360→   418→                        <div className="flex items-center gap-1.5">
+   361→   419→                          <p className="text-sm font-medium truncate">{mc.contactName}</p>
+   362→   420→                          <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[9px] shrink-0">
+   363→   421→                            <UserCheck className="h-2.5 w-2.5 mr-0.5" /> GaexPay
+   364→   422→                          </Badge>
+   365→   423→                        </div>
+   366→   424→                        <p className="text-xs text-muted-foreground truncate">{mc.phone || mc.email}</p>
+   367→   425→                      </div>
+   368→   426→                      <Badge className="bg-emerald-500/10 text-emerald-600 border-0 shrink-0">
+   369→   427→                        <WalletIcon className="h-3 w-3 mr-0.5" /> Instant
+   370→   428→                      </Badge>
+   371→   429→                    </button>
+   372→   430→                  ))}
+   373→   431→                  {/* Non-member contacts */}
+   374→   432→                  {checkedContacts?.nonMembers?.filter((nmc: any) =>
+   375→   433→                    !search || nmc.name?.toLowerCase().includes(search.toLowerCase()) || nmc.phone?.includes(search)
+   376→   434→                  ).map((nmc: any, i: number) => (
+   377→   435→                    <button
+   378→   436→                      key={i}
+   379→   437→                      onClick={() => selectRecipient({
+   380→   438→                        name: nmc.name,
+   381→   439→                        account: nmc.phone || nmc.email,
+   382→   440→                        bank: nmc.phone ? "Mobile Money" : "Email",
+   383→   441→                        type: nmc.phone ? "momo" : "email",
+   384→   442→                        method: nmc.phone ? "momo" : "wallet",
+   385→   443→                      })}
+   386→   444→                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+   387→   445→                    >
+   388→   446→                      <Avatar className="h-10 w-10">
+   389→   447→                        <AvatarFallback className="bg-muted text-muted-foreground text-xs font-semibold">
+   390→   448→                          {nmc.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+   391→   449→                        </AvatarFallback>
+   392→   450→                      </Avatar>
+   393→   451→                      <div className="flex-1 min-w-0">
+   394→   452→                        <p className="text-sm font-medium truncate">{nmc.name}</p>
+   395→   453→                        <p className="text-xs text-muted-foreground truncate">{nmc.phone || nmc.email}</p>
+   396→   454→                      </div>
+   397→   455→                      <Badge variant="outline" className="text-[10px] shrink-0">
+   398→   456→                        {nmc.phone ? <Smartphone className="h-3 w-3 mr-0.5" /> : <Mail className="h-3 w-3 mr-0.5" />}
+   399→   457→                        {nmc.phone ? "MoMo" : "Invite"}
+   400→   458→                      </Badge>
+   401→   459→                    </button>
+   402→   460→                  ))}
+   403→   461→                  {/* Device contacts not yet checked */}
+   404→   462→                  {!checkedContacts && filteredDeviceContacts.map((c, i) => (
+   405→   463→                    <button
+   406→   464→                      key={i}
+   407→   465→                      onClick={() => selectRecipient({
+   408→   466→                        name: c.name,
+   409→   467→                        account: c.phone || c.email,
+   410→   468→                        bank: c.phone ? "Mobile Money" : "Email",
+   411→   469→                        type: c.phone ? "momo" : "email",
+   412→   470→                        method: c.phone ? "momo" : "wallet",
+   413→   471→                      })}
+   414→   472→                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+   415→   473→                    >
+   416→   474→                      <Avatar className="h-10 w-10">
+   417→   475→                        <AvatarFallback className="bg-muted text-muted-foreground text-xs font-semibold">
+   418→   476→                          {c.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+   419→   477→                        </AvatarFallback>
+   420→   478→                      </Avatar>
+   421→   479→                      <div className="flex-1 min-w-0">
+   422→   480→                        <p className="text-sm font-medium truncate">{c.name}</p>
+   423→   481→                        <p className="text-xs text-muted-foreground truncate">{c.phone || c.email}</p>
+   424→   482→                      </div>
+   425→   483→                    </button>
+   426→   484→                  ))}
+   427→   485→                </>
+   428→   486→              )}
+   429→   487→
+   430→   488→              {/* Saved Beneficiaries tab */}
+   431→   489→              {activeTab === "beneficiaries" && (
+   432→   490→                <>
+   433→   491→                  {filteredBeneficiaries.length === 0 && contactsData && (
+   434→   492→                    <div className="grid place-items-center py-8 text-center">
+   435→   493→                      <Users className="h-8 w-8 text-muted-foreground/40 mb-2" />
+   436→   494→                      <p className="text-sm text-muted-foreground">No saved beneficiaries yet</p>
+   437→   495→                    </div>
+   438→   496→                  )}
+   439→   497→                  {filteredBeneficiaries.length === 0 && !contactsData && [1, 2, 3].map((i) => <Skeleton key={i} className="h-14" />)}
+   440→   498→                  {filteredBeneficiaries.map((b: any) => (
+   441→   499→                    <button
+   442→   500→                      key={b.id}
+   443→   501→                      onClick={() => selectRecipient(b)}
+   444→   502→                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+   445→   503→                    >
+   446→   504→                      <Avatar className="h-10 w-10">
+   447→   505→                        <AvatarFallback className={cn(
+   448→   506→                          "text-xs font-semibold",
+   449→   507→                          b.isGaexpayMember ? "bg-emerald-500/15 text-emerald-600" : "bg-primary/10 text-primary",
+   450→   508→                        )}>
+   451→   509→                          {b.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+   452→   510→                        </AvatarFallback>
+   453→   511→                      </Avatar>
+   454→   512→                      <div className="flex-1 min-w-0">
+   455→   513→                        <div className="flex items-center gap-1.5">
+   456→   514→                          <p className="text-sm font-medium truncate">{b.name}</p>
+   457→   515→                          {b.isGaexpayMember && (
+   458→   516→                            <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[9px] shrink-0">
+   459→   517→                              <UserCheck className="h-2.5 w-2.5 mr-0.5" /> GaexPay
+   460→   518→                            </Badge>
+   461→   519→                          )}
+   462→   520→                        </div>
+   463→   521→                        <p className="text-xs text-muted-foreground truncate">{b.account} · {b.bank || b.type}</p>
+   464→   522→                      </div>
+   465→   523→                      <Badge variant="outline" className="capitalize text-[10px] shrink-0">{b.type}</Badge>
+   466→   524→                    </button>
+   467→   525→                  ))}
+   468→   526→                </>
+   469→   527→              )}
+   470→   528→
+   471→   529→              {/* Recent Recipients tab */}
+   472→   530→              {activeTab === "recent" && (
+   473→   531→                <>
+   474→   532→                  {filteredRecent.length === 0 && contactsData && (
+   475→   533→                    <div className="grid place-items-center py-8 text-center">
+   476→   534→                      <Repeat className="h-8 w-8 text-muted-foreground/40 mb-2" />
+   477→   535→                      <p className="text-sm text-muted-foreground">No recent recipients</p>
+   478→   536→                    </div>
+   479→   537→                  )}
+   480→   538→                  {filteredRecent.map((r: any, i: number) => (
+   481→   539→                    <button
+   482→   540→                      key={i}
+   483→   541→                      onClick={() => selectRecipient({
+   484→   542→                        name: r.name,
+   485→   543→                        account: r.account,
+   486→   544→                        bank: r.bank,
+   487→   545→                        type: r.method,
+   488→   546→                        method: r.method,
+   489→   547→                        provider: r.provider,
+   490→   548→                      })}
+   491→   549→                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+   492→   550→                    >
+   493→   551→                      <Avatar className="h-10 w-10">
+   494→   552→                        <AvatarFallback className="bg-muted text-muted-foreground text-xs font-semibold">
+   495→   553→                          {r.name?.split(" ").map((n: string) => n[0]).slice(0, 2).join("") || "?"}
+   496→   554→                        </AvatarFallback>
+   497→   555→                      </Avatar>
+   498→   556→                      <div className="flex-1 min-w-0">
+   499→   557→                        <p className="text-sm font-medium truncate">{r.name}</p>
+   500→   558→                        <p className="text-xs text-muted-foreground truncate">
+   501→   559→                          {r.account || r.bank} · {r.method}
+   502→   560→                        </p>
+   503→   561→                      </div>
+   504→   562→                      <Badge variant="outline" className="capitalize text-[10px] shrink-0">
+   505→   563→                        <Repeat className="h-3 w-3 mr-0.5" /> Again
+   506→   564→                      </Badge>
+   507→   565→                    </button>
+   508→   566→                  ))}
+   509→   567→                </>
+   510→   568→              )}
+   511→   569→            </div>
+   512→   570→
+   513→   571→            {/* Payment method info */}
+   514→   572→            <div className="mt-4 flex items-start gap-2 rounded-lg bg-sky-500/10 p-3 text-xs text-sky-700 dark:text-sky-400">
+   515→   573→              <Info className="h-4 w-4 shrink-0 mt-0.5" />
+   516→   574→              <span>
+   517→   575→                <strong>GaexPay members</strong> get instant, free transfers. For others, choose Bank Transfer or Mobile Money — fees apply.
+   518→   576→              </span>
+   519→   577→            </div>
+   520→   578→          </motion.div>
+   521→   579→        )}
+   522→   580→
+   523→   581→        {/* Step 1: Amount */}
+   524→   582→        {step === 1 && (
+   525→   583→          <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+   526→   584→            <h3 className="font-semibold mb-1">Enter amount</h3>
+   527→   585→            <p className="text-sm text-muted-foreground mb-4">Sending to {recipient?.name}</p>
+   528→   586→
+   529→   587→            {method === "momo" && (
+   530→   588→              <div className="mb-4">
+   531→   589→                <Label className="text-xs">Provider</Label>
+   532→   590→                <div className="mt-1.5 grid grid-cols-3 gap-2">
+   533→   591→                  {MOBILE_MONEY_PROVIDERS.map((p) => (
+   534→   592→                    <button
+   535→   593→                      key={p.id}
+   536→   594→                      onClick={() => setProvider(p.id)}
+   537→   595→                      className={cn(
+   538→   596→                        "rounded-lg border p-2 text-center text-xs transition",
+   539→   597→                        provider === p.id ? "border-primary ring-2 ring-primary/20" : "hover:bg-muted",
+   540→   598→                      )}
+   541→   599→                      style={provider === p.id ? { borderColor: p.color } : {}}
+   542→   600→                    >
+   543→   601→                      <div className="h-6 w-full rounded mb-1" style={{ background: p.color }} />
+   544→   602→                      {p.name}
+   545→   603→                    </button>
+   546→   604→                  ))}
+   547→   605→                </div>
+   548→   606→              </div>
+   549→   607→            )}
+   550→   608→
+   551→   609→            <div className="rounded-2xl border bg-muted/30 p-6 text-center">
+   552→   610→              <div className="flex items-center justify-center gap-2">
+   553→   611→                <Select value={currency} onValueChange={setCurrency}>
+   554→   612→                  <SelectTrigger className="w-24 h-9"><SelectValue /></SelectTrigger>
+   555→   613→                  <SelectContent>
+   556→   614→                    {CURRENCIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>)}
+   557→   615→                  </SelectContent>
+   558→   616→                </Select>
+   559→   617→                <Input
+   560→   618→                  type="number"
+   561→   619→                  value={amount}
+   562→   620→                  onChange={(e) => setAmount(e.target.value)}
+   563→   621→                  placeholder="0.00"
+   564→   622→                  className="flex-1 border-0 bg-transparent text-3xl font-bold tabular-nums text-center focus-visible:ring-0"
+   565→   623→                />
+   566→   624→              </div>
+   567→   625→              <p className="mt-2 text-xs text-muted-foreground">
+   568→   626→                Available: {formatMoney(wallets.find((w) => w.currency === currency)?.balance ?? 0, currency)}
+   569→   627→              </p>
+   570→   628→            </div>
+   571→   629→
+   572→   630→            <div className="mt-3 flex gap-2">
+   573→   631→              {[5000, 10000, 25000, 50000].map((v) => (
+   574→   632→                <button
+   575→   633→                  key={v}
+   576→   634→                  onClick={() => setAmount(String(v))}
+   577→   635→                  className="flex-1 rounded-lg border py-1.5 text-xs font-medium hover:bg-muted transition"
+   578→   636→                >
+   579→   637→                  {symbol}{v.toLocaleString()}
+   580→   638→                </button>
+   581→   639→              ))}
+   582→   640→            </div>
+   583→   641→
+   584→   642→            <div className="mt-4 space-y-2">
+   585→   643→              <Label className="text-xs">Note (optional)</Label>
+   586→   644→              <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="What's this for?" />
+   587→   645→            </div>
+   588→   646→
+   589→   647→            <div className="mt-6 flex gap-2">
+   590→   648→              <Button variant="outline" onClick={() => setStep(0)} className="flex-1">
+   591→   649→                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+   592→   650→              </Button>
+   593→   651→              <Button onClick={() => setStep(2)} disabled={!amount || Number(amount) <= 0} className="flex-1">
+   594→   652→                Continue <ChevronRight className="h-4 w-4 ml-1" />
+   595→   653→              </Button>
+   596→   654→            </div>
+   597→   655→          </motion.div>
+   598→   656→        )}
+   599→   657→
+   600→   658→        {/* Step 2: Review */}
+   601→   659→        {step === 2 && (
+   602→   660→          <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+   603→   661→            <h3 className="font-semibold mb-1">Review transfer</h3>
+   604→   662→            <p className="text-sm text-muted-foreground mb-4">Please confirm the details below</p>
+   605→   663→
+   606→   664→            <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
+   607→   665→              <Row label="Recipient" value={recipient?.name} />
+   608→   666→              <Row label="Account" value={recipient?.account || recipient?.bank} />
+   609→   667→              <Row label="Method" value={method === "momo" ? `Mobile Money · ${provider.toUpperCase()}` : method === "bank" ? "Bank Transfer" : "GaexPay Wallet"} />
+   610→   668→              <Row label="Amount" value={formatMoney(Number(amount), currency)} />
+   611→   669→              <Row label="Fee" value={method === "bank" ? formatMoney(Math.min(Number(amount) * 0.005, 5000), currency) : method === "momo" ? formatMoney(Number(amount) * 0.01, currency) : "Free"} />
+   612→   670→              <div className="border-t pt-3">
+   613→   671→                <Row label="Total" value={formatMoney(Number(amount) + (method === "bank" ? Math.min(Number(amount) * 0.005, 5000) : method === "momo" ? Number(amount) * 0.01 : 0), currency)} bold />
+   614→   672→              </div>
+   615→   673→            </div>
+   616→   674→
+   617→   675→            <div className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-400">
+   618→   676→              <ShieldCheck className="h-4 w-4 shrink-0" />
+   619→   677→              Protected by GaexPay Buyer Protection & end-to-end encryption.
+   620→   678→            </div>
+   621→   679→
+   622→   680→            <div className="mt-6 flex gap-2">
+   623→   681→              <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
+   624→   682→                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+   625→   683→              </Button>
+   626→   684→              <Button onClick={() => setStep(3)} className="flex-1">Confirm & Continue</Button>
+   627→   685→            </div>
+   628→   686→          </motion.div>
+   629→   687→        )}
+   630→   688→
+   631→   689→        {/* Step 3: OTP */}
+   632→   690→        {step === 3 && (
+   633→   691→          <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+   634→   692→            <div className="text-center">
+   635→   693→              <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-primary/10">
+   636→   694→                <ShieldCheck className="h-7 w-7 text-primary" />
+   637→   695→              </div>
+   638→   696→              <h3 className="font-semibold">Verify it's you</h3>
+   639→   697→              <p className="mt-1 text-sm text-muted-foreground">
+   640→   698→                Enter the 6-digit code sent to your registered phone & email
+   641→   699→              </p>
+   642→   700→            </div>
+   643→   701→
+   644→   702→            <div className="my-6 flex justify-center">
+   645→   703→              <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+   646→   704→                <InputOTPGroup>
+   647→   705→                  <InputOTPSlot index={0} />
+   648→   706→                  <InputOTPSlot index={1} />
+   649→   707→                  <InputOTPSlot index={2} />
+   650→   708→                  <InputOTPSlot index={3} />
+   651→   709→                  <InputOTPSlot index={4} />
+   652→   710→                  <InputOTPSlot index={5} />
+   653→   711→                </InputOTPGroup>
+   654→   712→              </InputOTP>
+   655→   713→            </div>
+   656→   714→
+   657→   715→            <p className="text-center text-xs text-muted-foreground">
+   658→   716→              Didn't get a code? <button className="text-primary font-medium">Resend in 0:42</button>
+   659→   717→            </p>
+   660→   718→            <p className="mt-1 text-center text-xs text-muted-foreground">
+   661→   719→              Demo: enter any 6 digits to continue
+   662→   720→            </p>
+   663→   721→
+   664→   722→            <div className="mt-6 flex gap-2">
+   665→   723→              <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
+   666→   724→                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+   667→   725→              </Button>
+   668→   726→              <Button onClick={submit} disabled={otp.length < 6 || loading} className="flex-1">
+   669→   727→                {loading ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Sending...</> : "Confirm Transfer"}
+   670→   728→              </Button>
+   671→   729→            </div>
+   672→   730→          </motion.div>
+   673→   731→        )}
+   674→   732→
+   675→   733→        {/* Step 4: Success */}
+   676→   734→        {step === 4 && done && (
+   677→   735→          <motion.div key="s4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+   678→   736→            <Confetti trigger={true} />
+   679→   737→            <div className="text-center">
+   680→   738→              <motion.div
+   681→   739→                initial={{ scale: 0 }}
+   682→   740→                animate={{ scale: 1 }}
+   683→   741→                transition={{ type: "spring", delay: 0.1 }}
+   684→   742→                className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white pulse-glow"
+   685→   743→              >
+   686→   744→                <Check className="h-8 w-8" strokeWidth={3} />
+   687→   745→              </motion.div>
+   688→   746→              <h3 className="text-xl font-bold">Transfer Successful!</h3>
+   689→   747→              <p className="mt-1 text-sm text-muted-foreground">
+   690→   748→                {formatMoney(Number(amount), currency)} sent to {recipient?.name}
+   691→   749→              </p>
+   692→   750→            </div>
+   693→   751→
+   694→   752→            <div className="my-5 space-y-2 rounded-xl border bg-muted/30 p-4 text-sm">
+   695→   753→              <Row label="Reference" value={done.reference} />
+   696→   754→              <Row label="Recipient" value={recipient?.name} />
+   697→   755→              <Row label="Amount" value={formatMoney(Number(amount), currency)} />
+   698→   756→              <Row label="Fee" value={formatMoney(done.fee, currency)} />
+   699→   757→              <Row label="Date" value={new Date(done.completedAt).toLocaleString()} />
+   700→   758→              <Row label="Status" value="Completed" />
+   701→
+   702→[showing lines 59-758 of 2090; use offset=759 with limit to continue reading]

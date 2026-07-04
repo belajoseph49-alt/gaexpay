@@ -1,0 +1,1372 @@
+     1→"use client";
+     2→
+     3→import { useState, useRef, useEffect, useCallback, type ChangeEvent } from "react";
+     4→import { motion, AnimatePresence } from "framer-motion";
+     5→import {
+     6→  ScanLine, Receipt, Smartphone, Zap, Store, ChevronRight, Check, Loader2,
+     7→  X, Phone, Search, Upload, Keyboard, Flashlight, FlashlightOff, CameraOff,
+     8→  Star, ArrowRight, Sparkles, ShoppingBag, UtensilsCrossed, Car, Film,
+     9→  HeartPulse, Wallet, BadgeCheck, QrCode,
+    10→} from "lucide-react";
+    11→import { Card } from "@/components/ui/card";
+    12→import { Button } from "@/components/ui/button";
+    13→import { Input } from "@/components/ui/input";
+    14→import { Label } from "@/components/ui/label";
+    15→import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+    16→import { Badge } from "@/components/ui/badge";
+    17→import { Skeleton } from "@/components/ui/skeleton";
+    18→import {
+    19→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+    20→} from "@/components/ui/dialog";
+    21→import {
+    22→  Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription,
+    23→} from "@/components/ui/drawer";
+    24→import { useFetch } from "@/hooks/use-fetch";
+    25→import { useIsMobile } from "@/hooks/use-mobile";
+    26→import { useFormatMoney } from "@/hooks/use-format-money";
+    27→import { BILL_CATEGORIES, timeAgo } from "@/lib/gaexpay";
+    28→import { toast } from "sonner";
+    29→import { cn } from "@/lib/utils";
+    30→
+    31→// ---------- Types ----------
+    32→type Merchant = {
+    33→  id: string; name: string; category: string; logo: string | null;
+    34→  qrCode: string; account: string; phone: string | null; email: string | null;
+    35→  status: string; rating: number;
+    36→};
+    37→
+    38→type Tx = {
+    39→  id: string; reference: string; amount: number; currency: string;
+    40→  type: string; status: string; counterpartyName: string | null;
+    41→  description: string | null; createdAt: string;
+    42→};
+    43→
+    44→// ---------- Constants ----------
+    45→const MERCHANT_CATEGORY_CHIPS = [
+    46→  { id: "all", label: "All", Icon: Store },
+    47→  { id: "retail", label: "Retail", Icon: ShoppingBag },
+    48→  { id: "food", label: "Food & Drink", Icon: UtensilsCrossed },
+    49→  { id: "transport", label: "Transport", Icon: Car },
+    50→  { id: "utilities", label: "Utilities", Icon: Zap },
+    51→  { id: "entertainment", label: "Entertainment", Icon: Film },
+    52→  { id: "health", label: "Health", Icon: HeartPulse },
+    53→];
+    54→
+    55→const MERCHANT_CATEGORY_ICON: Record<string, any> = {
+    56→  retail: ShoppingBag, food: UtensilsCrossed, transport: Car,
+    57→  utilities: Zap, entertainment: Film, health: HeartPulse,
+    58→};
+    59→
+    60→const NETWORKS = [
+    61→  { id: "mtn", name: "MTN", color: "#FFCC00", textColor: "#000" },
+    62→  { id: "airtel", name: "Airtel", color: "#E40000", textColor: "#fff" },
+    63→  { id: "glo", name: "Glo", color: "#43B02A", textColor: "#fff" },
+    64→  { id: "9mobile", name: "9mobile", color: "#0066B3", textColor: "#fff" },
+    65→];
+    66→
+    67→const CATEGORY_GROUPS = [
+    68→  { label: "Utilities", cats: ["electricity", "water", "gas", "internet", "tv", "phone"] },
+    69→  { label: "Government & Taxes", cats: ["taxes", "customs", "fines", "permits", "social"] },
+    70→  { label: "Education", cats: ["university", "college", "school", "exams"] },
+    71→  { label: "Financial", cats: ["loan", "insurance", "mortgage"] },
+    72→  { label: "Transport", cats: ["fuel", "toll", "transport"] },
+    73→  { label: "Entertainment & Health", cats: ["streaming", "gaming", "health", "gym"] },
+    74→  { label: "Other", cats: ["betting", "donations", "rent", "other"] },
+    75→];
+    76→
+    77→// ---------- Helpers ----------
+    78→function extractNameFromRaw(raw: string): string {
+    79→  const v = raw.trim();
+    80→  // URL? Use hostname
+    81→  try {
+    82→    if (/^https?:\/\//i.test(v)) {
+    83→      const u = new URL(v);
+    84→      return u.hostname.replace(/^www\./, "");
+    85→    }
+    86→  } catch { /* ignore */ }
+    87→  // GXP-MER-XXX style
+    88→  if (/^GXP-MER-/i.test(v)) return "GaexPay Merchant";
+    89→  // Looks like an account number
+    90→  if (/^\d{6,}$/.test(v)) return `Merchant · ${v.slice(0, 4)}***`;
+    91→  return v.length > 40 ? `${v.slice(0, 40)}…` : v;
+    92→}
+    93→
+    94→function prettifyCameraError(e: any): string {
+    95→  const name = e?.name || "";
+    96→  if (name === "NotAllowedError" || name === "SecurityError")
+    97→    return "Camera access was denied. Enable camera permission in your browser settings to scan QR codes.";
+    98→  if (name === "NotFoundError" || name === "OverconstrainedError")
+    99→    return "No camera found on this device. Try uploading a QR image or entering the code manually.";
+   100→  if (name === "NotReadableError")
+   101→    return "Your camera is being used by another app. Close it and try again.";
+   102→  return e?.message || "Could not start the camera. Try uploading a QR image instead.";
+   103→}
+   104→
+   105→// ---------- Main View ----------
+   106→export function PayView() {
+   107→  const [tab, setTab] = useState("qr");
+   108→  const tabs = [
+   109→    { value: "qr", label: "Scan & Pay", Icon: QrCode },
+   110→    { value: "merchants", label: "Merchants", Icon: Store },
+   111→    { value: "bills", label: "Bills", Icon: Receipt },
+   112→    { value: "airtime", label: "Airtime", Icon: Smartphone },
+   113→  ];
+   114→
+   115→  return (
+   116→    <div className="space-y-6">
+   117→      <div>
+   118→        <h1 className="text-2xl font-bold tracking-tight">Pay & Bills</h1>
+   119→        <p className="text-sm text-muted-foreground">
+   120→          Scan to pay merchants, settle bills, top-up airtime — all in one place.
+   121→        </p>
+   122→      </div>
+   123→
+   124→      <Tabs value={tab} onValueChange={setTab}>
+   125→        <TabsList className="grid h-auto w-full grid-cols-4 gap-1 rounded-xl bg-muted/60 p-1">
+   126→          {tabs.map((t) => (
+   127→            <TabsTrigger
+   128→              key={t.value}
+   129→              value={t.value}
+   130→              className="flex flex-col items-center gap-1 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm sm:flex-row sm:justify-center sm:gap-2"
+   131→            >
+   132→              <t.Icon className="h-4 w-4" />
+   133→              <span className="hidden text-xs font-medium sm:inline">{t.label}</span>
+   134→            </TabsTrigger>
+   135→          ))}
+   136→        </TabsList>
+   137→
+   138→        <div className="mt-4">
+   139→          <AnimatePresence mode="wait">
+   140→            <motion.div
+   141→              key={tab}
+   142→              initial={{ opacity: 0, y: 8 }}
+   143→              animate={{ opacity: 1, y: 0 }}
+   144→              exit={{ opacity: 0, y: -8 }}
+   145→              transition={{ duration: 0.18, ease: "easeOut" }}
+   146→            >
+   147→              {tab === "qr" && <QrPay />}
+   148→              {tab === "merchants" && <MerchantsPay />}
+   149→              {tab === "bills" && <BillsPay />}
+   150→              {tab === "airtime" && <AirtimePay />}
+   151→            </motion.div>
+   152→          </AnimatePresence>
+   153→        </div>
+   154→      </Tabs>
+   155→    </div>
+   156→  );
+   157→}
+   158→
+   159→// ---------- Responsive bottom-sheet / dialog wrapper ----------
+   160→function PaySheet({
+   161→  open, onOpenChange, title, description, children, headerAccent,
+   162→}: {
+   163→  open: boolean;
+   164→  onOpenChange: (v: boolean) => void;
+   165→  title: React.ReactNode;
+   166→  description?: React.ReactNode;
+   167→  children: React.ReactNode;
+   168→  headerAccent?: React.ReactNode;
+   169→}) {
+   170→  const isMobile = useIsMobile();
+   171→
+   172→  if (isMobile) {
+   173→    return (
+   174→      <Drawer open={open} onOpenChange={onOpenChange}>
+   175→        <DrawerContent className="max-h-[92vh]">
+   176→          <DrawerHeader className="pb-2 text-center">
+   177→            {headerAccent}
+   178→            <DrawerTitle className="text-base font-semibold">{title}</DrawerTitle>
+   179→            {description && <DrawerDescription>{description}</DrawerDescription>}
+   180→          </DrawerHeader>
+   181→          <div className="overflow-y-auto px-4 pb-6 pt-1">{children}</div>
+   182→        </DrawerContent>
+   183→      </Drawer>
+   184→    );
+   185→  }
+   186→
+   187→  return (
+   188→    <Dialog open={open} onOpenChange={onOpenChange}>
+   189→      <DialogContent className="max-w-md">
+   190→        <DialogHeader className="items-center text-center">
+   191→          {headerAccent}
+   192→          <DialogTitle className="text-base font-semibold">{title}</DialogTitle>
+   193→          {description && <DialogDescription>{description}</DialogDescription>}
+   194→        </DialogHeader>
+   195→        {children}
+   196→      </DialogContent>
+   197→    </Dialog>
+   198→  );
+   199→}
+   200→
+   201→// ---------- AmountInput (shared) ----------
+   202→function AmountInput({
+   203→  value, onChange, symbol, quick = [1000, 5000, 10000, 20000],
+   204→}: {
+   205→  value: string; onChange: (v: string) => void; symbol: string;
+   206→  quick?: number[];
+   207→}) {
+   208→  return (
+   209→    <div className="space-y-2">
+   210→      <Label>Amount</Label>
+   211→      <div className="relative">
+   212→        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold text-muted-foreground">
+   213→          {symbol}
+   214→        </span>
+   215→        <Input
+   216→          type="number"
+   217→          inputMode="decimal"
+   218→          value={value}
+   219→          onChange={(e) => onChange(e.target.value)}
+   220→          placeholder="0.00"
+   221→          className="h-12 pl-8 text-xl font-bold"
+   222→        />
+   223→      </div>
+   224→      <div className="flex flex-wrap gap-2">
+   225→        {quick.map((v) => (
+   226→          <button
+   227→            key={v}
+   228→            type="button"
+   229→            onClick={() => onChange(String(v))}
+   230→            className="flex-1 rounded-lg border bg-muted/40 py-1.5 text-xs font-medium transition hover:bg-muted"
+   231→          >
+   232→            {symbol}{v.toLocaleString()}
+   233→          </button>
+   234→        ))}
+   235→      </div>
+   236→    </div>
+   237→  );
+   238→}
+   239→
+   240→// ---------- Success Sheet ----------
+   241→function SuccessSheet({
+   242→  open, onOpenChange, amount, recipient, reference,
+   243→}: {
+   244→  open: boolean; onOpenChange: (v: boolean) => void;
+   245→  amount: number; recipient: string; reference: string;
+   246→}) {
+   247→  const { fmt } = useFormatMoney();
+   248→  return (
+   249→    <PaySheet
+   250→      open={open}
+   251→      onOpenChange={onOpenChange}
+   252→      title="Payment Successful"
+   253→      description={reference}
+   254→      headerAccent={
+   255→        <motion.div
+   256→          initial={{ scale: 0 }}
+   257→          animate={{ scale: 1 }}
+   258→          transition={{ type: "spring", delay: 0.1, stiffness: 220, damping: 16 }}
+   259→          className="mx-auto mb-3 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
+   260→        >
+   261→          <Check className="h-8 w-8" strokeWidth={3} />
+   262→        </motion.div>
+   263→      }
+   264→    >
+   265→      <div className="space-y-3 text-center">
+   266→        <div>
+   267→          <p className="text-3xl font-bold">{fmt(amount)}</p>
+   268→          <p className="mt-1 text-sm text-muted-foreground">paid to</p>
+   269→          <p className="font-semibold">{recipient}</p>
+   270→        </div>
+   271→        <div className="rounded-xl border bg-muted/30 p-3 text-xs text-muted-foreground">
+   272→          <div className="flex items-center justify-between">
+   273→            <span>Reference</span>
+   274→            <span className="font-mono font-medium text-foreground">{reference}</span>
+   275→          </div>
+   276→          <div className="mt-1.5 flex items-center justify-center gap-1 text-emerald-600">
+   277→            <BadgeCheck className="h-3.5 w-3.5" />
+   278→            <span>Receipt saved to transactions</span>
+   279→          </div>
+   280→        </div>
+   281→        <Button className="w-full" onClick={() => onOpenChange(false)}>
+   282→          Done
+   283→        </Button>
+   284→      </div>
+   285→    </PaySheet>
+   286→  );
+   287→}
+   288→
+   289→// ============================================================
+   290→// 1. QR SCAN & PAY
+   291→// ============================================================
+   292→function QrPay() {
+   293→  const { data: merchantsData } = useFetch<{ merchants: Merchant[] }>("/api/merchants");
+   294→  const merchants = merchantsData?.merchants ?? [];
+   295→  const { fmt, symbol } = useFormatMoney();
+   296→
+   297→  const [scanning, setScanning] = useState(false);
+   298→  const [cameraSupported, setCameraSupported] = useState<boolean | null>(null);
+   299→  const [torchAvailable, setTorchAvailable] = useState(false);
+   300→  const [torchOn, setTorchOn] = useState(false);
+   301→  const [error, setError] = useState<string | null>(null);
+   302→  const [starting, setStarting] = useState(false);
+   303→  const [found, setFound] = useState<Merchant | null>(null);
+   304→  const [amount, setAmount] = useState("");
+   305→  const [paying, setPaying] = useState(false);
+   306→  const [success, setSuccess] = useState<{ ref: string; recipient: string; amount: number } | null>(null);
+   307→  const [manualOpen, setManualOpen] = useState(false);
+   308→  const [manualCode, setManualCode] = useState("");
+   309→  const [manualLooking, setManualLooking] = useState(false);
+   310→
+   311→  const videoRef = useRef<HTMLVideoElement>(null);
+   312→  const streamRef = useRef<MediaStream | null>(null);
+   313→  const rafRef = useRef<number | null>(null);
+   314→  const detectorRef = useRef<any>(null);
+   315→  const fileInputRef = useRef<HTMLInputElement>(null);
+   316→  const foundRef = useRef(false);
+   317→
+   318→  // Detect support on mount
+   319→  useEffect(() => {
+   320→    const hasBarcode = typeof window !== "undefined" && "BarcodeDetector" in window;
+   321→    const hasCamera = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
+   322→    setCameraSupported(hasBarcode && hasCamera);
+   323→  }, []);
+   324→
+   325→  // Cleanup
+   326→  const stopCamera = useCallback(() => {
+   327→    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+   328→    rafRef.current = null;
+   329→    if (streamRef.current) {
+   330→      streamRef.current.getTracks().forEach((t) => t.stop());
+   331→      streamRef.current = null;
+   332→    }
+   333→    if (videoRef.current) videoRef.current.srcObject = null;
+   334→    setTorchOn(false);
+   335→    setTorchAvailable(false);
+   336→    setScanning(false);
+   337→  }, []);
+   338→
+   339→  useEffect(() => () => stopCamera(), [stopCamera]);
+   340→
+   341→  const lookupMerchant = (raw: string): Merchant | null => {
+   342→    if (!merchants.length) return null;
+   343→    const v = raw.trim();
+   344→    let m = merchants.find((x) => x.qrCode && x.qrCode.toLowerCase() === v.toLowerCase());
+   345→    if (m) return m;
+   346→    m = merchants.find((x) => x.account && x.account === v);
+   347→    if (m) return m;
+   348→    m = merchants.find((x) => v.toLowerCase().includes(x.qrCode.toLowerCase()));
+   349→    if (m) return m;
+   350→    const digits = v.replace(/\D/g, "");
+   351→    if (digits.length >= 6) {
+   352→      m = merchants.find((x) => x.phone && digits.includes(x.phone.replace(/\D/g, "")));
+   353→      if (m) return m;
+   354→    }
+   355→    return null;
+   356→  };
+   357→
+   358→  const handleDetected = (raw: string) => {
+   359→    if (foundRef.current) return;
+   360→    foundRef.current = true;
+   361→    stopCamera();
+   362→    const m = lookupMerchant(raw);
+   363→    if (m) {
+   364→      setFound(m);
+   365→      toast.success(`QR detected · ${m.name}`);
+   366→    } else {
+   367→      setFound({
+   368→        id: "generic",
+   369→        name: extractNameFromRaw(raw),
+   370→        category: "other",
+   371→        qrCode: raw,
+   372→        account: "",
+   373→        phone: null,
+   374→        email: null,
+   375→        logo: null,
+   376→        status: "active",
+   377→        rating: 0,
+   378→      });
+   379→      toast.info("QR code read. Review the details before paying.");
+   380→    }
+   381→  };
+   382→
+   383→  const scanLoop = useCallback(async () => {
+   384→    if (!detectorRef.current || !videoRef.current) return;
+   385→    try {
+   386→      const barcodes = await detectorRef.current.detect(videoRef.current);
+   387→      if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+   388→        handleDetected(barcodes[0].rawValue);
+   389→        return;
+   390→      }
+   391→    } catch {
+   392→      /* transient detect errors are ignored */
+   393→    }
+   394→    rafRef.current = requestAnimationFrame(scanLoop);
+   395→  }, []);
+   396→
+   397→  const startCamera = async () => {
+   398→    setError(null);
+   399→    setStarting(true);
+   400→    foundRef.current = false;
+   401→    try {
+   402→      const stream = await navigator.mediaDevices.getUserMedia({
+   403→        video: { facingMode: { ideal: "environment" } },
+   404→        audio: false,
+   405→      });
+   406→      streamRef.current = stream;
+   407→      if (videoRef.current) {
+   408→        videoRef.current.srcObject = stream;
+   409→        await videoRef.current.play().catch(() => undefined);
+   410→      }
+   411→      try {
+   412→        const formats = await (window as any).BarcodeDetector.getSupportedFormats();
+   413→        const useFormats = Array.isArray(formats) && formats.includes("qr_code") ? ["qr_code"] : undefined;
+   414→        detectorRef.current = new (window as any).BarcodeDetector(useFormats ? { formats: useFormats } : undefined);
+   415→      } catch {
+   416→        detectorRef.current = new (window as any).BarcodeDetector();
+   417→      }
+   418→      const track = stream.getVideoTracks()[0];
+   419→      const caps: any = track.getCapabilities ? track.getCapabilities() : {};
+   420→      if (caps && caps.torch) setTorchAvailable(true);
+   421→      setScanning(true);
+   422→      rafRef.current = requestAnimationFrame(scanLoop);
+   423→    } catch (e: any) {
+   424→      setError(prettifyCameraError(e));
+   425→      setScanning(false);
+   426→    } finally {
+   427→      setStarting(false);
+   428→    }
+   429→  };
+   430→
+   431→  const toggleTorch = async () => {
+   432→    const track = streamRef.current?.getVideoTracks()[0];
+   433→    if (!track) return;
+   434→    try {
+   435→      const next = !torchOn;
+   436→      await track.applyConstraints({ advanced: [{ torch: next } as any] });
+   437→      setTorchOn(next);
+   438→    } catch {
+   439→      toast.error("Could not toggle flashlight");
+   440→    }
+   441→  };
+   442→
+   443→  const onFileSelected = async (e: ChangeEvent<HTMLInputElement>) => {
+   444→    const file = e.target.files?.[0];
+   445→    e.target.value = "";
+   446→    if (!file) return;
+   447→    setError(null);
+   448→    try {
+   449→      if ("BarcodeDetector" in window) {
+   450→        const detector = new (window as any).BarcodeDetector();
+   451→        const bitmap = await createImageBitmap(file);
+   452→        const barcodes = await detector.detect(bitmap);
+   453→        if (barcodes.length > 0 && barcodes[0].rawValue) {
+   454→          handleDetected(barcodes[0].rawValue);
+   455→          return;
+   456→        }
+   457→        toast.error("No QR code found in that image. Try a clearer photo.");
+   458→      } else {
+   459→        toast.error("QR image decoding isn't supported on this browser. Enter the code manually.");
+   460→        setManualOpen(true);
+   461→      }
+   462→    } catch {
+   463→      toast.error("Could not read that image. Try again or enter the code manually.");
+   464→    }
+   465→  };
+   466→
+   467→  const lookupManual = async () => {
+   468→    const code = manualCode.trim();
+   469→    if (!code) return;
+   470→    setManualLooking(true);
+   471→    // Small delay so the UI feels like it's doing work
+   472→    await new Promise((r) => setTimeout(r, 450));
+   473→    const m = lookupMerchant(code);
+   474→    setManualLooking(false);
+   475→    setManualOpen(false);
+   476→    setManualCode("");
+   477→    if (m) {
+   478→      setFound(m);
+   479→      toast.success(`Merchant found · ${m.name}`);
+   480→    } else {
+   481→      setFound({
+   482→        id: "generic",
+   483→        name: extractNameFromRaw(code),
+   484→        category: "other",
+   485→        qrCode: code,
+   486→        account: "",
+   487→        phone: null,
+   488→        email: null,
+   489→        logo: null,
+   490→        status: "active",
+   491→        rating: 0,
+   492→      });
+   493→      toast.info("Code recognized. Review the details before paying.");
+   494→    }
+   495→  };
+   496→
+   497→  const pay = async () => {
+   498→    if (!found || !amount) return;
+   499→    setPaying(true);
+   500→    try {
+   501→      const res = await fetch("/api/pay-merchant", {
+   502→        method: "POST",
+   503→        headers: { "Content-Type": "application/json" },
+   504→        body: JSON.stringify({
+   505→          amount: Number(amount),
+   506→          currency: "NGN",
+   507→          type: "payment",
+   508→          category: found.category || "shopping",
+   509→          counterpartyName: found.name,
+   510→          method: "qr",
+   511→          description: `QR payment to ${found.name}`,
+   512→        }),
+   513→      });
+   514→      const json = await res.json();
+   515→      if (!res.ok || !json.success) throw new Error(json.error || "Payment failed");
+   516→      setSuccess({ ref: json.transaction.reference, recipient: found.name, amount: Number(amount) });
+   517→      toast.success(`Paid ${fmt(Number(amount))} to ${found.name}`);
+   518→      setFound(null);
+   519→      setAmount("");
+   520→    } catch (e: any) {
+   521→      toast.error(e.message || "Payment failed");
+   522→    } finally {
+   523→      setPaying(false);
+   524→    }
+   525→  };
+   526→
+   527→  const reset = () => {
+   528→    setFound(null);
+   529→    setAmount("");
+   530→    setError(null);
+   531→    foundRef.current = false;
+   532→  };
+   533→
+   534→  // ====== CONFIRM PAYMENT SHEET ======
+   535→  if (found) {
+   536→    const CatIcon = MERCHANT_CATEGORY_ICON[found.category] || Store;
+   537→    return (
+   538→      <>
+   539→        <Card className="mx-auto max-w-md p-6">
+   540→          <div className="mb-4 flex items-center justify-between">
+   541→            <div>
+   542→              <h3 className="text-base font-semibold">Confirm Payment</h3>
+   543→              <p className="text-xs text-muted-foreground">Review and authorize this QR payment</p>
+   544→            </div>
+   545→            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={reset} aria-label="Cancel">
+   546→              <X className="h-4 w-4" />
+   547→            </Button>
+   548→          </div>
+   549→
+   550→          <div className="rounded-xl border bg-muted/30 p-4">
+   551→            <div className="flex items-center gap-3">
+   552→              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+   553→                <CatIcon className="h-5 w-5" />
+   554→              </div>
+   555→              <div className="min-w-0 flex-1">
+   556→                <p className="truncate font-semibold">{found.name}</p>
+   557→                <p className="text-xs capitalize text-muted-foreground">{found.category}</p>
+   558→                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+   559→                  {found.rating > 0 && (
+   560→                    <Badge variant="outline" className="gap-1 text-[10px]">
+   561→                      <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
+   562→                      {found.rating.toFixed(1)}
+   563→                    </Badge>
+   564→                  )}
+   565→                  <Badge variant="outline" className="gap-1 text-[10px] text-emerald-600">
+   566→                    <BadgeCheck className="h-3 w-3" /> Verified
+   567→                  </Badge>
+   568→                </div>
+   569→              </div>
+   570→            </div>
+   571→            {found.account && (
+   572→              <div className="mt-3 border-t pt-3 text-xs text-muted-foreground">
+   573→                Account <span className="ml-1 font-mono text-foreground">{found.account}</span>
+   574→              </div>
+   575→            )}
+   576→          </div>
+   577→
+   578→          <div className="mt-4">
+   579→            <AmountInput value={amount} onChange={setAmount} symbol={symbol} />
+   580→          </div>
+   581→
+   582→          <Button onClick={pay} disabled={!amount || paying} className="mt-4 h-12 w-full text-base" size="lg">
+   583→            {paying ? (
+   584→              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Paying…</>
+   585→            ) : (
+   586→              <>{amount ? `Pay ${fmt(Number(amount))}` : "Enter amount to pay"}</>
+   587→            )}
+   588→          </Button>
+   589→          <p className="mt-2 text-center text-[11px] text-muted-foreground">
+   590→            Secured by GaexPay · Instant settlement
+   591→          </p>
+   592→        </Card>
+   593→
+   594→        <SuccessSheet
+   595→          open={!!success}
+   596→          onOpenChange={(v) => { if (!v) { setSuccess(null); reset(); } }}
+   597→          amount={success?.amount ?? 0}
+   598→          recipient={success?.recipient ?? ""}
+   599→          reference={success?.ref ?? ""}
+   600→        />
+   601→      </>
+   602→    );
+   603→  }
+   604→
+   605→  // ====== SCANNER VIEW ======
+   606→  return (
+   607→    <div className="mx-auto w-full max-w-2xl">
+   608→      <Card className="overflow-hidden p-0">
+   609→        {/* Scanner viewport */}
+   610→        <div className="relative aspect-square w-full bg-black sm:aspect-[4/3] lg:aspect-square">
+   611→          {/* Live camera feed */}
+   612→          <video
+   613→            ref={videoRef}
+   614→            playsInline
+   615→            muted
+   616→            className={cn(
+   617→              "absolute inset-0 h-full w-full object-cover",
+   618→              scanning ? "opacity-100" : "opacity-0",
+   619→            )}
+   620→          />
+   621→
+   622→          {/* Idle / placeholder */}
+   623→          {!scanning && (
+   624→            <div className="absolute inset-0 grid place-items-center bg-gradient-to-b from-zinc-900 to-black p-6 text-center">
+   625→              <div className="max-w-xs">
+   626→                <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-white/10">
+   627→                  <ScanLine className="h-8 w-8 text-emerald-400" />
+   628→                </div>
+   629→                <h3 className="text-base font-semibold text-white">
+   630→                  {cameraSupported === false ? "Manual QR entry" : "Scan to pay"}
+   631→                </h3>
+   632→                <p className="mt-1 text-xs text-white/60">
+   633→                  {cameraSupported === false
+   634→                    ? "Your browser doesn't support camera scanning. Upload a QR image or enter the merchant code."
+   635→                    : "Point your camera at a merchant's GaexPay QR code to pay instantly."}
+   636→                </p>
+   637→                {error && (
+   638→                  <div className="mt-3 rounded-lg bg-rose-500/15 p-2 text-[11px] text-rose-300">
+   639→                    {error}
+   640→                  </div>
+   641→                )}
+   642→              </div>
+   643→            </div>
+   644→          )}
+   645→
+   646→          {/* Scanning frame overlay */}
+   647→          {scanning && (
+   648→            <>
+   649→              <div className="absolute inset-0 bg-black/40" />
+   650→              <div className="absolute inset-0 grid place-items-center p-8">
+   651→                <div className="relative h-56 w-56 sm:h-64 sm:w-64">
+   652→                  {/* Corner brackets */}
+   653→                  <span className="absolute left-0 top-0 h-8 w-8 rounded-tl-xl border-l-4 border-t-4 border-emerald-400" />
+   654→                  <span className="absolute right-0 top-0 h-8 w-8 rounded-tr-xl border-r-4 border-t-4 border-emerald-400" />
+   655→                  <span className="absolute bottom-0 left-0 h-8 w-8 rounded-bl-xl border-b-4 border-l-4 border-emerald-400" />
+   656→                  <span className="absolute bottom-0 right-0 h-8 w-8 rounded-br-xl border-b-4 border-r-4 border-emerald-400" />
+   657→                  {/* Moving scan line */}
+   658→                  <motion.div
+   659→                    className="absolute left-2 right-2 h-0.5 rounded-full bg-emerald-400 shadow-[0_0_12px_3px] shadow-emerald-400/70"
+   660→                    initial={{ top: "8%" }}
+   661→                    animate={{ top: ["8%", "92%", "8%"] }}
+   662→                    transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+   663→                  />
+   664→                </div>
+   665→              </div>
+   666→              <p className="absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs text-white">
+   667→                Point at a QR code
+   668→              </p>
+   669→            </>
+   670→          )}
+   671→
+   672→          {/* Top-right controls while scanning */}
+   673→          {scanning && (
+   674→            <div className="absolute right-3 top-3 flex gap-2">
+   675→              {torchAvailable && (
+   676→                <Button
+   677→                  size="icon"
+   678→                  variant="secondary"
+   679→                  className="h-9 w-9 rounded-full bg-black/60 text-white hover:bg-black/80"
+   680→                  onClick={toggleTorch}
+   681→                  aria-label={torchOn ? "Turn off flashlight" : "Turn on flashlight"}
+   682→                >
+   683→                  {torchOn ? <FlashlightOff className="h-4 w-4" /> : <Flashlight className="h-4 w-4" />}
+   684→                </Button>
+   685→              )}
+   686→              <Button
+   687→                size="icon"
+   688→                variant="secondary"
+   689→                className="h-9 w-9 rounded-full bg-black/60 text-white hover:bg-black/80"
+   690→                onClick={stopCamera}
+   691→                aria-label="Stop scanning"
+   692→              >
+   693→                <X className="h-4 w-4" />
+   694→              </Button>
+   695→            </div>
+   696→          )}
+   697→        </div>
+   698→
+   699→        {/* Actions */}
+   700→        <div className="space-y-3 p-4">
+   701→          {cameraSupported ? (
+   702→            !scanning ? (
+   703→              <Button
+   704→                onClick={startCamera}
+   705→                disabled={starting}
+   706→                className="h-12 w-full text-base"
+   707→                size="lg"
+   708→              >
+   709→                {starting ? (
+   710→                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Starting camera…</>
+   711→                ) : (
+   712→                  <><ScanLine className="mr-2 h-4 w-4" /> Open Scanner</>
+   713→                )}
+   714→              </Button>
+   715→            ) : (
+   716→              <Button variant="outline" onClick={stopCamera} className="h-11 w-full">
+   717→                <CameraOff className="mr-2 h-4 w-4" /> Stop Camera
+   718→              </Button>
+   719→            )
+   720→          ) : (
+   721→            <div className="rounded-lg border border-dashed bg-muted/30 p-3 text-center text-xs text-muted-foreground">
+   722→              <CameraOff className="mx-auto mb-1 h-4 w-4" />
+   723→              Camera scanning isn't supported on this browser.
+   724→            </div>
+   725→          )}
+   726→
+   727→          <div className="grid grid-cols-2 gap-2">
+   728→            <Button
+   729→              variant="outline"
+   730→              onClick={() => fileInputRef.current?.click()}
+   731→              className="h-11"
+   732→            >
+   733→              <Upload className="mr-2 h-4 w-4" /> Upload QR
+   734→            </Button>
+   735→            <Button variant="outline" onClick={() => setManualOpen(true)} className="h-11">
+   736→              <Keyboard className="mr-2 h-4 w-4" /> Enter Code
+   737→            </Button>
+   738→          </div>
+   739→          <input
+   740→            ref={fileInputRef}
+   741→            type="file"
+   742→            accept="image/*"
+   743→            className="hidden"
+   744→            onChange={onFileSelected}
+   745→          />
+   746→
+   747→          {/* Recent scan tip */}
+   748→          {!scanning && (
+   749→            <div className="flex items-start gap-2 rounded-lg bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-300">
+   750→              <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+   751→              <span>
+   752→                Tip: merchants display a GaexPay QR sticker. Codes start with <span className="font-mono">GXP-MER-</span>.
+   753→              </span>
+   754→            </div>
+   755→          )}
+   756→        </div>
+   757→      </Card>
+   758→
+   759→      {/* Manual entry sheet */}
+   760→      <PaySheet
+   761→        open={manualOpen}
+   762→        onOpenChange={setManualOpen}
+   763→        title="Enter merchant code"
+   764→        description="Type the GaexPay merchant code shown on the QR sticker."
+   765→        headerAccent={
+   766→          <div className="mx-auto mb-2 grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-primary">
+   767→            <Keyboard className="h-5 w-5" />
+   768→          </div>
+   769→        }
+   770→      >
+   771→        <div className="space-y-3">
+   772→          <Input
+   773→            value={manualCode}
+   774→            onChange={(e) => setManualCode(e.target.value)}
+   775→            placeholder="GXP-MER-001"
+   776→            className="h-12 text-center font-mono text-base"
+   777→            autoFocus
+   778→            onKeyDown={(e) => { if (e.key === "Enter") lookupManual(); }}
+   779→          />
+   780→          <Button
+   781→            onClick={lookupManual}
+   782→            disabled={!manualCode.trim() || manualLooking}
+   783→            className="h-11 w-full"
+   784→          >
+   785→            {manualLooking ? (
+   786→              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Looking up…</>
+   787→            ) : (
+   788→              <>Look up merchant <ArrowRight className="ml-2 h-4 w-4" /></>
+   789→            )}
+   790→          </Button>
+   791→          {merchants.length > 0 && (
+   792→            <div className="rounded-lg border bg-muted/30 p-2 text-[11px] text-muted-foreground">
+   793→              Try: <span className="font-mono">{merchants[0].qrCode}</span>
+   794→            </div>
+   795→          )}
+   796→        </div>
+   797→      </PaySheet>
+   798→
+   799→      <SuccessSheet
+   800→        open={!!success}
+   801→        onOpenChange={(v) => { if (!v) setSuccess(null); }}
+   802→        amount={success?.amount ?? 0}
+   803→        recipient={success?.recipient ?? ""}
+   804→        reference={success?.ref ?? ""}
+   805→      />
+   806→    </div>
+   807→  );
+   808→}
+   809→
+   810→// ============================================================
+   811→// 2. MERCHANTS
+   812→// ============================================================
+   813→function MerchantsPay() {
+   814→  const { data, loading } = useFetch<{ merchants: Merchant[] }>("/api/merchants");
+   815→  const merchants = data?.merchants ?? [];
+   816→  const { fmt, symbol } = useFormatMoney();
+   817→  const [query, setQuery] = useState("");
+   818→  const [cat, setCat] = useState("all");
+   819→  const [selected, setSelected] = useState<Merchant | null>(null);
+   820→  const [amount, setAmount] = useState("");
+   821→  const [paying, setPaying] = useState(false);
+   822→  const [success, setSuccess] = useState<{ ref: string; recipient: string; amount: number } | null>(null);
+   823→
+   824→  const filtered = merchants.filter((m) => {
+   825→    const matchCat = cat === "all" || m.category === cat;
+   826→    const q = query.trim().toLowerCase();
+   827→    const matchQ = !q ||
+   828→      m.name.toLowerCase().includes(q) ||
+   829→      m.category.toLowerCase().includes(q) ||
+   830→      (m.qrCode || "").toLowerCase().includes(q);
+   831→    return matchCat && matchQ;
+   832→  });
+   833→
+   834→  const openPay = (m: Merchant) => {
+   835→    setSelected(m);
+   836→    setAmount("");
+   837→  };
+   838→
+   839→  const pay = async () => {
+   840→    if (!selected || !amount) return;
+   841→    setPaying(true);
+   842→    try {
+   843→      const res = await fetch("/api/pay-merchant", {
+   844→        method: "POST",
+   845→        headers: { "Content-Type": "application/json" },
+   846→        body: JSON.stringify({
+   847→          amount: Number(amount), currency: "NGN", type: "payment",
+   848→          category: selected.category || "shopping",
+   849→          counterpartyName: selected.name, method: "wallet",
+   850→          description: `Payment to ${selected.name}`,
+   851→        }),
+   852→      });
+   853→      const json = await res.json();
+   854→      if (!res.ok || !json.success) throw new Error(json.error || "Payment failed");
+   855→      setSuccess({ ref: json.transaction.reference, recipient: selected.name, amount: Number(amount) });
+   856→      toast.success(`Paid ${fmt(Number(amount))} to ${selected.name}`);
+   857→      setSelected(null);
+   858→      setAmount("");
+   859→    } catch (e: any) {
+   860→      toast.error(e.message || "Payment failed");
+   861→    } finally {
+   862→      setPaying(false);
+   863→    }
+   864→  };
+   865→
+   866→  return (
+   867→    <div className="space-y-4">
+   868→      {/* Search */}
+   869→      <div className="relative">
+   870→        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+   871→        <Input
+   872→          value={query}
+   873→          onChange={(e) => setQuery(e.target.value)}
+   874→          placeholder="Search merchants by name, category, or code"
+   875→          className="h-11 pl-9"
+   876→          aria-label="Search merchants"
+   877→        />
+   878→      </div>
+   879→
+   880→      {/* Category chips */}
+   881→      <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+   882→        {MERCHANT_CATEGORY_CHIPS.map((c) => {
+   883→          const active = cat === c.id;
+   884→          return (
+   885→            <button
+   886→              key={c.id}
+   887→              onClick={() => setCat(c.id)}
+   888→              className={cn(
+   889→                "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition",
+   890→                active
+   891→                  ? "border-primary bg-primary text-primary-foreground"
+   892→                  : "bg-muted/40 hover:bg-muted",
+   893→              )}
+   894→            >
+   895→              <c.Icon className="h-3.5 w-3.5" />
+   896→              {c.label}
+   897→            </button>
+   898→          );
+   899→        })}
+   900→      </div>
+   901→
+   902→      {/* List */}
+   903→      {loading ? (
+   904→        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+   905→          {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-28" />)}
+   906→        </div>
+   907→      ) : filtered.length === 0 ? (
+   908→        <EmptyState
+   909→          icon={Search}
+   910→          title="No merchants found"
+   911→          description={query ? `No merchants match "${query}".` : "Try a different category."}
+   912→        />
+   913→      ) : (
+   914→        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+   915→          {filtered.map((m) => {
+   916→            const CatIcon = MERCHANT_CATEGORY_ICON[m.category] || Store;
+   917→            return (
+   918→              <motion.div
+   919→                key={m.id}
+   920→                whileHover={{ y: -2 }}
+   921→                transition={{ type: "spring", stiffness: 300, damping: 22 }}
+   922→              >
+   923→                <Card className="h-full p-4">
+   924→                  <div className="flex items-start gap-3">
+   925→                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+   926→                      <CatIcon className="h-5 w-5" />
+   927→                    </div>
+   928→                    <div className="min-w-0 flex-1">
+   929→                      <p className="truncate text-sm font-semibold">{m.name}</p>
+   930→                      <p className="text-xs capitalize text-muted-foreground">{m.category}</p>
+   931→                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+   932→                        <Badge variant="outline" className="gap-1 text-[10px]">
+   933→                          <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
+   934→                          {m.rating.toFixed(1)}
+   935→                        </Badge>
+   936→                        <Badge variant="outline" className="gap-1 text-[10px] text-emerald-600">
+   937→                          <BadgeCheck className="h-3 w-3" /> Verified
+   938→                        </Badge>
+   939→                      </div>
+   940→                    </div>
+   941→                  </div>
+   942→                  <Button
+   943→                    onClick={() => openPay(m)}
+   944→                    className="mt-3 h-9 w-full"
+   945→                    size="sm"
+   946→                  >
+   947→                    <Wallet className="mr-2 h-4 w-4" /> Pay
+   948→                  </Button>
+   949→                </Card>
+   950→              </motion.div>
+   951→            );
+   952→          })}
+   953→        </div>
+   954→      )}
+   955→
+   956→      {/* Payment sheet */}
+   957→      <PaySheet
+   958→        open={!!selected}
+   959→        onOpenChange={(v) => { if (!v) { setSelected(null); setAmount(""); } }}
+   960→        title="Pay merchant"
+   961→        description="Enter an amount to send"
+   962→        headerAccent={
+   963→          selected && (
+   964→            <div className="mx-auto mb-2 flex flex-col items-center">
+   965→              <div className="grid h-14 w-14 place-items-center rounded-full bg-primary/10 text-primary">
+   966→                {(() => {
+   967→                  const CatIcon = MERCHANT_CATEGORY_ICON[selected.category] || Store;
+   968→                  return <CatIcon className="h-6 w-6" />;
+   969→                })()}
+   970→              </div>
+   971→              <p className="mt-2 font-semibold">{selected.name}</p>
+   972→              <p className="text-xs capitalize text-muted-foreground">{selected.category}</p>
+   973→            </div>
+   974→          )
+   975→        }
+   976→      >
+   977→        {selected && (
+   978→          <div className="space-y-4">
+   979→            <AmountInput value={amount} onChange={setAmount} symbol={symbol} />
+   980→            <Button
+   981→              onClick={pay}
+   982→              disabled={!amount || paying}
+   983→              className="h-12 w-full text-base"
+   984→              size="lg"
+   985→            >
+   986→              {paying ? (
+   987→                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Paying…</>
+   988→              ) : (
+   989→                <>{amount ? `Pay ${fmt(Number(amount))}` : "Enter amount"}</>
+   990→              )}
+   991→            </Button>
+   992→          </div>
+   993→        )}
+   994→      </PaySheet>
+   995→
+   996→      <SuccessSheet
+   997→        open={!!success}
+   998→        onOpenChange={(v) => { if (!v) setSuccess(null); }}
+   999→        amount={success?.amount ?? 0}
+  1000→        recipient={success?.recipient ?? ""}
+  1001→        reference={success?.ref ?? ""}
+  1002→      />
+  1003→    </div>
+  1004→  );
+  1005→}
+  1006→
+  1007→// ============================================================
+  1008→// 3. BILLS
+  1009→// ============================================================
+  1010→function BillsPay() {
+  1011→  const { data: txData, reload } = useFetch<{ transactions: Tx[] }>("/api/transactions?type=bill&limit=5");
+  1012→  const recentBills = txData?.transactions ?? [];
+  1013→  const { fmt, symbol } = useFormatMoney();
+  1014→
+  1015→  const [selected, setSelected] = useState<typeof BILL_CATEGORIES[number] | null>(null);
+  1016→  const [account, setAccount] = useState("");
+  1017→  const [amount, setAmount] = useState("");
+  1018→  const [paying, setPaying] = useState(false);
+  1019→  const [success, setSuccess] = useState<{ ref: string; recipient: string; amount: number } | null>(null);
+  1020→
+  1021→  const openBill = (c: typeof BILL_CATEGORIES[number]) => {
+  1022→    setSelected(c);
+  1023→    setAccount("");
+  1024→    setAmount("");
+  1025→  };
+  1026→
+  1027→  const pay = async () => {
+  1028→    if (!selected || !account || !amount) return;
+  1029→    setPaying(true);
+  1030→    try {
+  1031→      const res = await fetch("/api/pay-merchant", {
+  1032→        method: "POST",
+  1033→        headers: { "Content-Type": "application/json" },
+  1034→        body: JSON.stringify({
+  1035→          amount: Number(amount), currency: "NGN", type: "bill",
+  1036→          category: selected.id,
+  1037→          counterpartyName: selected.label,
+  1038→          method: "wallet",
+  1039→          description: `${selected.label} · ref ${account}`,
+  1040→        }),
+  1041→      });
+  1042→      const json = await res.json();
+  1043→      if (!res.ok || !json.success) throw new Error(json.error || "Payment failed");
+  1044→      setSuccess({ ref: json.transaction.reference, recipient: selected.label, amount: Number(amount) });
+  1045→      toast.success(`${fmt(Number(amount))} paid for ${selected.label}`, {
+  1046→        description: `Ref ${json.transaction.reference}`,
+  1047→      });
+  1048→      setSelected(null);
+  1049→      setAccount("");
+  1050→      setAmount("");
+  1051→      reload();
+  1052→    } catch (e: any) {
+  1053→      toast.error(e.message || "Bill payment failed");
+  1054→    } finally {
+  1055→      setPaying(false);
+  1056→    }
+  1057→  };
+  1058→
+  1059→  return (
+  1060→    <div className="space-y-6">
+  1061→      {CATEGORY_GROUPS.map((group) => {
+  1062→        const groupCats = BILL_CATEGORIES.filter((c) => group.cats.includes(c.id));
+  1063→        return (
+  1064→          <div key={group.label}>
+  1065→            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+  1066→              {group.label}
+  1067→            </h3>
+  1068→            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+  1069→              {groupCats.map((catItem) => (
+  1070→                <motion.button
+  1071→                  key={catItem.id}
+  1072→                  whileHover={{ y: -2 }}
+  1073→                  whileTap={{ scale: 0.98 }}
+  1074→                  transition={{ type: "spring", stiffness: 300, damping: 22 }}
+  1075→                  onClick={() => openBill(catItem)}
+  1076→                  className="text-left"
+  1077→                >
+  1078→                  <Card className="h-full cursor-pointer p-4">
+  1079→                    <div className="flex items-center gap-3">
+  1080→                      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-primary/10 text-xl">
+  1081→                        <span>{catItem.icon}</span>
+  1082→                      </div>
+  1083→                      <div className="min-w-0 flex-1">
+  1084→                        <p className="truncate text-sm font-semibold">{catItem.label}</p>
+  1085→                        <p className="truncate text-xs text-muted-foreground">{catItem.desc}</p>
+  1086→                      </div>
+  1087→                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+  1088→                    </div>
+  1089→                  </Card>
+  1090→                </motion.button>
+  1091→              ))}
+  1092→            </div>
+  1093→          </div>
+  1094→        );
+  1095→      })}
+  1096→
+  1097→      {/* Recent bills */}
+  1098→      <div>
+  1099→        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+  1100→          Recent bill payments
+  1101→        </h3>
+  1102→        {recentBills.length === 0 ? (
+  1103→          <EmptyState
+  1104→            icon={Receipt}
+  1105→            title="No bills paid yet"
+  1106→            description="Pick a category above to make your first bill payment."
+  1107→          />
+  1108→        ) : (
+  1109→          <Card className="divide-y p-0">
+  1110→            {recentBills.map((tx) => (
+  1111→              <div key={tx.id} className="flex items-center gap-3 p-3">
+  1112→                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-emerald-500/10 text-emerald-600">
+  1113→                  <Receipt className="h-4 w-4" />
+  1114→                </div>
+  1115→                <div className="min-w-0 flex-1">
+  1116→                  <p className="truncate text-sm font-medium">{tx.counterpartyName || "Bill payment"}</p>
+  1117→                  <p className="truncate text-xs text-muted-foreground">
+  1118→                    {tx.description ? `${tx.description} · ` : ""}{timeAgo(tx.createdAt)}
+  1119→                  </p>
+  1120→                </div>
+  1121→                <div className="text-right">
+  1122→                  <p className="text-sm font-semibold">{fmt(tx.amount)}</p>
+  1123→                  <p className="text-[10px] text-emerald-600">Paid</p>
+  1124→                </div>
+  1125→              </div>
+  1126→            ))}
+  1127→          </Card>
+  1128→        )}
+  1129→      </div>
+  1130→
+  1131→      {/* Bill payment sheet */}
+  1132→      <PaySheet
+  1133→        open={!!selected}
+  1134→        onOpenChange={(v) => { if (!v) { setSelected(null); setAccount(""); setAmount(""); } }}
+  1135→        title="Pay bill"
+  1136→        description={selected?.desc}
+  1137→        headerAccent={
+  1138→          selected && (
+  1139→            <div className="mx-auto mb-2 grid h-14 w-14 place-items-center rounded-full bg-primary/10 text-2xl">
+  1140→              <span>{selected.icon}</span>
+  1141→            </div>
+  1142→          )
+  1143→        }
+  1144→      >
+  1145→        {selected && (
+  1146→          <div className="space-y-4">
+  1147→            <div className="text-center">
+  1148→              <p className="font-semibold">{selected.label}</p>
+  1149→            </div>
+  1150→            <div className="space-y-2">
+  1151→              <Label>Account / Reference Number</Label>
+  1152→              <Input
+  1153→                value={account}
+  1154→                onChange={(e) => setAccount(e.target.value)}
+  1155→                placeholder="e.g. meter number, account ID"
+  1156→                className="h-11"
+  1157→                autoFocus
+  1158→              />
+  1159→            </div>
+  1160→            <AmountInput value={amount} onChange={setAmount} symbol={symbol} />
+  1161→            <Button
+  1162→              onClick={pay}
+  1163→              disabled={!account || !amount || paying}
+  1164→              className="h-12 w-full text-base"
+  1165→              size="lg"
+  1166→            >
+  1167→              {paying ? (
+  1168→                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing…</>
+  1169→              ) : (
+  1170→                <>{amount ? `Pay ${fmt(Number(amount))}` : "Pay Bill"}</>
+  1171→              )}
+  1172→            </Button>
+  1173→            <p className="text-center text-[11px] text-muted-foreground">
+  1174→              Bills settle instantly. Save the reference for your records.
+  1175→            </p>
+  1176→          </div>
+  1177→        )}
+  1178→      </PaySheet>
+  1179→
+  1180→      <SuccessSheet
+  1181→        open={!!success}
+  1182→        onOpenChange={(v) => { if (!v) setSuccess(null); }}
+  1183→        amount={success?.amount ?? 0}
+  1184→        recipient={success?.recipient ?? ""}
+  1185→        reference={success?.ref ?? ""}
+  1186→      />
+  1187→    </div>
+  1188→  );
+  1189→}
+  1190→
+  1191→// ============================================================
+  1192→// 4. AIRTIME
+  1193→// ============================================================
+  1194→function AirtimePay() {
+  1195→  const { data: txData, reload } = useFetch<{ transactions: Tx[] }>("/api/transactions?type=airtime&limit=5");
+  1196→  const recentAirtime = txData?.transactions ?? [];
+  1197→  const { fmt, symbol } = useFormatMoney();
+  1198→  const [network, setNetwork] = useState("mtn");
+  1199→  const [phone, setPhone] = useState("");
+  1200→  const [amount, setAmount] = useState("");
+  1201→  const [paying, setPaying] = useState(false);
+  1202→  const [success, setSuccess] = useState<{ ref: string; recipient: string; amount: number } | null>(null);
+  1203→
+  1204→  const pay = async () => {
+  1205→    if (!phone || !amount) return;
+  1206→    setPaying(true);
+  1207→    try {
+  1208→      const netName = NETWORKS.find((n) => n.id === network)?.name || network.toUpperCase();
+  1209→      const res = await fetch("/api/pay-merchant", {
+  1210→        method: "POST",
+  1211→        headers: { "Content-Type": "application/json" },
+  1212→        body: JSON.stringify({
+  1213→          amount: Number(amount), currency: "NGN", type: "airtime",
+  1214→          category: "airtime",
+  1215→          counterpartyName: `${netName} · ${phone}`,
+  1216→          method: "wallet",
+  1217→          description: `Airtime top-up · ${phone}`,
+  1218→        }),
+  1219→      });
+  1220→      const json = await res.json();
+  1221→      if (!res.ok || !json.success) throw new Error(json.error || "Top-up failed");
+  1222→      setSuccess({ ref: json.transaction.reference, recipient: `${netName} · ${phone}`, amount: Number(amount) });
+  1223→      toast.success(`${fmt(Number(amount))} airtime sent to ${phone}`);
+  1224→      setPhone("");
+  1225→      setAmount("");
+  1226→      reload();
+  1227→    } catch (e: any) {
+  1228→      toast.error(e.message || "Airtime purchase failed");
+  1229→    } finally {
+  1230→      setPaying(false);
+  1231→    }
+  1232→  };
+  1233→
+  1234→  return (
+  1235→    <div className="mx-auto w-full max-w-xl">
+  1236→      <Card className="p-5">
+  1237→        <div className="space-y-4">
+  1238→          {/* Network selector */}
+  1239→          <div>
+  1240→            <Label className="mb-2 block">Select Network</Label>
+  1241→            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+  1242→              {NETWORKS.map((n) => {
+  1243→                const active = network === n.id;
+  1244→                return (
+  1245→                  <button
+  1246→                    key={n.id}
+  1247→                    onClick={() => setNetwork(n.id)}
+  1248→                    className={cn(
+  1249→                      "flex flex-col items-center gap-1.5 rounded-xl border p-3 transition",
+  1250→                      active ? "border-primary ring-2 ring-primary/20" : "hover:bg-muted",
+  1251→                    )}
+  1252→                    aria-pressed={active}
+  1253→                  >
+  1254→                    <div
+  1255→                      className="grid h-9 w-9 place-items-center rounded-full text-xs font-bold"
+  1256→                      style={{ background: n.color, color: n.textColor }}
+  1257→                    >
+  1258→                      {n.name.slice(0, 1)}
+  1259→                    </div>
+  1260→                    <span className="text-[11px] font-medium">{n.name}</span>
+  1261→                  </button>
+  1262→                );
+  1263→              })}
+  1264→            </div>
+  1265→          </div>
+  1266→
+  1267→          {/* Phone number */}
+  1268→          <div className="space-y-2">
+  1269→            <Label>Phone Number</Label>
+  1270→            <div className="relative">
+  1271→              <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+  1272→              <Input
+  1273→                value={phone}
+  1274→                onChange={(e) => setPhone(e.target.value)}
+  1275→                placeholder="0801 234 5678"
+  1276→                inputMode="tel"
+  1277→                className="h-11 pl-9"
+  1278→              />
+  1279→            </div>
+  1280→          </div>
+  1281→
+  1282→          {/* Amount */}
+  1283→          <AmountInput
+  1284→            value={amount}
+  1285→            onChange={setAmount}
+  1286→            symbol={symbol}
+  1287→            quick={[100, 200, 500, 1000, 2000, 5000]}
+  1288→          />
+  1289→
+  1290→          {/* Bonus banner */}
+  1291→          <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
+  1292→            <Zap className="h-4 w-4 shrink-0" />
+  1293→            <span>Get 2% bonus airtime on every GaexPay top-up.</span>
+  1294→          </div>
+  1295→
+  1296→          <Button
+  1297→            onClick={pay}
+  1298→            disabled={!phone || !amount || paying}
+  1299→            className="h-12 w-full text-base"
+  1300→            size="lg"
+  1301→          >
+  1302→            {paying ? (
+  1303→              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending…</>
+  1304→            ) : (
+  1305→              <><Smartphone className="mr-2 h-4 w-4" /> Buy Airtime</>
+  1306→            )}
+  1307→          </Button>
+  1308→        </div>
+  1309→      </Card>
+  1310→
+  1311→      {/* Recent airtime */}
+  1312→      <div className="mt-6">
+  1313→        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+  1314→          Recent airtime purchases
+  1315→        </h3>
+  1316→        {recentAirtime.length === 0 ? (
+  1317→          <EmptyState
+  1318→            icon={Smartphone}
+  1319→            title="No airtime yet"
+  1320→            description="Your airtime purchases will appear here."
+  1321→          />
+  1322→        ) : (
+  1323→          <Card className="divide-y p-0">
+  1324→            {recentAirtime.map((tx) => (
+  1325→              <div key={tx.id} className="flex items-center gap-3 p-3">
+  1326→                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-emerald-500/10 text-emerald-600">
+  1327→                  <Smartphone className="h-4 w-4" />
+  1328→                </div>
+  1329→                <div className="min-w-0 flex-1">
+  1330→                  <p className="truncate text-sm font-medium">{tx.counterpartyName || "Airtime"}</p>
+  1331→                  <p className="text-xs text-muted-foreground">{timeAgo(tx.createdAt)}</p>
+  1332→                </div>
+  1333→                <div className="text-right">
+  1334→                  <p className="text-sm font-semibold">{fmt(tx.amount)}</p>
+  1335→                  <p className="text-[10px] text-emerald-600">Sent</p>
+  1336→                </div>
+  1337→              </div>
+  1338→            ))}
+  1339→          </Card>
+  1340→        )}
+  1341→      </div>
+  1342→
+  1343→      <SuccessSheet
+  1344→        open={!!success}
+  1345→        onOpenChange={(v) => { if (!v) setSuccess(null); }}
+  1346→        amount={success?.amount ?? 0}
+  1347→        recipient={success?.recipient ?? ""}
+  1348→        reference={success?.ref ?? ""}
+  1349→      />
+  1350→    </div>
+  1351→  );
+  1352→}
+  1353→
+  1354→// ---------- Empty State ----------
+  1355→function EmptyState({
+  1356→  icon: Icon, title, description,
+  1357→}: {
+  1358→  icon: React.ComponentType<{ className?: string }>;
+  1359→  title: string;
+  1360→  description: string;
+  1361→}) {
+  1362→  return (
+  1363→    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-10 text-center">
+  1364→      <div className="mb-3 grid h-12 w-12 place-items-center rounded-full bg-muted text-muted-foreground">
+  1365→        <Icon className="h-5 w-5" />
+  1366→      </div>
+  1367→      <p className="text-sm font-semibold">{title}</p>
+  1368→      <p className="mt-1 max-w-xs text-xs text-muted-foreground">{description}</p>
+  1369→    </div>
+  1370→  );
+  1371→}
+  1372→

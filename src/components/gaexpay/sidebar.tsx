@@ -7,7 +7,7 @@ import {
   Sparkles, PiggyBank, Wallet2, CalendarClock, Store, FileText, Trophy,
   Calendar, MapPin, Bitcoin, Repeat, Globe, DollarSign, AtSign, Banknote,
   Building2, Briefcase, Landmark, Code2, UserCheck, Receipt, Crown,
-  Network, ShoppingBag,
+  Network, ShoppingBag, MessageSquare, Lock, Coins, Radio, Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp, type View } from "@/lib/store";
@@ -158,6 +158,31 @@ const NAV: NavGroup[] = [
       { id: "merchant", label: "Merchant Dashboard", labelKey: "nav.merchantDashboard", icon: Store, badge: "Pro", featureFlag: "merchant_dashboard" },
       { id: "business-pro", label: "Business Pro", labelKey: "nav.businessPro", icon: Briefcase, badge: "Pro", featureFlag: "business_pro" },
       { id: "treasury", label: "Treasury", labelKey: "nav.treasury", icon: Landmark, badge: "L4", featureFlag: "treasury" },
+    ],
+  },
+  {
+    section: "Community",
+    sectionKey: "nav.community",
+    items: [
+      { id: "social", label: "Social", labelKey: "nav.social", icon: Users, featureFlag: "social" },
+      { id: "messaging", label: "Messages", labelKey: "nav.messages", icon: MessageSquare, featureFlag: "messaging" },
+      { id: "live", label: "Live", labelKey: "nav.live", icon: Radio, featureFlag: "live_streaming" },
+    ],
+  },
+  {
+    section: "Crypto & Finance",
+    sectionKey: "nav.cryptoFinance",
+    items: [
+      { id: "staking", label: "Staking", labelKey: "nav.staking", icon: Lock, featureFlag: "staking" },
+      { id: "gaex-token", label: "GAEX Token", labelKey: "nav.gaexToken", icon: Coins, badge: "NEW", featureFlag: "gaex_token" },
+    ],
+  },
+  {
+    section: "Commerce",
+    sectionKey: "nav.commerce",
+    items: [
+      { id: "seller-dashboard", label: "Seller Dashboard", labelKey: "nav.sellerDashboard", icon: Store, featureFlag: "seller_dashboard" },
+      { id: "notifications", label: "Notifications", labelKey: "nav.notifications", icon: Bell },
     ],
   },
   {

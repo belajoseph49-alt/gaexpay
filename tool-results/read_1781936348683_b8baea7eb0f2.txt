@@ -1,0 +1,1302 @@
+     1→"use client";
+     2→
+     3→import { useState, useEffect } from "react";
+     4→import { motion, AnimatePresence } from "framer-motion";
+     5→import {
+     6→  SendHorizontal, ArrowDownToLine, ArrowUpFromLine, QrCode, Search, UserPlus,
+     7→  Smartphone, Landmark, Wallet as WalletIcon, Check, ShieldCheck, ChevronRight,
+     8→  ChevronLeft, Loader2, Copy, Share2, Repeat, Contact as ContactIcon,
+     9→  Users, UserCheck, Phone, Mail, Plus, Info,
+    10→  Download, MessageSquare, Link2, Sparkles, Clock, RefreshCw,
+    11→} from "lucide-react";
+    12→import QRCode from "qrcode";
+    13→import { Logo } from "@/components/gaexpay/logo";
+    14→import { Card } from "@/components/ui/card";
+    15→import { Button } from "@/components/ui/button";
+    16→import { Input } from "@/components/ui/input";
+    17→import { Label } from "@/components/ui/label";
+    18→import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+    19→import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+    20→import { Badge } from "@/components/ui/badge";
+    21→import { useFetch } from "@/hooks/use-fetch";
+    22→import { formatMoney, CURRENCIES, MOBILE_MONEY_PROVIDERS, BANKS } from "@/lib/gaexpay";
+    23→import { useApp } from "@/lib/store";
+    24→import { Skeleton } from "@/components/ui/skeleton";
+    25→import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+    26→import { Confetti } from "@/components/gaexpay/confetti";
+    27→import { useContacts, type DeviceContact } from "@/hooks/use-contacts";
+    28→import { toast } from "sonner";
+    29→import { cn } from "@/lib/utils";
+    30→import {
+    31→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    32→} from "@/components/ui/select";
+    33→import { useFormatMoney } from "@/hooks/use-format-money";
+    34→
+    35→export function SendView() {
+    36→  return (
+    37→    <div className="space-y-4 sm:space-y-6">
+    38→      <div>
+    39→        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Send & Receive</h1>
+    40→        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Transfer money instantly, request payments, top up or withdraw</p>
+    41→      </div>
+    42→      <Tabs defaultValue="send">
+    43→        <TabsList className="grid w-full grid-cols-4">
+    44→          <TabsTrigger value="send" className="text-xs sm:text-sm"><SendHorizontal className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Send</span></TabsTrigger>
+    45→          <TabsTrigger value="request" className="text-xs sm:text-sm"><ArrowDownToLine className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Request</span></TabsTrigger>
+    46→          <TabsTrigger value="topup" className="text-xs sm:text-sm"><ArrowDownToLine className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Top Up</span></TabsTrigger>
+    47→          <TabsTrigger value="withdraw" className="text-xs sm:text-sm"><ArrowUpFromLine className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Withdraw</span></TabsTrigger>
+    48→        </TabsList>
+    49→        <TabsContent value="send" className="mt-3 sm:mt-4"><SendFlow /></TabsContent>
+    50→        <TabsContent value="request" className="mt-3 sm:mt-4"><RequestFlow /></TabsContent>
+    51→        <TabsContent value="topup" className="mt-3 sm:mt-4"><TopUpFlow /></TabsContent>
+    52→        <TabsContent value="withdraw" className="mt-3 sm:mt-4"><WithdrawFlow /></TabsContent>
+    53→      </Tabs>
+    54→    </div>
+    55→  );
+    56→}
+    57→
+    58→function SendFlow() {
+    59→  const { data: contactsData, reload: reloadContacts } = useFetch<any>("/api/contacts");
+    60→  const { data: wData } = useFetch<{ wallets: any[] }>("/api/wallets");
+    61→  const {
+    62→    deviceContacts, loading: contactsLoading, supported: contactsSupported,
+    63→    pickContacts, checkMembership, addManualContact,
+    64→  } = useContacts();
+    65→  const [step, setStep] = useState(0);
+    66→  const { fmt, symbol, currency: userCur } = useFormatMoney();
+    67→  const [recipient, setRecipient] = useState<any>(null);
+    68→  const [amount, setAmount] = useState("");
+    69→  const [currency, setCurrency] = useState("NGN");
+    70→  const [method, setMethod] = useState("wallet");
+    71→  const [provider, setProvider] = useState("mtn");
+    72→  const [note, setNote] = useState("");
+    73→  const [otp, setOtp] = useState("");
+    74→  const [loading, setLoading] = useState(false);
+    75→  const [done, setDone] = useState<any>(null);
+    76→  const [search, setSearch] = useState("");
+    77→  const [showManualAdd, setShowManualAdd] = useState(false);
+    78→  const [manualName, setManualName] = useState("");
+    79→  const [manualPhone, setManualPhone] = useState("");
+    80→  const [manualEmail, setManualEmail] = useState("");
+    81→  const [checkedContacts, setCheckedContacts] = useState<any>(null);
+    82→  const [checkingContacts, setCheckingContacts] = useState(false);
+    83→  const [activeTab, setActiveTab] = useState<"contacts" | "gaexpay" | "beneficiaries" | "recent">("gaexpay");
+    84→
+    85→  const beneficiaries = contactsData?.beneficiaries ?? [];
+    86→  const gaexpayMembers = contactsData?.gaexpayMembers ?? [];
+    87→  const recentRecipients = contactsData?.recentRecipients ?? [];
+    88→  const wallets = wData?.wallets ?? [];
+    89→
+    90→  // Filter logic
+    91→  const filteredBeneficiaries = search
+    92→    ? beneficiaries.filter((b: any) =>
+    93→        b.name?.toLowerCase().includes(search.toLowerCase()) ||
+    94→        b.account?.toLowerCase().includes(search.toLowerCase()) ||
+    95→        b.bank?.toLowerCase().includes(search.toLowerCase()))
+    96→    : beneficiaries;
+    97→
+    98→  const filteredMembers = search
+    99→    ? gaexpayMembers.filter((m: any) =>
+   100→        `${m.firstName} ${m.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
+   101→        m.phone?.includes(search) ||
+   102→        m.email?.toLowerCase().includes(search.toLowerCase()) ||
+   103→        m.username?.toLowerCase().includes(search.toLowerCase()))
+   104→    : gaexpayMembers;
+   105→
+   106→  const filteredRecent = search
+   107→    ? recentRecipients.filter((r: any) =>
+   108→        r.name?.toLowerCase().includes(search.toLowerCase()) ||
+   109→        r.account?.includes(search))
+   110→    : recentRecipients;
+   111→
+   112→  const filteredDeviceContacts = search
+   113→    ? deviceContacts.filter((c: DeviceContact) =>
+   114→        c.name?.toLowerCase().includes(search.toLowerCase()) ||
+   115→        c.phone?.includes(search) ||
+   116→        c.email?.toLowerCase().includes(search.toLowerCase()))
+   117→    : deviceContacts;
+   118→
+   119→  // Handle picking device contacts
+   120→  const handlePickContacts = async () => {
+   121→    const contacts = await pickContacts();
+   122→    if (contacts.length === 0) {
+   123→      if (!contactsSupported) {
+   124→        toast.info("Contact picker not supported on this browser. Use manual entry below.");
+   125→        setShowManualAdd(true);
+   126→      }
+   127→      return;
+   128→    }
+   129→    setCheckingContacts(true);
+   130→    const result = await checkMembership(contacts);
+   131→    setCheckedContacts(result);
+   132→    setCheckingContacts(false);
+   133→    toast.success(`${result.memberCount} of ${result.totalChecked} contacts are on GaexPay!`);
+   134→    setActiveTab("contacts");
+   135→  };
+   136→
+   137→  // Handle manual contact add
+   138→  const handleManualAdd = () => {
+   139→    if (!manualName.trim()) {
+   140→      toast.error("Please enter a name");
+   141→      return;
+   142→    }
+   143→    if (!manualPhone.trim() && !manualEmail.trim()) {
+   144→      toast.error("Please enter a phone or email");
+   145→      return;
+   146→    }
+   147→    addManualContact({ name: manualName.trim(), phone: manualPhone.trim() || undefined, email: manualEmail.trim() || undefined });
+   148→    setManualName(""); setManualPhone(""); setManualEmail("");
+   149→    setShowManualAdd(false);
+   150→    toast.success("Contact added");
+   151→  };
+   152→
+   153→  // Check device contacts for membership
+   154→  useEffect(() => {
+   155→    if (deviceContacts.length > 0 && !checkedContacts) {
+   156→      setCheckingContacts(true);
+   157→      checkMembership(deviceContacts).then((result) => {
+   158→        setCheckedContacts(result);
+   159→        setCheckingContacts(false);
+   160→      });
+   161→    }
+   162→  }, [deviceContacts, checkedContacts, checkMembership]);
+   163→
+   164→  const submit = async () => {
+   165→    setLoading(true);
+   166→    try {
+   167→      const res = await fetch("/api/transfer", {
+   168→        method: "POST",
+   169→        headers: { "Content-Type": "application/json" },
+   170→        body: JSON.stringify({ amount: Number(amount), currency, recipient, method, provider, note }),
+   171→      });
+   172→      const data = await res.json();
+   173→      if (data.success) {
+   174→        setDone(data.transaction);
+   175→        setStep(4);
+   176→      } else {
+   177→        toast.error(data.error || "Transfer failed");
+   178→      }
+   179→    } catch {
+   180→      toast.error("Something went wrong");
+   181→    } finally {
+   182→      setLoading(false);
+   183→    }
+   184→  };
+   185→
+   186→  const reset = () => {
+   187→    setStep(0); setRecipient(null); setAmount(""); setNote(""); setOtp(""); setDone(null);
+   188→  };
+   189→
+   190→  const selectRecipient = (r: any) => {
+   191→    setRecipient(r);
+   192→    setMethod(r.method || r.type || "wallet");
+   193→    setStep(1);
+   194→  };
+   195→
+   196→  return (
+   197→    <Card className="mx-auto max-w-2xl p-4 sm:p-6">
+   198→      {/* Steps indicator */}
+   199→      <div className="mb-6 flex items-center justify-between">
+   200→        {["Recipient", "Amount", "Review", "Verify"].map((s, i) => (
+   201→          <div key={s} className="flex flex-1 items-center">
+   202→            <div className={cn(
+   203→              "grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-semibold transition",
+   204→              i < step ? "bg-primary text-primary-foreground" : i === step ? "bg-primary text-primary-foreground ring-4 ring-primary/20" : "bg-muted text-muted-foreground",
+   205→            )}>
+   206→              {i < step ? <Check className="h-4 w-4" /> : i + 1}
+   207→            </div>
+   208→            <span className={cn("ml-2 hidden sm:inline text-xs font-medium", i === step ? "text-foreground" : "text-muted-foreground")}>{s}</span>
+   209→            {i < 3 && <div className={cn("mx-2 h-0.5 flex-1 rounded", i < step ? "bg-primary" : "bg-muted")} />}
+   210→          </div>
+   211→        ))}
+   212→      </div>
+   213→
+   214→      <AnimatePresence mode="wait">
+   215→        {/* Step 0: Recipient — NEW DESIGN */}
+   216→        {step === 0 && (
+   217→          <motion.div key="s0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+   218→            <h3 className="font-semibold mb-1">Who are you sending to?</h3>
+   219→            <p className="text-sm text-muted-foreground mb-4">Pick from contacts, GaexPay members, or enter new details</p>
+   220→
+   221→            {/* Action buttons row */}
+   222→            <div className="mb-4 grid grid-cols-2 gap-2">
+   223→              {/* Access phone contacts */}
+   224→              <Button
+   225→                variant="outline"
+   226→                className="h-12"
+   227→                onClick={handlePickContacts}
+   228→                disabled={contactsLoading}
+   229→                suppressHydrationWarning
+   230→              >
+   231→                <span className="flex items-center justify-center" suppressHydrationWarning>
+   232→                  <Loader2 className={cn("h-4 w-4 mr-2", contactsLoading ? "animate-spin" : "hidden")} />
+   233→                  <ContactIcon className={cn("h-4 w-4 mr-2", contactsLoading ? "hidden" : "")} />
+   234→                  Contacts
+   235→                </span>
+   236→              </Button>
+   237→
+   238→              {/* New recipient */}
+   239→              <Button
+   240→                variant="outline"
+   241→                className="h-12"
+   242→                onClick={() => setShowManualAdd(!showManualAdd)}
+   243→                suppressHydrationWarning
+   244→              >
+   245→                <span className="flex items-center justify-center" suppressHydrationWarning>
+   246→                  <UserPlus className="h-4 w-4 mr-2" />
+   247→                  New Recipient
+   248→                </span>
+   249→              </Button>
+   250→            </div>
+   251→
+   252→            {/* Manual add form */}
+   253→            {showManualAdd && (
+   254→              <motion.div
+   255→                initial={{ opacity: 0, height: 0 }}
+   256→                animate={{ opacity: 1, height: "auto" }}
+   257→                exit={{ opacity: 0, height: 0 }}
+   258→                className="mb-4 rounded-lg border bg-muted/30 p-4 space-y-3"
+   259→              >
+   260→                <p className="text-xs font-medium text-muted-foreground">Enter recipient details manually</p>
+   261→                <Input placeholder="Full name" value={manualName} onChange={(e) => setManualName(e.target.value)} />
+   262→                <div className="grid grid-cols-2 gap-2">
+   263→                  <div className="relative">
+   264→                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+   265→                    <Input placeholder="Phone" className="pl-9" value={manualPhone} onChange={(e) => setManualPhone(e.target.value)} />
+   266→                  </div>
+   267→                  <div className="relative">
+   268→                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+   269→                    <Input placeholder="Email" className="pl-9" value={manualEmail} onChange={(e) => setManualEmail(e.target.value)} />
+   270→                  </div>
+   271→                </div>
+   272→                <div className="flex gap-2">
+   273→                  <Button size="sm" variant="ghost" onClick={() => setShowManualAdd(false)}>Cancel</Button>
+   274→                  <Button size="sm" onClick={handleManualAdd}>
+   275→                    <Plus className="h-3.5 w-3.5 mr-1" /> Add Contact
+   276→                  </Button>
+   277→                </div>
+   278→              </motion.div>
+   279→            )}
+   280→
+   281→            {/* Search bar */}
+   282→            <div className="relative mb-4">
+   283→              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+   284→              <Input
+   285→                placeholder="Search name, phone, email, account..."
+   286→                className="pl-9"
+   287→                value={search}
+   288→                onChange={(e) => setSearch(e.target.value)}
+   289→              />
+   290→            </div>
+   291→
+   292→            {/* Tabs: GaexPay Members | Contacts | Saved | Recent */}
+   293→            <div className="mb-3 flex gap-1.5 flex-wrap">
+   294→              {[
+   295→                { id: "gaexpay", label: "GaexPay", icon: UserCheck, count: filteredMembers.length },
+   296→                { id: "contacts", label: "Contacts", icon: ContactIcon, count: checkedContacts ? checkedContacts.totalChecked : deviceContacts.length },
+   297→                { id: "beneficiaries", label: "Saved", icon: Users, count: filteredBeneficiaries.length },
+   298→                { id: "recent", label: "Recent", icon: Repeat, count: filteredRecent.length },
+   299→              ].map((t) => {
+   300→                const Icon = t.icon;
+   301→                const isActive = activeTab === t.id;
+   302→                return (
+   303→                  <button
+   304→                    key={t.id}
+   305→                    onClick={() => setActiveTab(t.id as any)}
+   306→                    className={cn(
+   307→                      "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition",
+   308→                      isActive ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground",
+   309→                    )}
+   310→                  >
+   311→                    <Icon className="h-3.5 w-3.5" />
+   312→                    {t.label}
+   313→                    {t.count > 0 && (
+   314→                      <span className={cn(
+   315→                        "rounded-full px-1.5 py-0.5 text-[9px] font-bold",
+   316→                        isActive ? "bg-primary text-primary-foreground" : "bg-muted-foreground/20",
+   317→                      )}>
+   318→                        {t.count}
+   319→                      </span>
+   320→                    )}
+   321→                  </button>
+   322→                );
+   323→              })}
+   324→            </div>
+   325→
+   326→            {/* Content per tab */}
+   327→            <div className="space-y-1.5 max-h-72 overflow-y-auto overscroll-contain no-scrollbar" style={{ WebkitOverflowScrolling: "touch" }}>
+   328→
+   329→              {/* GaexPay Members tab */}
+   330→              {activeTab === "gaexpay" && (
+   331→                <>
+   332→                  {filteredMembers.length === 0 && !contactsData && [1, 2, 3].map((i) => <Skeleton key={i} className="h-14" />)}
+   333→                  {filteredMembers.length === 0 && contactsData && (
+   334→                    <div className="grid place-items-center py-8 text-center">
+   335→                      <UserCheck className="h-8 w-8 text-muted-foreground/40 mb-2" />
+   336→                      <p className="text-sm text-muted-foreground">No GaexPay members found</p>
+   337→                      <p className="text-xs text-muted-foreground mt-1">Invite friends to join GaexPay!</p>
+   338→                    </div>
+   339→                  )}
+   340→                  {filteredMembers.map((m: any) => (
+   341→                    <button
+   342→                      key={m.id}
+   343→                      onClick={() => selectRecipient({
+   344→                        name: `${m.firstName} ${m.lastName}`,
+   345→                        account: m.phone,
+   346→                        bank: "GaexPay",
+   347→                        type: "gaexpay",
+   348→                        method: "wallet",
+   349→                        gaexpayUserId: m.id,
+   350→                      })}
+   351→                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+   352→                    >
+   353→                      <Avatar className="h-10 w-10">
+   354→                        <AvatarFallback className="bg-emerald-500/15 text-emerald-600 text-xs font-semibold">
+   355→                          {m.firstName[0]}{m.lastName[0]}
+   356→                        </AvatarFallback>
+   357→                      </Avatar>
+   358→                      <div className="flex-1 min-w-0">
+   359→                        <div className="flex items-center gap-1.5">
+   360→                          <p className="text-sm font-medium truncate">{m.firstName} {m.lastName}</p>
+   361→                          {m.kycStatus === "verified" && (
+   362→                            <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[9px] shrink-0">
+   363→                              <Check className="h-2.5 w-2.5 mr-0.5" /> KYC
+   364→                            </Badge>
+   365→                          )}
+   366→                        </div>
+   367→                        <p className="text-xs text-muted-foreground truncate">
+   368→                          {m.username ? `@${m.username}` : m.phone}
+   369→                        </p>
+   370→                      </div>
+   371→                      <Badge className="bg-emerald-500/10 text-emerald-600 border-0 shrink-0">
+   372→                        <WalletIcon className="h-3 w-3 mr-0.5" /> Instant
+   373→                      </Badge>
+   374→                    </button>
+   375→                  ))}
+   376→                </>
+   377→              )}
+   378→
+   379→              {/* Device Contacts tab */}
+   380→              {activeTab === "contacts" && (
+   381→                <>
+   382→                  {checkingContacts && (
+   383→                    <div className="flex items-center justify-center py-8 gap-2">
+   384→                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+   385→                      <p className="text-sm text-muted-foreground">Checking GaexPay membership...</p>
+   386→                    </div>
+   387→                  )}
+   388→                  {!checkingContacts && deviceContacts.length === 0 && (
+   389→                    <div className="grid place-items-center py-8 text-center">
+   390→                      <ContactIcon className="h-8 w-8 text-muted-foreground/40 mb-2" />
+   391→                      <p className="text-sm text-muted-foreground">No contacts imported yet</p>
+   392→                      <Button size="sm" variant="outline" className="mt-3" onClick={handlePickContacts}>
+   393→                        <ContactIcon className="h-4 w-4 mr-1.5" /> Import Contacts
+   394→                      </Button>
+   395→                    </div>
+   396→                  )}
+   397→                  {/* Show contacts that are GaexPay members first */}
+   398→                  {checkedContacts?.members?.map((mc: any) => (
+   399→                    <button
+   400→                      key={mc.gaexpayUser.id}
+   401→                      onClick={() => selectRecipient({
+   402→                        name: mc.contactName,
+   403→                        account: mc.gaexpayUser.phone,
+   404→                        bank: "GaexPay",
+   405→                        type: "gaexpay",
+   406→                        method: "wallet",
+   407→                        gaexpayUserId: mc.gaexpayUser.id,
+   408→                      })}
+   409→                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+   410→                    >
+   411→                      <Avatar className="h-10 w-10">
+   412→                        <AvatarFallback className="bg-emerald-500/15 text-emerald-600 text-xs font-semibold">
+   413→                          {mc.contactName.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+   414→                        </AvatarFallback>
+   415→                      </Avatar>
+   416→                      <div className="flex-1 min-w-0">
+   417→                        <div className="flex items-center gap-1.5">
+   418→                          <p className="text-sm font-medium truncate">{mc.contactName}</p>
+   419→                          <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[9px] shrink-0">
+   420→                            <UserCheck className="h-2.5 w-2.5 mr-0.5" /> GaexPay
+   421→                          </Badge>
+   422→                        </div>
+   423→                        <p className="text-xs text-muted-foreground truncate">{mc.phone || mc.email}</p>
+   424→                      </div>
+   425→                      <Badge className="bg-emerald-500/10 text-emerald-600 border-0 shrink-0">
+   426→                        <WalletIcon className="h-3 w-3 mr-0.5" /> Instant
+   427→                      </Badge>
+   428→                    </button>
+   429→                  ))}
+   430→                  {/* Non-member contacts */}
+   431→                  {checkedContacts?.nonMembers?.filter((nmc: any) =>
+   432→                    !search || nmc.name?.toLowerCase().includes(search.toLowerCase()) || nmc.phone?.includes(search)
+   433→                  ).map((nmc: any, i: number) => (
+   434→                    <button
+   435→                      key={i}
+   436→                      onClick={() => selectRecipient({
+   437→                        name: nmc.name,
+   438→                        account: nmc.phone || nmc.email,
+   439→                        bank: nmc.phone ? "Mobile Money" : "Email",
+   440→                        type: nmc.phone ? "momo" : "email",
+   441→                        method: nmc.phone ? "momo" : "wallet",
+   442→                      })}
+   443→                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+   444→                    >
+   445→                      <Avatar className="h-10 w-10">
+   446→                        <AvatarFallback className="bg-muted text-muted-foreground text-xs font-semibold">
+   447→                          {nmc.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+   448→                        </AvatarFallback>
+   449→                      </Avatar>
+   450→                      <div className="flex-1 min-w-0">
+   451→                        <p className="text-sm font-medium truncate">{nmc.name}</p>
+   452→                        <p className="text-xs text-muted-foreground truncate">{nmc.phone || nmc.email}</p>
+   453→                      </div>
+   454→                      <Badge variant="outline" className="text-[10px] shrink-0">
+   455→                        {nmc.phone ? <Smartphone className="h-3 w-3 mr-0.5" /> : <Mail className="h-3 w-3 mr-0.5" />}
+   456→                        {nmc.phone ? "MoMo" : "Invite"}
+   457→                      </Badge>
+   458→                    </button>
+   459→                  ))}
+   460→                  {/* Device contacts not yet checked */}
+   461→                  {!checkedContacts && filteredDeviceContacts.map((c, i) => (
+   462→                    <button
+   463→                      key={i}
+   464→                      onClick={() => selectRecipient({
+   465→                        name: c.name,
+   466→                        account: c.phone || c.email,
+   467→                        bank: c.phone ? "Mobile Money" : "Email",
+   468→                        type: c.phone ? "momo" : "email",
+   469→                        method: c.phone ? "momo" : "wallet",
+   470→                      })}
+   471→                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+   472→                    >
+   473→                      <Avatar className="h-10 w-10">
+   474→                        <AvatarFallback className="bg-muted text-muted-foreground text-xs font-semibold">
+   475→                          {c.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+   476→                        </AvatarFallback>
+   477→                      </Avatar>
+   478→                      <div className="flex-1 min-w-0">
+   479→                        <p className="text-sm font-medium truncate">{c.name}</p>
+   480→                        <p className="text-xs text-muted-foreground truncate">{c.phone || c.email}</p>
+   481→                      </div>
+   482→                    </button>
+   483→                  ))}
+   484→                </>
+   485→              )}
+   486→
+   487→              {/* Saved Beneficiaries tab */}
+   488→              {activeTab === "beneficiaries" && (
+   489→                <>
+   490→                  {filteredBeneficiaries.length === 0 && contactsData && (
+   491→                    <div className="grid place-items-center py-8 text-center">
+   492→                      <Users className="h-8 w-8 text-muted-foreground/40 mb-2" />
+   493→                      <p className="text-sm text-muted-foreground">No saved beneficiaries yet</p>
+   494→                    </div>
+   495→                  )}
+   496→                  {filteredBeneficiaries.length === 0 && !contactsData && [1, 2, 3].map((i) => <Skeleton key={i} className="h-14" />)}
+   497→                  {filteredBeneficiaries.map((b: any) => (
+   498→                    <button
+   499→                      key={b.id}
+   500→                      onClick={() => selectRecipient(b)}
+   501→                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+   502→                    >
+   503→                      <Avatar className="h-10 w-10">
+   504→                        <AvatarFallback className={cn(
+   505→                          "text-xs font-semibold",
+   506→                          b.isGaexpayMember ? "bg-emerald-500/15 text-emerald-600" : "bg-primary/10 text-primary",
+   507→                        )}>
+   508→                          {b.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+   509→                        </AvatarFallback>
+   510→                      </Avatar>
+   511→                      <div className="flex-1 min-w-0">
+   512→                        <div className="flex items-center gap-1.5">
+   513→                          <p className="text-sm font-medium truncate">{b.name}</p>
+   514→                          {b.isGaexpayMember && (
+   515→                            <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[9px] shrink-0">
+   516→                              <UserCheck className="h-2.5 w-2.5 mr-0.5" /> GaexPay
+   517→                            </Badge>
+   518→                          )}
+   519→                        </div>
+   520→                        <p className="text-xs text-muted-foreground truncate">{b.account} · {b.bank || b.type}</p>
+   521→                      </div>
+   522→                      <Badge variant="outline" className="capitalize text-[10px] shrink-0">{b.type}</Badge>
+   523→                    </button>
+   524→                  ))}
+   525→                </>
+   526→              )}
+   527→
+   528→              {/* Recent Recipients tab */}
+   529→              {activeTab === "recent" && (
+   530→                <>
+   531→                  {filteredRecent.length === 0 && contactsData && (
+   532→                    <div className="grid place-items-center py-8 text-center">
+   533→                      <Repeat className="h-8 w-8 text-muted-foreground/40 mb-2" />
+   534→                      <p className="text-sm text-muted-foreground">No recent recipients</p>
+   535→                    </div>
+   536→                  )}
+   537→                  {filteredRecent.map((r: any, i: number) => (
+   538→                    <button
+   539→                      key={i}
+   540→                      onClick={() => selectRecipient({
+   541→                        name: r.name,
+   542→                        account: r.account,
+   543→                        bank: r.bank,
+   544→                        type: r.method,
+   545→                        method: r.method,
+   546→                        provider: r.provider,
+   547→                      })}
+   548→                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+   549→                    >
+   550→                      <Avatar className="h-10 w-10">
+   551→                        <AvatarFallback className="bg-muted text-muted-foreground text-xs font-semibold">
+   552→                          {r.name?.split(" ").map((n: string) => n[0]).slice(0, 2).join("") || "?"}
+   553→                        </AvatarFallback>
+   554→                      </Avatar>
+   555→                      <div className="flex-1 min-w-0">
+   556→                        <p className="text-sm font-medium truncate">{r.name}</p>
+   557→                        <p className="text-xs text-muted-foreground truncate">
+   558→                          {r.account || r.bank} · {r.method}
+   559→                        </p>
+   560→                      </div>
+   561→                      <Badge variant="outline" className="capitalize text-[10px] shrink-0">
+   562→                        <Repeat className="h-3 w-3 mr-0.5" /> Again
+   563→                      </Badge>
+   564→                    </button>
+   565→                  ))}
+   566→                </>
+   567→              )}
+   568→            </div>
+   569→
+   570→            {/* Payment method info */}
+   571→            <div className="mt-4 flex items-start gap-2 rounded-lg bg-sky-500/10 p-3 text-xs text-sky-700 dark:text-sky-400">
+   572→              <Info className="h-4 w-4 shrink-0 mt-0.5" />
+   573→              <span>
+   574→                <strong>GaexPay members</strong> get instant, free transfers. For others, choose Bank Transfer or Mobile Money — fees apply.
+   575→              </span>
+   576→            </div>
+   577→          </motion.div>
+   578→        )}
+   579→
+   580→        {/* Step 1: Amount */}
+   581→        {step === 1 && (
+   582→          <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+   583→            <h3 className="font-semibold mb-1">Enter amount</h3>
+   584→            <p className="text-sm text-muted-foreground mb-4">Sending to {recipient?.name}</p>
+   585→
+   586→            {method === "momo" && (
+   587→              <div className="mb-4">
+   588→                <Label className="text-xs">Provider</Label>
+   589→                <div className="mt-1.5 grid grid-cols-3 gap-2">
+   590→                  {MOBILE_MONEY_PROVIDERS.map((p) => (
+   591→                    <button
+   592→                      key={p.id}
+   593→                      onClick={() => setProvider(p.id)}
+   594→                      className={cn(
+   595→                        "rounded-lg border p-2 text-center text-xs transition",
+   596→                        provider === p.id ? "border-primary ring-2 ring-primary/20" : "hover:bg-muted",
+   597→                      )}
+   598→                      style={provider === p.id ? { borderColor: p.color } : {}}
+   599→                    >
+   600→                      <div className="h-6 w-full rounded mb-1" style={{ background: p.color }} />
+   601→                      {p.name}
+   602→                    </button>
+   603→                  ))}
+   604→                </div>
+   605→              </div>
+   606→            )}
+   607→
+   608→            <div className="rounded-2xl border bg-muted/30 p-6 text-center">
+   609→              <div className="flex items-center justify-center gap-2">
+   610→                <Select value={currency} onValueChange={setCurrency}>
+   611→                  <SelectTrigger className="w-24 h-9"><SelectValue /></SelectTrigger>
+   612→                  <SelectContent>
+   613→                    {CURRENCIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>)}
+   614→                  </SelectContent>
+   615→                </Select>
+   616→                <Input
+   617→                  type="number"
+   618→                  value={amount}
+   619→                  onChange={(e) => setAmount(e.target.value)}
+   620→                  placeholder="0.00"
+   621→                  className="flex-1 border-0 bg-transparent text-3xl font-bold tabular-nums text-center focus-visible:ring-0"
+   622→                />
+   623→              </div>
+   624→              <p className="mt-2 text-xs text-muted-foreground">
+   625→                Available: {formatMoney(wallets.find((w) => w.currency === currency)?.balance ?? 0, currency)}
+   626→              </p>
+   627→            </div>
+   628→
+   629→            <div className="mt-3 flex gap-2">
+   630→              {[5000, 10000, 25000, 50000].map((v) => (
+   631→                <button
+   632→                  key={v}
+   633→                  onClick={() => setAmount(String(v))}
+   634→                  className="flex-1 rounded-lg border py-1.5 text-xs font-medium hover:bg-muted transition"
+   635→                >
+   636→                  {symbol}{v.toLocaleString()}
+   637→                </button>
+   638→              ))}
+   639→            </div>
+   640→
+   641→            <div className="mt-4 space-y-2">
+   642→              <Label className="text-xs">Note (optional)</Label>
+   643→              <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="What's this for?" />
+   644→            </div>
+   645→
+   646→            <div className="mt-6 flex gap-2">
+   647→              <Button variant="outline" onClick={() => setStep(0)} className="flex-1">
+   648→                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+   649→              </Button>
+   650→              <Button onClick={() => setStep(2)} disabled={!amount || Number(amount) <= 0} className="flex-1">
+   651→                Continue <ChevronRight className="h-4 w-4 ml-1" />
+   652→              </Button>
+   653→            </div>
+   654→          </motion.div>
+   655→        )}
+   656→
+   657→        {/* Step 2: Review */}
+   658→        {step === 2 && (
+   659→          <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+   660→            <h3 className="font-semibold mb-1">Review transfer</h3>
+   661→            <p className="text-sm text-muted-foreground mb-4">Please confirm the details below</p>
+   662→
+   663→            <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
+   664→              <Row label="Recipient" value={recipient?.name} />
+   665→              <Row label="Account" value={recipient?.account || recipient?.bank} />
+   666→              <Row label="Method" value={method === "momo" ? `Mobile Money · ${provider.toUpperCase()}` : method === "bank" ? "Bank Transfer" : "GaexPay Wallet"} />
+   667→              <Row label="Amount" value={formatMoney(Number(amount), currency)} />
+   668→              <Row label="Fee" value={method === "bank" ? formatMoney(Math.min(Number(amount) * 0.005, 5000), currency) : method === "momo" ? formatMoney(Number(amount) * 0.01, currency) : "Free"} />
+   669→              <div className="border-t pt-3">
+   670→                <Row label="Total" value={formatMoney(Number(amount) + (method === "bank" ? Math.min(Number(amount) * 0.005, 5000) : method === "momo" ? Number(amount) * 0.01 : 0), currency)} bold />
+   671→              </div>
+   672→            </div>
+   673→
+   674→            <div className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-400">
+   675→              <ShieldCheck className="h-4 w-4 shrink-0" />
+   676→              Protected by GaexPay Buyer Protection & end-to-end encryption.
+   677→            </div>
+   678→
+   679→            <div className="mt-6 flex gap-2">
+   680→              <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
+   681→                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+   682→              </Button>
+   683→              <Button onClick={() => setStep(3)} className="flex-1">Confirm & Continue</Button>
+   684→            </div>
+   685→          </motion.div>
+   686→        )}
+   687→
+   688→        {/* Step 3: OTP */}
+   689→        {step === 3 && (
+   690→          <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+   691→            <div className="text-center">
+   692→              <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-primary/10">
+   693→                <ShieldCheck className="h-7 w-7 text-primary" />
+   694→              </div>
+   695→              <h3 className="font-semibold">Verify it's you</h3>
+   696→              <p className="mt-1 text-sm text-muted-foreground">
+   697→                Enter the 6-digit code sent to your registered phone & email
+   698→              </p>
+   699→            </div>
+   700→
+   701→            <div className="my-6 flex justify-center">
+   702→              <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+   703→                <InputOTPGroup>
+   704→                  <InputOTPSlot index={0} />
+   705→                  <InputOTPSlot index={1} />
+   706→                  <InputOTPSlot index={2} />
+   707→                  <InputOTPSlot index={3} />
+   708→                  <InputOTPSlot index={4} />
+   709→                  <InputOTPSlot index={5} />
+   710→                </InputOTPGroup>
+   711→              </InputOTP>
+   712→            </div>
+   713→
+   714→            <p className="text-center text-xs text-muted-foreground">
+   715→              Didn't get a code? <button className="text-primary font-medium">Resend in 0:42</button>
+   716→            </p>
+   717→            <p className="mt-1 text-center text-xs text-muted-foreground">
+   718→              Demo: enter any 6 digits to continue
+   719→            </p>
+   720→
+   721→            <div className="mt-6 flex gap-2">
+   722→              <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
+   723→                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+   724→              </Button>
+   725→              <Button onClick={submit} disabled={otp.length < 6 || loading} className="flex-1">
+   726→                {loading ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Sending...</> : "Confirm Transfer"}
+   727→              </Button>
+   728→            </div>
+   729→          </motion.div>
+   730→        )}
+   731→
+   732→        {/* Step 4: Success */}
+   733→        {step === 4 && done && (
+   734→          <motion.div key="s4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+   735→            <Confetti trigger={true} />
+   736→            <div className="text-center">
+   737→              <motion.div
+   738→                initial={{ scale: 0 }}
+   739→                animate={{ scale: 1 }}
+   740→                transition={{ type: "spring", delay: 0.1 }}
+   741→                className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white pulse-glow"
+   742→              >
+   743→                <Check className="h-8 w-8" strokeWidth={3} />
+   744→              </motion.div>
+   745→              <h3 className="text-xl font-bold">Transfer Successful!</h3>
+   746→              <p className="mt-1 text-sm text-muted-foreground">
+   747→                {formatMoney(Number(amount), currency)} sent to {recipient?.name}
+   748→              </p>
+   749→            </div>
+   750→
+   751→            <div className="my-5 space-y-2 rounded-xl border bg-muted/30 p-4 text-sm">
+   752→              <Row label="Reference" value={done.reference} />
+   753→              <Row label="Recipient" value={recipient?.name} />
+   754→              <Row label="Amount" value={formatMoney(Number(amount), currency)} />
+   755→              <Row label="Fee" value={formatMoney(done.fee, currency)} />
+   756→              <Row label="Date" value={new Date(done.completedAt).toLocaleString()} />
+   757→              <Row label="Status" value="Completed" />
+   758→            </div>
+   759→
+   760→            <div className="flex gap-2">
+   761→              <Button variant="outline" className="flex-1" onClick={() => { navigator.clipboard?.writeText(done.reference); toast.success("Reference copied"); }}>
+   762→                <Copy className="h-4 w-4 mr-1.5" /> Copy Ref
+   763→              </Button>
+   764→              <Button variant="outline" className="flex-1">
+   765→                <Share2 className="h-4 w-4 mr-1.5" /> Share
+   766→              </Button>
+   767→              <Button className="flex-1" onClick={reset}>
+   768→                <Repeat className="h-4 w-4 mr-1.5" /> Send Again
+   769→              </Button>
+   770→            </div>
+   771→          </motion.div>
+   772→        )}
+   773→      </AnimatePresence>
+   774→    </Card>
+   775→  );
+   776→}
+   777→
+   778→function Row({ label, value, bold }: { label: string; value?: string; bold?: boolean }) {
+   779→  return (
+   780→    <div className="flex items-center justify-between">
+   781→      <span className="text-xs text-muted-foreground">{label}</span>
+   782→      <span className={cn("text-sm", bold ? "font-bold" : "font-medium")}>{value || "—"}</span>
+   783→    </div>
+   784→  );
+   785→}
+   786→
+   787→function RequestFlow() {
+   788→  const { fmtRaw } = useFormatMoney();
+   789→  const [amount, setAmount] = useState("");
+   790→  const [currency, setCurrency] = useState("NGN");
+   791→  const [note, setNote] = useState("");
+   792→  const [link, setLink] = useState("");
+   793→  const [qrDataUrl, setQrDataUrl] = useState("");
+   794→  const [canNativeShare, setCanNativeShare] = useState(false);
+   795→  const [copied, setCopied] = useState(false);
+   796→
+   797→  useEffect(() => {
+   798→    setCanNativeShare(typeof navigator !== "undefined" && typeof navigator.share === "function");
+   799→  }, []);
+   800→
+   801→  // Generate QR code whenever the link changes
+   802→  useEffect(() => {
+   803→    if (!link) {
+   804→      setQrDataUrl("");
+   805→      return;
+   806→    }
+   807→    QRCode.toDataURL(link, {
+   808→      width: 480,
+   809→      margin: 1,
+   810→      errorCorrectionLevel: "H",
+   811→      color: { dark: "#0b1320", light: "#ffffff" },
+   812→    })
+   813→      .then(setQrDataUrl)
+   814→      .catch(() => setQrDataUrl(""));
+   815→  }, [link]);
+   816→
+   817→  const generate = () => {
+   818→    if (!amount || Number(amount) <= 0) {
+   819→      toast.error("Enter a valid amount");
+   820→      return;
+   821→    }
+   822→    const id = `${currency}${amount}-${Date.now().toString(36)}`;
+   823→    setLink(`https://gaexpay.com/pay/req/${id}`);
+   824→    toast.success("Payment request link generated");
+   825→  };
+   826→
+   827→  const reset = () => {
+   828→    setLink("");
+   829→    setAmount("");
+   830→    setNote("");
+   831→    setCopied(false);
+   832→  };
+   833→
+   834→  const amountDisplay = link && amount ? fmtRaw(Number(amount), currency) : "";
+   835→
+   836→  const platformShareText = `${note.trim() ? note.trim() + "\n\n" : ""}You've been requested ${amountDisplay} on GaexPay.\nPay securely: ${link}`;
+   837→  const nativeShareText = `You've been requested ${amountDisplay} via GaexPay. Pay securely: ${link}`;
+   838→
+   839→  const handleNativeShare = async () => {
+   840→    if (typeof navigator !== "undefined" && navigator.share) {
+   841→      try {
+   842→        await navigator.share({
+   843→          title: "GaexPay Payment Request",
+   844→          text: nativeShareText,
+   845→          url: link,
+   846→        });
+   847→      } catch {
+   848→        // user dismissed — no action
+   849→      }
+   850→    } else {
+   851→      navigator.clipboard?.writeText(`${nativeShareText}\n${link}`);
+   852→      toast.success("Link copied — paste in any app to share");
+   853→    }
+   854→  };
+   855→
+   856→  const copyLink = () => {
+   857→    navigator.clipboard?.writeText(link);
+   858→    setCopied(true);
+   859→    toast.success("Link copied to clipboard");
+   860→    setTimeout(() => setCopied(false), 2000);
+   861→  };
+   862→
+   863→  const downloadQr = () => {
+   864→    if (!qrDataUrl) return;
+   865→    const a = document.createElement("a");
+   866→    a.href = qrDataUrl;
+   867→    a.download = `gaexpay-request-${currency}-${amount || "0"}.png`;
+   868→    document.body.appendChild(a);
+   869→    a.click();
+   870→    document.body.removeChild(a);
+   871→    toast.success("QR code downloaded");
+   872→  };
+   873→
+   874→  const openPlatform = (name: string, href: string) => {
+   875→    toast.success(`Opening ${name}...`);
+   876→    window.open(href, "_blank", "noopener,noreferrer");
+   877→  };
+   878→
+   879→  const platforms: {
+   880→    name: string;
+   881→    color: string;
+   882→    href?: string;
+   883→    action?: () => void;
+   884→    Icon: React.ComponentType<{ className?: string }>;
+   885→  }[] = [
+   886→    {
+   887→      name: "WhatsApp",
+   888→      color: "#25D366",
+   889→      href: `https://wa.me/?text=${encodeURIComponent(platformShareText)}`,
+   890→      Icon: WhatsAppIcon,
+   891→    },
+   892→    {
+   893→      name: "Telegram",
+   894→      color: "#0088cc",
+   895→      href: `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(platformShareText)}`,
+   896→      Icon: TelegramIcon,
+   897→    },
+   898→    {
+   899→      name: "SMS",
+   900→      color: "#2563eb",
+   901→      href: `sms:?body=${encodeURIComponent(platformShareText)}`,
+   902→      Icon: MessageSquare,
+   903→    },
+   904→    {
+   905→      name: "Email",
+   906→      color: "#475569",
+   907→      href: `mailto:?subject=${encodeURIComponent("GaexPay Payment Request")}&body=${encodeURIComponent(platformShareText)}`,
+   908→      Icon: Mail,
+   909→    },
+   910→    {
+   911→      name: "X",
+   912→      color: "#0f172a",
+   913→      href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(platformShareText)}`,
+   914→      Icon: XIcon,
+   915→    },
+   916→    {
+   917→      name: "Facebook",
+   918→      color: "#1877F2",
+   919→      href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}&quote=${encodeURIComponent(platformShareText)}`,
+   920→      Icon: FacebookIcon,
+   921→    },
+   922→    {
+   923→      name: "Copy Link",
+   924→      color: "#64748b",
+   925→      action: copyLink,
+   926→      Icon: copied ? Check : Link2,
+   927→    },
+   928→  ];
+   929→
+   930→  return (
+   931→    <Card className="mx-auto max-w-2xl p-4 sm:p-6">
+   932→      <h3 className="font-semibold text-base sm:text-lg">Request Money</h3>
+   933→      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 mb-4">
+   934→        Generate a payment link or QR code to receive funds
+   935→      </p>
+   936→
+   937→      <AnimatePresence mode="wait">
+   938→        {!link ? (
+   939→          <motion.div
+   940→            key="form"
+   941→            initial={{ opacity: 0 }}
+   942→            animate={{ opacity: 1 }}
+   943→            exit={{ opacity: 0, y: -8 }}
+   944→            transition={{ duration: 0.2 }}
+   945→          >
+   946→            <div className="rounded-xl sm:rounded-2xl border bg-muted/30 p-4 sm:p-6 text-center">
+   947→              <div className="flex items-center justify-center gap-2">
+   948→                <Select value={currency} onValueChange={setCurrency}>
+   949→                  <SelectTrigger className="w-20 sm:w-24 h-10">
+   950→                    <SelectValue />
+   951→                  </SelectTrigger>
+   952→                  <SelectContent>
+   953→                    {CURRENCIES.map((c) => (
+   954→                      <SelectItem key={c.code} value={c.code}>
+   955→                        {c.flag} {c.code}
+   956→                      </SelectItem>
+   957→                    ))}
+   958→                  </SelectContent>
+   959→                </Select>
+   960→                <Input
+   961→                  type="number"
+   962→                  value={amount}
+   963→                  onChange={(e) => setAmount(e.target.value)}
+   964→                  placeholder="0.00"
+   965→                  className="flex-1 border-0 bg-transparent text-2xl sm:text-3xl font-bold tabular-nums text-center focus-visible:ring-0"
+   966→                />
+   967→              </div>
+   968→            </div>
+   969→
+   970→            <div className="mt-4 space-y-2">
+   971→              <Label className="text-xs">Note for payer</Label>
+   972→              <Input
+   973→                value={note}
+   974→                onChange={(e) => setNote(e.target.value)}
+   975→                placeholder="e.g. Dinner split, rent contribution"
+   976→                maxLength={140}
+   977→              />
+   978→              <p className="text-[11px] text-muted-foreground">
+   979→                This note will be included in the share message.
+   980→              </p>
+   981→            </div>
+   982→
+   983→            <Button
+   984→              className="mt-4 w-full h-11"
+   985→              onClick={generate}
+   986→              disabled={!amount || Number(amount) <= 0}
+   987→            >
+   988→              <Sparkles className="h-4 w-4 mr-1.5" /> Generate Request Link
+   989→            </Button>
+   990→          </motion.div>
+   991→        ) : (
+   992→          <motion.div
+   993→            key="result"
+   994→            initial={{ opacity: 0, y: 16 }}
+   995→            animate={{ opacity: 1, y: 0 }}
+   996→            exit={{ opacity: 0 }}
+   997→            transition={{ duration: 0.3, ease: "easeOut" }}
+   998→            className="overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-950/50 via-background to-background p-5 sm:p-6"
+   999→          >
+  1000→            {/* Header */}
+  1001→            <div className="flex items-center justify-between gap-3">
+  1002→              <div className="flex items-center gap-2.5 min-w-0">
+  1003→                <div className="grid h-9 w-9 place-items-center rounded-full bg-emerald-500/15 text-emerald-400 shrink-0">
+  1004→                  <Check className="h-4 w-4" strokeWidth={3} />
+  1005→                </div>
+  1006→                <div className="min-w-0">
+  1007→                  <p className="text-sm font-semibold">Payment Request Ready</p>
+  1008→                  <p className="text-[11px] text-muted-foreground truncate">
+  1009→                    Share with anyone to get paid
+  1010→                  </p>
+  1011→                </div>
+  1012→              </div>
+  1013→              <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-400 border-0 shrink-0">
+  1014→                {currency}
+  1015→              </Badge>
+  1016→            </div>
+  1017→
+  1018→            {/* Amount */}
+  1019→            <div className="mt-4 text-center">
+  1020→              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+  1021→                Requesting
+  1022→              </p>
+  1023→              <p className="mt-0.5 text-3xl sm:text-4xl font-bold tabular-nums">
+  1024→                {amountDisplay}
+  1025→              </p>
+  1026→              {note.trim() && (
+  1027→                <p className="mt-1.5 text-xs text-muted-foreground italic line-clamp-2 px-4">
+  1028→                  “{note.trim()}”
+  1029→                </p>
+  1030→              )}
+  1031→            </div>
+  1032→
+  1033→            {/* QR Code */}
+  1034→            <div className="mt-5 flex flex-col items-center">
+  1035→              <div className="relative">
+  1036→                <div className="rounded-2xl bg-white p-3 shadow-xl ring-1 ring-black/5">
+  1037→                  {qrDataUrl ? (
+  1038→                    <img
+  1039→                      src={qrDataUrl}
+  1040→                      alt="GaexPay payment QR code"
+  1041→                      className="h-[200px] w-[200px] rounded-lg"
+  1042→                    />
+  1043→                  ) : (
+  1044→                    <div className="h-[200px] w-[200px] rounded-lg bg-slate-100 animate-pulse grid place-items-center">
+  1045→                      <Loader2 className="h-7 w-7 text-slate-400 animate-spin" />
+  1046→                    </div>
+  1047→                  )}
+  1048→                </div>
+  1049→                {/* GaexPay logo overlay (like WeChat Pay QR) */}
+  1050→                <div className="absolute inset-0 grid place-items-center pointer-events-none">
+  1051→                  <div className="rounded-xl bg-white p-1 shadow-md ring-1 ring-black/5">
+  1052→                    <Logo size={30} showText={false} />
+  1053→                  </div>
+  1054→                </div>
+  1055→              </div>
+  1056→              <Button
+  1057→                variant="outline"
+  1058→                size="sm"
+  1059→                onClick={downloadQr}
+  1060→                disabled={!qrDataUrl}
+  1061→                className="mt-3 h-8 text-xs"
+  1062→              >
+  1063→                <Download className="h-3.5 w-3.5 mr-1.5" /> Download QR
+  1064→              </Button>
+  1065→            </div>
+  1066→
+  1067→            {/* Native Share (primary) */}
+  1068→            {canNativeShare && (
+  1069→              <>
+  1070→                <Button
+  1071→                  onClick={handleNativeShare}
+  1072→                  className="mt-5 w-full h-12 text-base font-semibold"
+  1073→                  size="lg"
+  1074→                >
+  1075→                  <Share2 className="h-5 w-5 mr-2" /> Share
+  1076→                </Button>
+  1077→                <div className="my-3 flex items-center gap-3">
+  1078→                  <div className="h-px flex-1 bg-border" />
+  1079→                  <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+  1080→                    or share via
+  1081→                  </span>
+  1082→                  <div className="h-px flex-1 bg-border" />
+  1083→                </div>
+  1084→              </>
+  1085→            )}
+  1086→
+  1087→            {/* Platform quick-share buttons */}
+  1088→            <div
+  1089→              className={cn(
+  1090→                "mt-3 -mx-1 px-1",
+  1091→                "flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-7 sm:overflow-visible sm:pb-0",
+  1092→                "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+  1093→              )}
+  1094→            >
+  1095→              {platforms.map((p) => {
+  1096→                const Icon = p.Icon;
+  1097→                return (
+  1098→                  <button
+  1099→                    key={p.name}
+  1100→                    onClick={() => (p.action ? p.action() : openPlatform(p.name, p.href!))}
+  1101→                    className="group flex flex-col items-center gap-1.5 shrink-0 sm:shrink"
+  1102→                    aria-label={p.name}
+  1103→                  >
+  1104→                    <span
+  1105→                      className="grid h-11 w-11 place-items-center rounded-full text-white shadow-md transition-transform duration-150 group-hover:scale-110 group-active:scale-95"
+  1106→                      style={{ backgroundColor: p.color }}
+  1107→                    >
+  1108→                      <Icon className="h-5 w-5" />
+  1109→                    </span>
+  1110→                    <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
+  1111→                      {p.name}
+  1112→                    </span>
+  1113→                  </button>
+  1114→                );
+  1115→              })}
+  1116→            </div>
+  1117→
+  1118→            {/* Link display */}
+  1119→            <div className="mt-5">
+  1120→              <Label className="text-xs mb-1.5 block">Payment link</Label>
+  1121→              <div className="flex items-center gap-2 rounded-lg border bg-muted/40 p-1.5 pl-3">
+  1122→                <span className="flex-1 truncate text-xs font-mono text-muted-foreground">
+  1123→                  {link}
+  1124→                </span>
+  1125→                <Button
+  1126→                  size="sm"
+  1127→                  variant={copied ? "secondary" : "default"}
+  1128→                  onClick={copyLink}
+  1129→                  className="h-8 shrink-0"
+  1130→                >
+  1131→                  {copied ? (
+  1132→                    <>
+  1133→                      <Check className="h-3.5 w-3.5 mr-1" /> Copied
+  1134→                    </>
+  1135→                  ) : (
+  1136→                    <>
+  1137→                      <Copy className="h-3.5 w-3.5 mr-1" /> Copy
+  1138→                    </>
+  1139→                  )}
+  1140→                </Button>
+  1141→              </div>
+  1142→              <div className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+  1143→                <Clock className="h-3 w-3" />
+  1144→                <span>Link expires in 24 hours</span>
+  1145→              </div>
+  1146→            </div>
+  1147→
+  1148→            {/* Create new */}
+  1149→            <Button
+  1150→              variant="outline"
+  1151→              onClick={reset}
+  1152→              className="mt-4 w-full h-10"
+  1153→            >
+  1154→              <RefreshCw className="h-4 w-4 mr-1.5" /> Create New Request
+  1155→            </Button>
+  1156→          </motion.div>
+  1157→        )}
+  1158→      </AnimatePresence>
+  1159→    </Card>
+  1160→  );
+  1161→}
+  1162→
+  1163→/* --- Brand icons (inline SVG, currentColor) --- */
+  1164→
+  1165→function WhatsAppIcon({ className }: { className?: string }) {
+  1166→  return (
+  1167→    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+  1168→      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.149-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" />
+  1169→    </svg>
+  1170→  );
+  1171→}
+  1172→
+  1173→function TelegramIcon({ className }: { className?: string }) {
+  1174→  return (
+  1175→    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+  1176→      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.139-5.061 3.345-.48.329-.913.489-1.302.481-.428-.009-1.252-.242-1.865-.442-.751-.244-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+  1177→    </svg>
+  1178→  );
+  1179→}
+  1180→
+  1181→function XIcon({ className }: { className?: string }) {
+  1182→  return (
+  1183→    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+  1184→      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  1185→    </svg>
+  1186→  );
+  1187→}
+  1188→
+  1189→function FacebookIcon({ className }: { className?: string }) {
+  1190→  return (
+  1191→    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+  1192→      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+  1193→    </svg>
+  1194→  );
+  1195→}
+  1196→
+  1197→function TopUpFlow() {
+  1198→  return (
+  1199→    <Card className="mx-auto max-w-2xl p-4 sm:p-6">
+  1200→      <h3 className="font-semibold text-base sm:text-lg">Top Up Wallet</h3>
+  1201→      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 mb-4">Add funds from card, bank or mobile money</p>
+  1202→      <div className="grid gap-2.5 sm:gap-3 sm:grid-cols-2">
+  1203→        {[
+  1204→          { icon: Landmark, title: "Bank Transfer", desc: "Free · Instant", color: "bg-emerald-500/15 text-emerald-500" },
+  1205→          { icon: Smartphone, title: "Mobile Money", desc: "MTN, Orange, Airtel", color: "bg-amber-500/15 text-amber-500" },
+  1206→          { icon: WalletIcon, title: "Debit Card", desc: "Visa, Mastercard", color: "bg-violet-500/15 text-violet-500" },
+  1207→          { icon: QrCode, title: "Voucher / Code", desc: "Redeem a code", color: "bg-sky-500/15 text-sky-500" },
+  1208→        ].map((m) => {
+  1209→          const Icon = m.icon;
+  1210→          return (
+  1211→            <button key={m.title} className="flex items-center gap-3 rounded-xl border p-3 sm:p-4 text-left transition hover:border-primary/40 hover:bg-muted/30">
+  1212→              <div className={cn("grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-lg shrink-0", m.color)}>
+  1213→                <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+  1214→              </div>
+  1215→              <div className="min-w-0 flex-1">
+  1216→                <p className="text-sm font-semibold">{m.title}</p>
+  1217→                <p className="text-[11px] sm:text-xs text-muted-foreground">{m.desc}</p>
+  1218→              </div>
+  1219→              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+  1220→            </button>
+  1221→          );
+  1222→        })}
+  1223→      </div>
+  1224→    </Card>
+  1225→  );
+  1226→}
+  1227→
+  1228→function WithdrawFlow() {
+  1229→  const { fmt, symbol, currency: userCur } = useFormatMoney();
+  1230→  const { data: walletData } = useFetch<{ wallets: any[]; totalNGN: number }>("/api/wallets");
+  1231→  const { data: benData } = useFetch<{ beneficiaries: any[] }>("/api/beneficiaries");
+  1232→  const [amount, setAmount] = useState("");
+  1233→  const [destination, setDestination] = useState("");
+  1234→
+  1235→  const wallets = walletData?.wallets ?? [];
+  1236→  const beneficiaries = benData?.beneficiaries ?? [];
+  1237→  const defaultWallet = wallets.find((w) => w.isDefault) || wallets[0];
+  1238→  const availableBalance = defaultWallet?.balance ?? 0;
+  1239→  const dailyLimit = 5000000;
+  1240→  const dailyLimitLeft = Math.max(0, dailyLimit - availableBalance * 0.1);
+  1241→
+  1242→  // Filter beneficiaries for withdrawal destinations (bank + momo)
+  1243→  const withdrawalDestinations = beneficiaries.filter((b) => b.type === "bank" || b.type === "momo");
+  1244→
+  1245→  const handleWithdraw = async () => {
+  1246→    if (!amount || Number(amount) <= 0) {
+  1247→      toast.error("Enter a valid amount");
+  1248→      return;
+  1249→    }
+  1250→    if (Number(amount) > availableBalance) {
+  1251→      toast.error("Insufficient balance");
+  1252→      return;
+  1253→    }
+  1254→    toast.success(`Withdrawing ${symbol}${Number(amount).toLocaleString()} to your account`);
+  1255→    setAmount("");
+  1256→  };
+  1257→
+  1258→  return (
+  1259→    <Card className="mx-auto max-w-2xl p-4 sm:p-6">
+  1260→      <h3 className="font-semibold text-base sm:text-lg">Withdraw Funds</h3>
+  1261→      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 mb-4">Cash out to bank or mobile money</p>
+  1262→      <div className="space-y-4">
+  1263→        <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+  1264→          <div className="rounded-xl border p-3 sm:p-4">
+  1265→            <p className="text-[11px] sm:text-xs text-muted-foreground">Available</p>
+  1266→            <p className="text-base sm:text-xl font-bold tabular-nums">{fmt(availableBalance)}</p>
+  1267→          </div>
+  1268→          <div className="rounded-xl border p-3 sm:p-4">
+  1269→            <p className="text-[11px] sm:text-xs text-muted-foreground">Daily limit left</p>
+  1270→            <p className="text-base sm:text-xl font-bold tabular-nums">{fmt(dailyLimitLeft)}</p>
+  1271→          </div>
+  1272→        </div>
+  1273→        <div className="space-y-1.5">
+  1274→          <Label className="text-xs sm:text-sm">Withdraw to</Label>
+  1275→          {withdrawalDestinations.length > 0 ? (
+  1276→            <Select value={destination} onValueChange={setDestination}>
+  1277→              <SelectTrigger className="h-11"><SelectValue placeholder="Select destination" /></SelectTrigger>
+  1278→              <SelectContent>
+  1279→                {withdrawalDestinations.map((b) => (
+  1280→                  <SelectItem key={b.id} value={b.id}>
+  1281→                    {b.bank || b.type} · {b.account}
+  1282→                  </SelectItem>
+  1283→                ))}
+  1284→              </SelectContent>
+  1285→            </Select>
+  1286→          ) : (
+  1287→            <div className="rounded-lg border border-dashed p-4 text-center">
+  1288→              <p className="text-xs text-muted-foreground mb-2">No saved bank or mobile money accounts</p>
+  1289→              <Button size="sm" variant="outline" onClick={() => useApp.getState().setView("send")}>Add beneficiary</Button>
+  1290→            </div>
+  1291→          )}
+  1292→        </div>
+  1293→        <div className="space-y-1.5">
+  1294→          <Label className="text-xs sm:text-sm">Amount ({userCur})</Label>
+  1295→          <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" className="h-11 text-base sm:text-lg font-semibold" />
+  1296→        </div>
+  1297→        <Button className="w-full h-11" onClick={handleWithdraw} disabled={!amount || !destination}>Continue</Button>
+  1298→      </div>
+  1299→    </Card>
+  1300→  );
+  1301→}
+  1302→

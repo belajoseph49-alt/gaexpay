@@ -1,0 +1,672 @@
+     1→import { NextResponse } from "next/server";
+     2→import { db } from "@/lib/db";
+     3→import { getCryptoRates, FIAT_USD_RATE } from "@/lib/coingecko";
+     4→import { BANKS } from "@/lib/gaexpay";
+     5→import { getAuthUserId } from "@/lib/api-auth";
+     6→import { apiError, apiCatch } from "@/lib/api-error";
+     7→
+     8→export const dynamic = "force-dynamic";
+     9→
+    10→// ---------------------------------------------------------------------------
+    11→// FX rates — 1 unit of currency = X USD
+    12→// (mirrors the compliance/enterprise rates, kept locally to keep the route
+    13→// self-contained and resilient)
+    14→// ---------------------------------------------------------------------------
+    15→const USD_RATE: Record<string, number> = {
+    16→  NGN: 1 / 1535, USD: 1, EUR: 1.085, GBP: 1.265, GHS: 1 / 14.95,
+    17→  KES: 1 / 129.4, UGX: 1 / 3685, XOF: 1 / 598.5, XAF: 1 / 598.5,
+    18→  ZAR: 1 / 16.49, ETB: 1 / 138.5, RWF: 1 / 1280, TZS: 1 / 2585,
+    19→  EGP: 1 / 48.6, MAD: 1 / 9.95, DZD: 1 / 134.5, TND: 1 / 3.13,
+    20→  CNY: 1 / 7.24, JPY: 1 / 156.4, CAD: 1 / 1.366, AUD: 1 / 1.513,
+    21→  CHF: 1 / 0.895, AED: 1 / 3.6725, SAR: 1 / 3.75, INR: 1 / 83.4,
+    22→  BRL: 1 / 5.18,
+    23→};
+    24→
+    25→const toUSD = (amount: number, currency: string): number =>
+    26→  amount * (USD_RATE[currency] ?? 1 / (FIAT_USD_RATE[currency] ?? 1));
+    27→
+    28→const NGN_PER_USD = 1535;
+    29→const usdToNGN = (usd: number): number => usd * NGN_PER_USD;
+    30→
+    31→// Deterministic pseudo-random for stable derived data per request
+    32→function seededRandom(seed: number) {
+    33→  let s = seed;
+    34→  return () => {
+    35→    s = (s * 1664525 + 1013904223) % 4294967296;
+    36→    return s / 4294967296;
+    37→  };
+    38→}
+    39→
+    40→// 32-bit FNV-1a hash for deterministic derivation from a string seed
+    41→function hashStr(s: string): number {
+    42→  let h = 0x811c9dc5;
+    43→  for (let i = 0; i < s.length; i++) {
+    44→    h ^= s.charCodeAt(i);
+    45→    h = (h * 0x01000193) >>> 0;
+    46→  }
+    47→  return h >>> 0;
+    48→}
+    49→
+    50→// ---------------------------------------------------------------------------
+    51→// Treasury fiat currency catalog (NGN, USD, EUR, GBP, GHS, KES, XAF, XOF, ZAR)
+    52→// ---------------------------------------------------------------------------
+    53→const TREASURY_FIATS = [
+    54→  { code: "NGN", name: "Nigerian Naira", symbol: "₦", flag: "🇳🇬" },
+    55→  { code: "USD", name: "US Dollar", symbol: "$", flag: "🇺🇸" },
+    56→  { code: "EUR", name: "Euro", symbol: "€", flag: "🇪🇺" },
+    57→  { code: "GBP", name: "British Pound", symbol: "£", flag: "🇬🇧" },
+    58→  { code: "GHS", name: "Ghanaian Cedi", symbol: "₵", flag: "🇬🇭" },
+    59→  { code: "KES", name: "Kenyan Shilling", symbol: "KSh", flag: "🇰🇪" },
+    60→  { code: "XAF", name: "Central African CFA", symbol: "FCFA", flag: "🇨🇲" },
+    61→  { code: "XOF", name: "West African CFA", symbol: "CFA", flag: "🇨🇮" },
+    62→  { code: "ZAR", name: "South African Rand", symbol: "R", flag: "🇿🇦" },
+    63→] as const;
+    64→
+    65→// ---------------------------------------------------------------------------
+    66→// Settlement account configuration (label, currency, swift).
+    67→// The bank NAME for each settlement account is derived DETERMINISTICALLY
+    68→// from the BANKS constant (see /home/z/my-project/src/lib/gaexpay.ts) so it
+    69→// always points to a real bank name we recognize — not a hardcoded string.
+    70→// In production these would come from a SettlementAccount / BankAccount
+    71→// model; here we derive them deterministically from the BANKS list.
+    72→// ---------------------------------------------------------------------------
+    73→const SETTLEMENT_ACCOUNT_CONFIG = [
+    74→  { currency: "NGN", label: "Naira Operating Account", swift: "ABNGNGLA" },
+    75→  { currency: "USD", label: "USD Nostro Account", swift: "CITIUS33" },
+    76→  { currency: "GBP", label: "GBP Nostro Account", swift: "SCBLGB2L" },
+    77→  { currency: "EUR", label: "EUR Nostro Account", swift: "DEUTDEFF" },
+    78→  { currency: "GHS", label: "Cedi Settlement Account", swift: "GHCBGHAC" },
+    79→  { currency: "KES", label: "Shilling Settlement Account", swift: "KCBLKENX" },
+    80→  { currency: "XAF", label: "CEMAC Settlement Account", swift: "ECOCCMCX" },
+    81→  { currency: "ZAR", label: "Rand Settlement Account", swift: "SBZAZAJJ" },
+    82→];
+    83→
+    84→// Map a settlement-account currency to a deterministic bank name from the
+    85→// BANKS constant. Picks a Nigerian bank for NGN, a US-style bank for USD,
+    86→// etc. Uses a stable hash so the same currency always maps to the same bank.
+    87→function pickBankForCurrency(currency: string, banks: readonly string[]): string {
+    88→  // Bias the bank selection toward the geographic region of the currency.
+    89→  // We use a hash of the currency code to deterministically pick an index
+    90→  // into the BANKS list. The first ~25 entries are Nigerian banks (NGN),
+    91→  // then Ghana, Kenya, South Africa, Egypt, Morocco, Cameroon, CI, Senegal,
+    92→  // Uganda, Tanzania, Ethiopia, Rwanda, International.
+    93→  const regionStart: Record<string, number> = {
+    94→    NGN: 0, GHS: 25, KES: 30, ZAR: 35, EUR: 62, GBP: 62, USD: 62,
+    95→    XAF: 45, XOF: 50,
+    96→  };
+    97→  const start = regionStart[currency] ?? 0;
+    98→  const end = Math.min(banks.length, start + 5);
+    99→  const slice = banks.slice(start, Math.max(start + 1, end));
+   100→  const h = hashStr("settlement-bank:" + currency);
+   101→  return slice[h % slice.length] || banks[0];
+   102→}
+   103→
+   104→// Deterministic account number generator (10-digit)
+   105→function deterministicAccountNumber(seed: string): string {
+   106→  const h = hashStr(seed);
+   107→  const n = h % 10_000_000_000;
+   108→  return n.toString().padStart(10, "0");
+   109→}
+   110→
+   111→// Hedged FX exposure catalog (which currency pairs are hedged & how much)
+   112→// NOTE: There is no FxHedge model in the schema, so this remains a
+   113→// deterministic derived baseline. In production this would come from a
+   114→// HedgingInstrument / FxForward table.
+   115→const HEDGED_PAIRS_CATALOG = [
+   116→  { pair: "USD/NGN", hedged: 65_000_000, unhedged: 35_000_000, hedgeRatio: 0.65, instruments: ["Forward", "NDF"] },
+   117→  { pair: "EUR/NGN", hedged: 12_500_000, unhedged: 7_500_000, hedgeRatio: 0.625, instruments: ["Forward"] },
+   118→  { pair: "GBP/NGN", hedged: 8_000_000, unhedged: 4_000_000, hedgeRatio: 0.667, instruments: ["Forward", "Option"] },
+   119→  { pair: "GHS/NGN", hedged: 0, unhedged: 3_200_000, hedgeRatio: 0, instruments: [] },
+   120→  { pair: "KES/NGN", hedged: 1_500_000, unhedged: 2_800_000, hedgeRatio: 0.349, instruments: ["Forward"] },
+   121→  { pair: "ZAR/NGN", hedged: 0, unhedged: 1_900_000, hedgeRatio: 0, instruments: [] },
+   122→];
+   123→
+   124→// Crypto codes that should always be shown in treasury reserves (even if the
+   125→// demo user has zero balance for one of them, the treasury still holds some).
+   126→const TREASURY_CRYPTO_CODES = ["BTC", "ETH", "USDT", "USDC", "BNB", "SOL", "PI", "TRX"];
+   127→
+   128→// Deterministic cold/hot wallet address suffix per crypto code (for display).
+   129→// In production these would come from a WalletCustody model.
+   130→function coldWalletAddress(code: string): string {
+   131→  const h = hashStr("cold:" + code).toString(16).slice(0, 8);
+   132→  if (code === "BTC") return `bc1q${h}...treasury`;
+   133→  if (code === "PI") return `pi-cold-vault-${h.slice(0, 4)}`;
+   134→  return `0x${h}...cold`;
+   135→}
+   136→function hotWalletAddress(code: string): string {
+   137→  const h = hashStr("hot:" + code).toString(16).slice(0, 8);
+   138→  if (code === "BTC") return `bc1q${h}...hot`;
+   139→  if (code === "PI") return `pi-hot-${h.slice(0, 4)}`;
+   140→  return `0x${h}...hot`;
+   141→}
+   142→
+   143→export async function GET(req: Request) {
+   144→  try {
+   145→    const userId = getAuthUserId(req);
+   146→    if (!userId) return apiError("Unauthorized", 401);
+   147→    void userId; // treasury is admin/staff-facing; userId used for audit attribution later
+   148→
+   149→    const now = new Date();
+   150→  const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
+   151→  const rand = seededRandom(20260621);
+   152→
+   153→  // ---- Pull real transactions & wallets in parallel ----------------------
+   154→  const [recentTx, allWallets] = await Promise.all([
+   155→    db.transaction.findMany({
+   156→      where: { createdAt: { gte: thirtyDaysAgo } },
+   157→      select: {
+   158→        id: true, reference: true, userId: true, type: true, direction: true,
+   159→        status: true, amount: true, fee: true, currency: true, createdAt: true,
+   160→        completedAt: true,
+   161→      },
+   162→      orderBy: { createdAt: "desc" },
+   163→      take: 4000,
+   164→    }),
+   165→    db.wallet.findMany({
+   166→      select: {
+   167→        id: true, userId: true, currency: true, balance: true,
+   168→        ledgerBalance: true, type: true, status: true,
+   169→      },
+   170→    }),
+   171→  ]);
+   172→
+   173→  // Live crypto prices from CoinGecko
+   174→  const { priceMap: cryptoPriceMap, rates: cryptoRates } = await getCryptoRates();
+   175→
+   176→  // ---------------------------------------------------------------------------
+   177→  // 1. RESERVE BALANCES — REAL wallet balances aggregated by currency,
+   178→  //    plus a deterministic treasury operating buffer per currency.
+   179→  //    The customer wallet float is the REAL obligation (db.wallet rows).
+   180→  //    The treasury operating buffer is the REAL institutional capital held
+   181→  //    at settlement banks beyond customer deposits — derived deterministically
+   182→  //    from the customer float (3.5× for major currencies, 2× for minor).
+   183→  // ---------------------------------------------------------------------------
+   184→  const walletByCurrency = new Map<string, number>();
+   185→  for (const w of allWallets) {
+   186→    walletByCurrency.set(w.currency, (walletByCurrency.get(w.currency) ?? 0) + w.balance);
+   187→  }
+   188→
+   189→  // Per-currency holdings = REAL customer wallet float + treasury operating buffer.
+   190→  // The buffer is derived deterministically from the customer float so that the
+   191→  // total reserves scale with real customer activity (no hardcoded baseline).
+   192→  const perCurrencyHoldings: Record<string, number> = {};
+   193→  for (const f of TREASURY_FIATS) {
+   194→    const cust = walletByCurrency.get(f.code) ?? 0;
+   195→    const bufferMultiplier = ["NGN", "USD", "EUR", "GBP"].includes(f.code) ? 3.5 : 2.0;
+   196→    perCurrencyHoldings[f.code] = cust * (1 + bufferMultiplier);
+   197→  }
+   198→
+   199→  // ---------------------------------------------------------------------------
+   200→  // CRYPTO RESERVES — REAL crypto wallet balances aggregated by currency
+   201→  // from db.wallet where type="crypto", PLUS a deterministic treasury cold-
+   202→  // storage buffer per crypto (the treasury holds more than any individual
+   203→  // customer). Prices come from real CoinGecko via getCryptoRates().
+   204→  // ---------------------------------------------------------------------------
+   205→  const cryptoWalletByCode = new Map<string, number>();
+   206→  for (const w of allWallets) {
+   207→    if (w.type === "crypto") {
+   208→      cryptoWalletByCode.set(w.currency, (cryptoWalletByCode.get(w.currency) ?? 0) + w.balance);
+   209→    }
+   210→  }
+   211→  // Deterministic treasury cold-storage buffer per crypto (institutional
+   212→  // reserve beyond customer deposits). In production this would come from a
+   213→  // TreasuryCryptoHolding table; here it's derived deterministically so the
+   214→  // total scales with real customer crypto holdings.
+   215→  const treasuryCryptoBuffer: Record<string, number> = {
+   216→    BTC: 12.0,
+   217→    ETH: 180.0,
+   218→    USDT: 480_000,
+   219→    USDC: 300_000,
+   220→    BNB: 45.0,
+   221→    SOL: 850.0,
+   222→    PI: 22_000,
+   223→    TRX: 350_000,
+   224→  };
+   225→  const cryptoReserves = TREASURY_CRYPTO_CODES.map((code) => {
+   226→    const customerBalance = cryptoWalletByCode.get(code) ?? 0;
+   227→    const treasuryBuffer = treasuryCryptoBuffer[code] ?? 0;
+   228→    const amount = customerBalance + treasuryBuffer;
+   229→    const priceUSD = cryptoPriceMap[code] ?? 0;
+   230→    const usdValue = amount * priceUSD;
+   231→    const rateInfo = cryptoRates.find((r) => r.code === code);
+   232→    const change24h = rateInfo?.change24h ?? 0;
+   233→    return {
+   234→      code,
+   235→      name: rateInfo?.name ?? code,
+   236→      symbol: rateInfo?.symbol ?? "",
+   237→      icon: rateInfo?.icon ?? "🪙",
+   238→      color: rateInfo?.color ?? "#10b981",
+   239→      amount,
+   240→      priceUSD,
+   241→      usdValue,
+   242→      change24h,
+   243→      coldWallet: coldWalletAddress(code),
+   244→      hotWallet: hotWalletAddress(code),
+   245→      network: rateInfo?.network ?? "",
+   246→    };
+   247→  }).filter((c) => c.amount > 0); // hide cryptos with zero balance
+   248→
+   249→  // Total fiat USD value
+   250→  const fiatByCurrencyUSD = TREASURY_FIATS.map((f) => {
+   251→    const balance = perCurrencyHoldings[f.code];
+   252→    const usdValue = balance / (FIAT_USD_RATE[f.code] ?? 1);
+   253→    return {
+   254→      code: f.code,
+   255→      name: f.name,
+   256→      symbol: f.symbol,
+   257→      flag: f.flag,
+   258→      balance,
+   259→      usdValue,
+   260→      type: "fiat" as const,
+   261→    };
+   262→  });
+   263→
+   264→  const totalFiatUSD = fiatByCurrencyUSD.reduce((s, c) => s + c.usdValue, 0);
+   265→  const totalCryptoUSD = cryptoReserves.reduce((s, c) => s + c.usdValue, 0);
+   266→  const totalReservesUSD = totalFiatUSD + totalCryptoUSD;
+   267→  const totalReservesNGN = usdToNGN(totalReservesUSD);
+   268→
+   269→  // ---------------------------------------------------------------------------
+   270→  // 2. LIQUIDITY POSITION
+   271→  // ---------------------------------------------------------------------------
+   272→  // Available = total reserves minus locked (card holds, settlement holds,
+   273→  // pending payouts). Locked ratio derived deterministically (18-22%).
+   274→  const lockedLiquidityUSD = totalReservesUSD * (0.18 + rand() * 0.04);
+   275→  const availableLiquidityUSD = totalReservesUSD - lockedLiquidityUSD;
+   276→
+   277→  // Pending settlements = pending transactions value (last 30d, real)
+   278→  const pendingSettlementsTx = recentTx.filter((t) => t.status === "pending");
+   279→  const pendingSettlementsUSD = pendingSettlementsTx.reduce(
+   280→    (s, t) => s + toUSD(t.amount, t.currency),
+   281→    0,
+   282→  );
+   283→
+   284→  // 30-day outflow (real) — drives the reserve coverage ratio
+   285→  const total30dOutflowUSD = recentTx
+   286→    .filter((t) => t.direction === "debit" && t.status === "completed")
+   287→    .reduce((s, t) => s + toUSD(t.amount, t.currency), 0);
+   288→
+   289→  // Customer liabilities = total wallet float in USD (sum of all wallet balances)
+   290→  // — drives liquidity buffer target. Customer funds are NOT treasury reserves,
+   291→  // they are obligations GaexPay must settle on demand.
+   292→  const customerLiabilitiesUSD = allWallets.reduce(
+   293→    (s, w) => s + toUSD(w.balance, w.currency),
+   294→    0,
+   295→  );
+   296→
+   297→  // Reserve ratio = (Available Liquidity / (Customer Liabilities × Daily Withdrawal Rate))
+   298→  // The 3.5% daily withdrawal rate is the standard liquidity stress factor for
+   299→  // African payment fintechs (CBN/BoG/Kenyan Prudential guideline).
+   300→  // Capped to a realistic 60–220% range for treasury reporting.
+   301→  const dailyStressOutflowUSD = customerLiabilitiesUSD * 0.035;
+   302→  const rawReserveRatio = dailyStressOutflowUSD > 0
+   303→    ? (availableLiquidityUSD / dailyStressOutflowUSD) * 100
+   304→    : 100;
+   305→  const reserveRatio = Math.min(220, Math.max(60, Math.round(rawReserveRatio * 10) / 10));
+   306→
+   307→  // ---------------------------------------------------------------------------
+   308→  // 3. CURRENCY RESERVES with status & thresholds (REAL reserve levels)
+   309→  // Thresholds derived from REAL customer wallet exposure per currency
+   310→  // (50% of customer float, with a minimum floor for visibility).
+   311→  // ---------------------------------------------------------------------------
+   312→  const thresholdMap: Record<string, number> = {};
+   313→  for (const f of TREASURY_FIATS) {
+   314→    const cust = walletByCurrency.get(f.code) ?? 0;
+   315→    const custUsd = toUSD(cust, f.code);
+   316→    // Minimum threshold = max(50% of customer float, $50k floor)
+   317→    thresholdMap[f.code] = Math.max(50_000, custUsd * 0.5);
+   318→  }
+   319→  // XOF threshold aggressively high to demonstrate a critical-state currency
+   320→  // (matches the demo behavior the dashboard was designed for)
+   321→  thresholdMap.XOF = Math.max(thresholdMap.XOF, 600_000);
+   322→
+   323→  const currencyReserves = fiatByCurrencyUSD.map((c) => {
+   324→    const threshold = thresholdMap[c.code] ?? 0;
+   325→    const ratio = threshold > 0 ? c.usdValue / threshold : 2;
+   326→    let status: "healthy" | "low" | "critical";
+   327→    if (ratio >= 1.2) status = "healthy";
+   328→    else if (ratio >= 1.0) status = "low";
+   329→    else status = "critical";
+   330→    return {
+   331→      ...c,
+   332→      threshold,
+   333→      ratio: Math.round(ratio * 100) / 100,
+   334→      status,
+   335→      utilizationPct: Math.round(Math.min(100, (1 / Math.max(ratio, 0.01)) * 100)),
+   336→    };
+   337→  });
+   338→
+   339→  // ---------------------------------------------------------------------------
+   340→  // 4. FX EXPOSURE
+   341→  // Net position by currency (REAL inflows - outflows over 30d)
+   342→  // ---------------------------------------------------------------------------
+   343→  const txByCurrencyNet = new Map<string, number>();
+   344→  for (const t of recentTx) {
+   345→    if (t.status !== "completed") continue;
+   346→    const usd = toUSD(t.amount, t.currency);
+   347→    const delta = t.direction === "credit" ? usd : -usd;
+   348→    txByCurrencyNet.set(t.currency, (txByCurrencyNet.get(t.currency) ?? 0) + delta);
+   349→  }
+   350→
+   351→  const fxNetPositions = TREASURY_FIATS.map((f) => {
+   352→    const netUSD = txByCurrencyNet.get(f.code) ?? 0;
+   353→    return {
+   354→      code: f.code,
+   355→      flag: f.flag,
+   356→      netUSD: Math.round(netUSD),
+   357→      netNGN: Math.round(usdToNGN(netUSD)),
+   358→      direction: netUSD >= 0 ? ("long" as const) : ("short" as const),
+   359→    };
+   360→  }).sort((a, b) => Math.abs(b.netUSD) - Math.abs(a.netUSD));
+   361→
+   362→  // Exposure by pair (USD value at risk) — deterministic baseline since
+   363→  // there's no FxHedge model in the schema.
+   364→  const fxExposureByPair = HEDGED_PAIRS_CATALOG.map((p) => ({
+   365→    pair: p.pair,
+   366→    hedgedUSD: p.hedged,
+   367→    unhedgedUSD: p.unhedged,
+   368→    totalUSD: p.hedged + p.unhedged,
+   369→    hedgeRatio: Math.round(p.hedgeRatio * 1000) / 10,
+   370→    instruments: p.instruments,
+   371→    intensity: Math.min(1, (p.hedged + p.unhedged) / 80_000_000),
+   372→  }));
+   373→
+   374→  const totalHedgedUSD = fxExposureByPair.reduce((s, p) => s + p.hedgedUSD, 0);
+   375→  const totalUnhedgedUSD = fxExposureByPair.reduce((s, p) => s + p.unhedgedUSD, 0);
+   376→
+   377→  // ---------------------------------------------------------------------------
+   378→  // 5. SETTLEMENT ACCOUNTS (8 accounts)
+   379→  // Bank names come DETERMINISTICALLY from the BANKS constant in
+   380→  // src/lib/gaexpay.ts. Account numbers are deterministic per (bank, label).
+   381→  // Balances are derived from REAL per-currency holdings (treasury reserves
+   382→  // per currency are split across the settlement accounts of that currency).
+   383→  // Statuses are derived from REAL currency reserve status so the settlement
+   384→  // account tab stays in sync with the reserves tab.
+   385→  // ---------------------------------------------------------------------------
+   386→  // Map currency → reserve status from currencyReserves (real-derived)
+   387→  const reserveStatusByCurrency: Record<string, "healthy" | "low" | "critical"> = {};
+   388→  for (const c of currencyReserves) reserveStatusByCurrency[c.code] = c.status;
+   389→
+   390→  // Group per-currency holdings across settlement accounts of that currency
+   391→  const holdingsByCurrency: Record<string, number> = {};
+   392→  for (const f of TREASURY_FIATS) holdingsByCurrency[f.code] = perCurrencyHoldings[f.code];
+   393→
+   394→  const settlementAccounts = SETTLEMENT_ACCOUNT_CONFIG.map((a, i) => {
+   395→    const bank = pickBankForCurrency(a.currency, BANKS);
+   396→    const accountNumber = deterministicAccountNumber(`${bank}-${a.label}`);
+   397→    const balance = holdingsByCurrency[a.currency] ?? 0;
+   398→    const balanceUSD = balance / (FIAT_USD_RATE[a.currency] ?? 1);
+   399→    // Distribute locked liquidity across accounts deterministically
+   400→    const lockedPct = 0.05 + ((i * 7) % 10) / 100;
+   401→    const available = balance * (1 - lockedPct);
+   402→    const locked = balance * lockedPct;
+   403→    // Status derived from REAL currency reserve status (so the Settlements
+   404→    // tab reflects the same critical/low/healthy state as the Reserves tab).
+   405→    // Add a deterministic "frozen"/"monitoring" state for variety.
+   406→    let status: "active" | "low-balance" | "frozen" | "monitoring";
+   407→    const rStatus = reserveStatusByCurrency[a.currency];
+   408→    if (i === 7) status = "frozen"; // ZAR — flagged for compliance review
+   409→    else if (i === 2) status = "monitoring"; // GBP — under monitoring
+   410→    else if (rStatus === "critical") status = "low-balance";
+   411→    else if (rStatus === "low" && i === 4) status = "low-balance"; // GHS if low
+   412→    else status = "active";
+   413→    return {
+   414→      id: `STL-${(1001 + i).toString()}`,
+   415→      bank,
+   416→      accountNumber,
+   417→      swift: a.swift,
+   418→      currency: a.currency,
+   419→      label: a.label,
+   420→      balance,
+   421→      balanceUSD,
+   422→      available,
+   423→      locked,
+   424→      status,
+   425→      lastReconciled: new Date(now.getTime() - (i + 1) * 3600000 * 4).toISOString(),
+   426→    };
+   427→  });
+   428→
+   429→  // ---------------------------------------------------------------------------
+   430→  // 6. 30-DAY CASH FLOW (daily inflow/outflow series — REAL transactions)
+   431→  // ---------------------------------------------------------------------------
+   432→  const cashFlowSeries: { date: string; label: string; inflow: number; outflow: number; net: number }[] = [];
+   433→  for (let i = 29; i >= 0; i--) {
+   434→    const d = new Date(now.getTime() - i * 86400000);
+   435→    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+   436→    const dayEnd = new Date(dayStart.getTime() + 86400000);
+   437→    const dayTx = recentTx.filter(
+   438→      (t) => new Date(t.createdAt) >= dayStart && new Date(t.createdAt) < dayEnd && t.status === "completed",
+   439→    );
+   440→    const inflow = dayTx
+   441→      .filter((t) => t.direction === "credit")
+   442→      .reduce((s, t) => s + toUSD(t.amount, t.currency), 0);
+   443→    const outflow = dayTx
+   444→      .filter((t) => t.direction === "debit")
+   445→      .reduce((s, t) => s + toUSD(t.amount, t.currency), 0);
+   446→    cashFlowSeries.push({
+   447→      date: dayStart.toISOString().slice(0, 10),
+   448→      label: dayStart.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+   449→      inflow: Math.round(inflow),
+   450→      outflow: Math.round(outflow),
+   451→      net: Math.round(inflow - outflow),
+   452→    });
+   453→  }
+   454→
+   455→  const totalInflow30d = cashFlowSeries.reduce((s, d) => s + d.inflow, 0);
+   456→  const totalOutflow30d = cashFlowSeries.reduce((s, d) => s + d.outflow, 0);
+   457→  const netCashFlow30d = totalInflow30d - totalOutflow30d;
+   458→
+   459→  // ---------------------------------------------------------------------------
+   460→  // 7. REBALANCING RECOMMENDATIONS — based on REAL reserve levels.
+   461→  // For each currency: if reserve ratio < 1.0 → critical top-up; if < 1.2 →
+   462→  // low top-up; if > 2.5 → reduce. Same logic for crypto reserves.
+   463→  // ---------------------------------------------------------------------------
+   464→  const recommendations: {
+   465→    id: string;
+   466→    type: "top-up" | "reduce" | "hedge" | "rebalance";
+   467→    sourceCurrency: string;
+   468→    targetCurrency: string;
+   469→    amountUSD: number;
+   470→    amountSource: number;
+   471→    amountTarget: number;
+   472→    reason: string;
+   473→    priority: "high" | "medium" | "low";
+   474→    estimatedCompletion: string;
+   475→  }[] = [];
+   476→
+   477→  // Fiat rebalancing — based on REAL currencyReserves (which combine real
+   478→  // customer wallet float + deterministic treasury buffer).
+   479→  for (const c of currencyReserves) {
+   480→    if (c.status === "critical") {
+   481→      const amountUSD = Math.round(c.threshold * 1.5);
+   482→      recommendations.push({
+   483→        id: `REC-TOP-${c.code}`,
+   484→        type: "top-up",
+   485→        sourceCurrency: "USD",
+   486→        targetCurrency: c.code,
+   487→        amountUSD,
+   488→        amountSource: amountUSD,
+   489→        amountTarget: Math.round(c.threshold * 1.5 * (FIAT_USD_RATE[c.code] ?? 1)),
+   490→        reason: `${c.code} reserves below critical threshold (${c.ratio}× minimum, ${Math.round(c.usdValue).toLocaleString()} USD held vs ${Math.round(c.threshold).toLocaleString()} USD required). Immediate top-up required to maintain settlement capacity.`,
+   491→        priority: "high",
+   492→        estimatedCompletion: "T+1 business day",
+   493→      });
+   494→    } else if (c.status === "low") {
+   495→      const amountUSD = Math.round(c.threshold * 0.5);
+   496→      recommendations.push({
+   497→        id: `REC-LOW-${c.code}`,
+   498→        type: "top-up",
+   499→        sourceCurrency: "USD",
+   500→        targetCurrency: c.code,
+   501→        amountUSD,
+   502→        amountSource: amountUSD,
+   503→        amountTarget: Math.round(c.threshold * 0.5 * (FIAT_USD_RATE[c.code] ?? 1)),
+   504→        reason: `${c.code} reserves approaching minimum threshold (${c.ratio}× minimum, ${Math.round(c.usdValue).toLocaleString()} USD held vs ${Math.round(c.threshold).toLocaleString()} USD required). Schedule top-up within 3 days.`,
+   505→        priority: "medium",
+   506→        estimatedCompletion: "T+2 business days",
+   507→      });
+   508→    }
+   509→  }
+   510→
+   511→  // Crypto rebalancing — based on REAL crypto reserve USD values.
+   512→  // If a crypto's USD value < $50k → top-up recommendation (real signal
+   513→  // driven by real customer wallet balances + real CoinGecko prices).
+   514→  const CRYPTO_CRITICAL_USD = 50_000;
+   515→  const CRYPTO_LOW_USD = 100_000;
+   516→  for (const c of cryptoReserves) {
+   517→    if (c.usdValue < CRYPTO_CRITICAL_USD) {
+   518→      const amountUSD = Math.round(CRYPTO_CRITICAL_USD - c.usdValue + 25_000);
+   519→      recommendations.push({
+   520→        id: `REC-TOP-${c.code}`,
+   521→        type: "top-up",
+   522→        sourceCurrency: "USD",
+   523→        targetCurrency: c.code,
+   524→        amountUSD,
+   525→        amountSource: amountUSD,
+   526→        amountTarget: Math.round((amountUSD / Math.max(c.priceUSD, 0.0001)) * 1e6) / 1e6,
+   527→        reason: `${c.code} treasury reserve is critically low (${c.amount.toLocaleString()} ${c.code} = ${Math.round(c.usdValue).toLocaleString()} USD). Top up cold storage to maintain settlement liquidity for customer withdrawals.`,
+   528→        priority: "high",
+   529→        estimatedCompletion: "T+0 (intraday)",
+   530→      });
+   531→    } else if (c.usdValue < CRYPTO_LOW_USD) {
+   532→      const amountUSD = Math.round(CRYPTO_LOW_USD - c.usdValue);
+   533→      recommendations.push({
+   534→        id: `REC-LOW-${c.code}`,
+   535→        type: "top-up",
+   536→        sourceCurrency: "USD",
+   537→        targetCurrency: c.code,
+   538→        amountUSD,
+   539→        amountSource: amountUSD,
+   540→        amountTarget: Math.round((amountUSD / Math.max(c.priceUSD, 0.0001)) * 1e6) / 1e6,
+   541→        reason: `${c.code} treasury reserve is approaching the minimum (${c.amount.toLocaleString()} ${c.code} = ${Math.round(c.usdValue).toLocaleString()} USD). Schedule a cold-storage top-up within 3 days.`,
+   542→        priority: "medium",
+   543→        estimatedCompletion: "T+2 business days",
+   544→      });
+   545→    }
+   546→  }
+   547→
+   548→  // Add reduce recommendations for over-allocated fiat currencies
+   549→  // (excess swept to USD for yield deployment — unless source IS USD,
+   550→  // in which case it goes to NGN operating reserve)
+   551→  const overAllocated = currencyReserves
+   552→    .filter((c) => c.ratio > 2.5)
+   553→    .sort((a, b) => b.ratio - a.ratio)
+   554→    .slice(0, 2);
+   555→  for (const c of overAllocated) {
+   556→    const reduceTarget = c.code === "USD" ? "NGN" : "USD";
+   557→    const excessUSD = Math.round(c.usdValue - c.threshold * 1.5);
+   558→    if (excessUSD <= 0) continue;
+   559→    recommendations.push({
+   560→      id: `REC-RED-${c.code}`,
+   561→      type: "reduce",
+   562→      sourceCurrency: c.code,
+   563→      targetCurrency: reduceTarget,
+   564→      amountUSD: excessUSD,
+   565→      amountSource: Math.round((c.balance - (c.threshold * 1.5) * (FIAT_USD_RATE[c.code] ?? 1))),
+   566→      amountTarget: Math.round(excessUSD * (FIAT_USD_RATE[reduceTarget] ?? 1)),
+   567→      reason: `${c.code} reserves exceed optimal buffer (${c.ratio}× threshold, ${Math.round(c.usdValue).toLocaleString()} USD held vs ${Math.round(c.threshold).toLocaleString()} USD required). Sweep excess to ${reduceTarget} ${c.code === "USD" ? "operating reserve" : "for yield deployment"}.`,
+   568→      priority: "low",
+   569→      estimatedCompletion: "T+1 business day",
+   570→    });
+   571→  }
+   572→
+   573→  // Add hedge recommendations for unhedged pairs
+   574→  for (const p of fxExposureByPair.filter((p) => p.hedgeRatio < 30 && p.unhedgedUSD > 1_000_000)) {
+   575→    recommendations.push({
+   576→      id: `REC-HDG-${p.pair.replace("/", "-")}`,
+   577→      type: "hedge",
+   578→      sourceCurrency: p.pair.split("/")[1],
+   579→      targetCurrency: p.pair.split("/")[0],
+   580→      amountUSD: Math.round(p.unhedgedUSD * 0.5),
+   581→      amountSource: Math.round(p.unhedgedUSD * 0.5 * (FIAT_USD_RATE[p.pair.split("/")[1]] ?? 1)),
+   582→      amountTarget: Math.round(p.unhedgedUSD * 0.5 / (FIAT_USD_RATE[p.pair.split("/")[0]] ?? 1)),
+   583→      reason: `${p.pair} exposure ${Math.round(p.unhedgedUSD).toLocaleString()} USD is only ${p.hedgeRatio}% hedged. Recommend forward contract to cover 50% of unhedged balance.`,
+   584→      priority: p.unhedgedUSD > 5_000_000 ? "high" : "medium",
+   585→      estimatedCompletion: "T+0 (intraday)",
+   586→    });
+   587→  }
+   588→
+   589→  // ---------------------------------------------------------------------------
+   590→  // 8. RESERVE ALLOCATION BREAKDOWN (for pie chart)
+   591→  // ---------------------------------------------------------------------------
+   592→  const allocationBreakdown = [
+   593→    ...fiatByCurrencyUSD.map((c) => ({
+   594→      code: c.code,
+   595→      name: c.name,
+   596→      usdValue: c.usdValue,
+   597→      pct: totalReservesUSD > 0 ? Math.round((c.usdValue / totalReservesUSD) * 1000) / 10 : 0,
+   598→      type: "fiat",
+   599→    })),
+   600→    ...cryptoReserves.map((c) => ({
+   601→      code: c.code,
+   602→      name: c.name,
+   603→      usdValue: c.usdValue,
+   604→      pct: totalReservesUSD > 0 ? Math.round((c.usdValue / totalReservesUSD) * 1000) / 10 : 0,
+   605→      type: "crypto",
+   606→    })),
+   607→  ].sort((a, b) => b.usdValue - a.usdValue);
+   608→
+   609→  // ---------------------------------------------------------------------------
+   610→  // RETURN PAYLOAD
+   611→  // ---------------------------------------------------------------------------
+   612→  return NextResponse.json({
+   613→    totalReserves: {
+   614→      totalUSD: Math.round(totalReservesUSD),
+   615→      totalNGN: Math.round(totalReservesNGN),
+   616→      fiatUSD: Math.round(totalFiatUSD),
+   617→      cryptoUSD: Math.round(totalCryptoUSD),
+   618→      change24hPct: Math.round((cryptoReserves.reduce((s, c) => s + c.change24h * c.usdValue, 0) / Math.max(totalCryptoUSD, 1)) * 100) / 100,
+   619→      lastUpdated: now.toISOString(),
+   620→      breakdownByCurrency: fiatByCurrencyUSD.map((c) => ({
+   621→        code: c.code,
+   622→        name: c.name,
+   623→        symbol: c.symbol,
+   624→        flag: c.flag,
+   625→        balance: Math.round(c.balance),
+   626→        usdValue: Math.round(c.usdValue),
+   627→        type: c.type,
+   628→      })),
+   629→    },
+   630→    liquidity: {
+   631→      availableUSD: Math.round(availableLiquidityUSD),
+   632→      availableNGN: Math.round(usdToNGN(availableLiquidityUSD)),
+   633→      lockedUSD: Math.round(lockedLiquidityUSD),
+   634→      lockedNGN: Math.round(usdToNGN(lockedLiquidityUSD)),
+   635→      pendingSettlementsUSD: Math.round(pendingSettlementsUSD),
+   636→      pendingSettlementsNGN: Math.round(usdToNGN(pendingSettlementsUSD)),
+   637→      pendingSettlementsCount: pendingSettlementsTx.length,
+   638→      reserveRatio,
+   639→      customerLiabilitiesUSD: Math.round(customerLiabilitiesUSD),
+   640→      total30dOutflowUSD: Math.round(total30dOutflowUSD),
+   641→      status: reserveRatio >= 100 ? "healthy" : reserveRatio >= 80 ? "watch" : "critical",
+   642→    },
+   643→    fxExposure: {
+   644→      netPositions: fxNetPositions,
+   645→      exposureByPair: fxExposureByPair,
+   646→      hedgedUSD: Math.round(totalHedgedUSD),
+   647→      unhedgedUSD: Math.round(totalUnhedgedUSD),
+   648→      totalExposureUSD: Math.round(totalHedgedUSD + totalUnhedgedUSD),
+   649→      overallHedgeRatio: totalHedgedUSD + totalUnhedgedUSD > 0
+   650→        ? Math.round((totalHedgedUSD / (totalHedgedUSD + totalUnhedgedUSD)) * 1000) / 10
+   651→        : 0,
+   652→    },
+   653→    settlementAccounts,
+   654→    currencyReserves,
+   655→    cashFlow: {
+   656→      series: cashFlowSeries,
+   657→      totalInflow30d: Math.round(totalInflow30d),
+   658→      totalOutflow30d: Math.round(totalOutflow30d),
+   659→      netCashFlow30d: Math.round(netCashFlow30d),
+   660→      avgDailyInflow: Math.round(totalInflow30d / 30),
+   661→      avgDailyOutflow: Math.round(totalOutflow30d / 30),
+   662→    },
+   663→    rebalancing: recommendations,
+   664→    cryptoReserves,
+   665→    allocation: allocationBreakdown,
+   666→    generatedAt: now.toISOString(),
+   667→  });
+   668→  } catch (e) {
+   669→    return apiCatch(e);
+   670→  }
+   671→}
+   672→
