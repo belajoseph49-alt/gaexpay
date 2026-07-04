@@ -45,6 +45,7 @@ import { TreasuryView } from "./views/treasury-view";
 import { DeveloperPortalView } from "./views/developer-portal-view";
 import { ReferralView } from "./views/referral-view";
 import { MarketplaceView } from "./views/marketplace-view";
+import { SavingsChallengesView } from "./views/savings-challenges-view";
 import { WalletDetailView } from "./views/wallet-detail-view";
 import { MerchantView } from "./views/merchant-view";
 import { BusinessProView } from "./views/business-pro-view";
@@ -128,6 +129,7 @@ export function AppShell() {
     developer: <DeveloperPortalView />,
     referral: <ReferralView />,
     marketplace: <MarketplaceView />,
+    "savings-challenges": <SavingsChallengesView />,
     social: <SocialView />,
     messaging: <MessagingView />,
     live: <LiveView />,

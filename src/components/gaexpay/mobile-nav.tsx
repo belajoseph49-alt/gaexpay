@@ -56,6 +56,7 @@ const NAV: NavGroup[] = [
       { id: "pay", label: "Pay & Bills", icon: QrCode, featureFlag: "qr_payments" },
       { id: "marketplace", label: "Marketplace", icon: ShoppingBag, badge: "New" },
       { id: "savings", label: "Savings Goals", icon: PiggyBank, accountTypes: ["personal"], featureFlag: "savings_goals" },
+      { id: "savings-challenges", label: "Savings Challenges", icon: Trophy, badge: "New", accountTypes: ["personal"] },
       { id: "budgets", label: "Budgets", icon: Wallet2, accountTypes: ["personal"], featureFlag: "budgets" },
       { id: "scheduled", label: "Scheduled", icon: CalendarClock, featureFlag: "scheduled_transfers" },
       { id: "calendar", label: "Calendar", icon: Calendar },

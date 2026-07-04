@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState } from "react";
 import {
   ArrowRight, Shield, Zap, Globe, Smartphone, CreditCard, QrCode,
   Users, Star, Fingerprint, Sparkles, TrendingUp, Wallet,
@@ -11,6 +12,73 @@ import { Logo } from "./logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CURRENCIES } from "@/lib/gaexpay";
+
+// Rotating "live" transactions used in the hero ticker.
+const LIVE_TX = [
+  { name: "Amaka ●●●●", action: "sent to", target: "Tunde ●●●●", amount: "₦45,000", color: "text-emerald-400" },
+  { name: "Kwame ●●●●", action: "exchanged", target: "NGN → GHS", amount: "₦120,000", color: "text-sky-400" },
+  { name: "Fatima ●●●●", action: "paid", target: "DSTV bill", amount: "₦12,500", color: "text-rose-400" },
+  { name: "David ●●●●", action: "received from", target: "Salary", amount: "₦850,000", color: "text-emerald-400" },
+  { name: "Aisha ●●●●", action: "bought", target: "USDC", amount: "₦60,000", color: "text-amber-400" },
+  { name: "Emeka ●●●●", action: "topped up", target: "MTN airtime", amount: "₦3,200", color: "text-violet-400" },
+  { name: "Zainab ●●●●", action: "saved to", target: "Holiday Fund", amount: "₦25,000", color: "text-emerald-400" },
+  { name: "Yusuf ●●●●", action: "scanned QR at", target: "The Place", amount: "₦6,700", color: "text-rose-400" },
+] as const;
+
+function LiveActivityTicker() {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setIdx((i) => (i + 1) % LIVE_TX.length), 2600);
+    return () => clearInterval(t);
+  }, []);
+  const tx = LIVE_TX[idx];
+  return (
+    <div className="mt-6 flex items-center justify-center lg:justify-start">
+      <div className="flex items-center gap-3 rounded-full border bg-background/70 px-4 py-2 backdrop-blur-md shadow-sm">
+        <span className="relative flex h-2.5 w-2.5">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+        </span>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={idx}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.35 }}
+            className="text-xs text-muted-foreground"
+          >
+            <span className="font-medium text-foreground">{tx.name}</span> {tx.action}{" "}
+            <span className="font-medium text-foreground">{tx.target}</span>{" "}
+            <span className={`font-semibold tabular-nums ${tx.color}`}>{tx.amount}</span>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+function TrustStrip() {
+  const stats = [
+    { value: "$2.4B+", label: "Transferred" },
+    { value: "180+", label: "Countries" },
+    { value: "30+", label: "Currencies" },
+    { value: "99.99%", label: "Uptime" },
+  ];
+  return (
+    <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {stats.map((s) => (
+        <div
+          key={s.label}
+          className="rounded-xl border bg-card/40 px-3 py-2.5 text-center backdrop-blur-sm transition hover:border-primary/40 hover:bg-card/70"
+        >
+          <div className="text-base font-bold tracking-tight text-foreground sm:text-lg">{s.value}</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{s.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function Landing({ onEnter, onSignup }: { onEnter: () => void; onSignup: () => void }) {
   return (
@@ -74,6 +142,12 @@ export function Landing({ onEnter, onSignup }: { onEnter: () => void; onSignup: 
                     <span>4.9 rating</span>
                   </div>
                 </div>
+
+                {/* Live activity ticker — fills the previously empty space below social proof */}
+                <LiveActivityTicker />
+
+                {/* Trust stats — adds visual weight to the lower portion of the hero */}
+                <TrustStrip />
               </motion.div>
 
               {/* Phone mockup */}

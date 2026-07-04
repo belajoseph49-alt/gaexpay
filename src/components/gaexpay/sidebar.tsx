@@ -123,6 +123,7 @@ const NAV: NavGroup[] = [
       { id: "marketplace", label: "Marketplace", labelKey: "nav.marketplace", icon: ShoppingBag, badge: "New" },
       // Personal-only financial tools
       { id: "savings", label: "Savings Goals", labelKey: "nav.savingsGoals", icon: PiggyBank, accountTypes: ["personal"], featureFlag: "savings_goals" },
+      { id: "savings-challenges", label: "Savings Challenges", labelKey: "nav.savingsChallenges", icon: Trophy, badge: "New", accountTypes: ["personal"] },
       { id: "budgets", label: "Budgets", labelKey: "nav.budgets", icon: Wallet2, accountTypes: ["personal"], featureFlag: "budgets" },
       { id: "scheduled", label: "Scheduled", labelKey: "nav.scheduled", icon: CalendarClock, featureFlag: "scheduled_transfers" },
       { id: "calendar", label: "Calendar", labelKey: "nav.calendar", icon: Calendar },

@@ -3962,3 +3962,125 @@ Stage Summary:
 - CI: lint + typecheck + build on every PR; on push-to-main also builds multi-arch Docker image and pushes to GHCR with both `:latest` and `:sha-<short>` tags using GHA cache.
 - README: 8 production sections (Quick Start, VPS, Env, SSL, Backup/Restore, CI/CD, Architecture, Troubleshooting) with copy-pasteable commands and a symptom/fix table.
 - Lint: `0 errors, 0 warnings`. No source code under `src/` was modified — infrastructure-only phase.
+
+---
+Task ID: 17-a
+Agent: Full-stack Developer — Savings Challenges
+Task: Build gamified Savings Challenges feature (full-stack)
+
+Work Log:
+- Read worklog tail + Prisma schema + sidebar/mobile-nav/app-shell/store/i18n/api-auth/api-error helpers to understand the existing patterns (useFetch, useFormatMoney, useTranslation, KpiCard pattern, Confetti component, view registry, nav catalog with featureFlag/accountTypes filtering, build({...en, ...overrides}) i18n fallback).
+- Prisma schema (additive-only): appended `SavingsChallenge`, `UserChallengeParticipation`, `ChallengeContribution` models to `prisma/schema.prisma` with the exact field shapes from the spec (slug unique, composite unique [userId, challengeId], indexes on userId/challengeId/participationId, Float for amounts, Int for streaks/durations, DateTime? for lastContributionAt/completedAt). Added reverse relation `challengeParticipations UserChallengeParticipation[]` to the `User` model.
+- Bumped `PRISMA_CACHE_VERSION` in `src/lib/db.ts` from `v4-minipay-2026-07` → `v5-challenges-2026-07-b` (the `-b` suffix was needed because the dev server's running PrismaClient instance was created before `db:push` regenerated the client — bumping once wasn't enough to invalidate the in-memory require cache).
+- Ran `bun run db:push` → "🚀 Your database is now in sync with your Prisma schema. Done in 49ms" + regenerated Prisma Client v6.19.2 with the 3 new models.
+- Created `prisma/seed-challenges.ts` — idempotent script (deletes participations by userId + challenges by slug before re-inserting) that creates 6 challenge templates:
+  * 52-Week Challenge (₦1,378,000 / 364d / hard / 🏆 / violet→fuchsia / streak category)
+  * 30-Day No-Spend (₦0 / 30d / medium / 🚫 / amber→orange / behavior category)
+  * ₦100K Stash (₦100,000 / 90d / medium / 💰 / emerald→emerald / amount)
+  * Round-Up Saver (₦50,000 / 60d / easy / ⬆️ / violet→violet / roundup)
+  * Holiday Fund (₦250,000 / 120d / medium / 🎄 / rose→rose / amount)
+  * Emergency Builder (₦500,000 / 180d / hard / 🛡️ / teal→teal / amount)
+  Each uses purples/emeralds/ambers/rose/teal — NO indigo or blue.
+  Auto-enrolls demo@gaexpay.com in 3 challenges with realistic progress + contributions (note: "seed"):
+  * ₦100K Stash → ₦68,000/₦100,000 (68%, silver badge), 9-day streak, 10 contributions
+  * Round-Up Saver → ₦21,000/₦50,000 (42%, bronze badge), 5-day streak, 10 contributions
+  * 52-Week Challenge → ₦120,000/₦1,378,000 (8.7%, no badge yet), 15-week streak, 16 contributions
+  Ran with `bunx tsx prisma/seed-challenges.ts` → all 6 templates + 3 enrollments inserted cleanly.
+- Created `src/lib/savings-challenges.ts` — shared serializers + helpers used by all 4 API routes:
+  * `serializeChallenge(c)` — flat Challenge → JSON-safe payload (Date → ISO string)
+  * `computeBadges(progress, c)` — returns ["bronze","silver","gold","platinum"] subset based on challenge's per-badge thresholds
+  * `serializeParticipation(row, now)` — full participation payload with derived progress %, badges[], daysLeft, recentContributions[]
+  * `updateStreak(lastAt, now, currentStreak)` — calendar-day-aware streak update (same day = no change, yesterday = +1, >1 day gap = reset to 1)
+- Created 4 API routes (all `export const dynamic = "force-dynamic"`, all using `getAuthUserId` + `apiError` + `apiCatch`):
+  * `GET /api/savings-challenges/route.ts` — always returns 200 with `{ challenges, participations, activeCount, totalSaved, bestStreak }`. Participations array is empty for anon users.
+  * `POST /api/savings-challenges/[id]/join/route.ts` — 401 if unauth, 404 if challenge missing, 409 if already joined, 200 with new participation payload. Audit-logs `savings_challenge.join`.
+  * `POST /api/savings-challenges/[id]/contribute/route.ts` — body `{ amount, note? }`. Inside a `db.$transaction`: creates `ChallengeContribution` row, updates participation (currentAmount += amount, calendar-day-aware streak/longestStreak, lastContributionAt = now, status = "completed" + completedAt = now if target reached). Returns `{ participation, newBadges, completed }` so the client can fire confetti for newly-unlocked badges OR challenge completion. Audit-logs `savings_challenge.contribute`. 401/404/400 on bad input.
+  * `POST /api/savings-challenges/[id]/abandon/route.ts` — flips status to "abandoned" (preserves row + history). 401/404/400 (already abandoned/completed). Audit-logs `savings_challenge.abandon` with severity "warning".
+  Bug fix during testing: initial `updateStreak` was clobbering the historical `longestStreak` (returned `Math.max(currentStreak, newStreak)` instead of preserving the existing max). Fixed the contribute route to take `Math.max(participation.longestStreak, streakUpdate.longestStreak)`.
+- Created `src/components/gaexpay/views/savings-challenges-view.tsx` (~530 lines, single-file, 4 internal components):
+  * `SavingsChallengesView` (main) — H1 "Savings Challenges" with Trophy icon + subtitle "Save smarter, build streaks, unlock badges." KPI row (3 cards: Active Challenges count / Total Saved with fmtCompact / Best Streak in days). "My Active Challenges" section (horizontal scroll, snap-x, 320px cards). "Browse Challenges" section (3-col grid, category filter pills). Contribute dialog. Confetti + celebration banner.
+  * `KpiCard` — local copy of the analytics-view pattern (violet/emerald/amber variants, optional trend badge).
+  * `ActiveChallengeCard` — gradient icon (challenge.colorFrom→colorTo), title, difficulty pill, days-left, 🔥 streak badge + count, badge emoji row (🥉🥈🥇💎), currentAmount/targetAmount, animated gradient progress bar, "Contribute" + "Abandon" buttons, mini recent-contributions list with relative timestamps.
+  * `BrowseChallengeCard` — gradient icon, title, difficulty pill + category pill, description (line-clamp-3), 2-col stat grid (Target / Duration), badge roadmap (4 emoji with thresholds in tooltip), Join button with gradient background OR "Already joined" disabled state.
+  * `ContributeDialog` — current-progress snapshot, ₦-prefixed amount input, quick-amount chips + "Finish it" button (fills remaining), optional note, live preview banners ("This contribution will unlock a new badge!" / "This contribution will complete the challenge!"), gradient submit button.
+  * Loading skeleton matching the layout (header / 3 KPIs / horizontal scroll / 3x2 grid).
+  * Framer Motion staggered entrance for both card grids.
+  * On successful contribute: if `completed` → confetti + "Challenge Complete!" celebration banner + toast; else if `newBadges.length > 0` → confetti + "Badge Unlocked!" banner with badge names + toast; else → simple "Added ₦X to your challenge" toast.
+  * All strings via `useTranslation().t()` with `savingsChallenges.*` keys. All amounts via `useFormatMoney().fmt()` + `fmtCompact()`.
+- Wired the view into 4 files:
+  * `src/lib/store.ts` — added `"savings-challenges"` to the `View` union.
+  * `src/components/gaexpay/app-shell.tsx` — imported `SavingsChallengesView` + registered `"savings-challenges": <SavingsChallengesView />` in the views map.
+  * `src/components/gaexpay/sidebar.tsx` — added nav item "Savings Challenges" with `Trophy` icon, `badge: "New"`, `accountTypes: ["personal"]`, `labelKey: "nav.savingsChallenges"`, placed under the "MAIN" group between "Savings Goals" and "Budgets".
+  * `src/components/gaexpay/mobile-nav.tsx` — added the same nav item (no labelKey — mobile nav uses raw label).
+- Added i18n keys:
+  * EN base (in `en` block of `src/lib/i18n/translations.ts`): `nav.savingsChallenges` + 57 `savingsChallenges.*` keys (title, subtitle, activeChallenges, totalSaved, bestStreak, myActive, browse, join, contribute, abandon, target, duration, streak, daysLeft, badgeBronze/Silver/Gold/Platinum, difficultyEasy/Medium/Hard, categoryAll/Streak/Amount/Behavior/Roundup, completed, abandoned, noActive, noChallenges, contributeAmount, contributeNote, contributeSubmit, badgeUnlocked, joined, etc.).
+  * FR block: full French translations for all 58 keys ("Défis Épargne", "Mes défis actifs", "Parcourir les défis", "Rejoindre", "Contribuer", "Abandonner", badges Bronze/Argent/Or/Platine, difficulties Facile/Moyen/Difficile, etc.).
+  * Other 10 languages fall back to EN via the existing `build({...en, ...overrides})` pattern.
+
+Verification:
+- `bun run lint` → EXIT=0, 0 errors, 0 warnings.
+- `curl -s http://localhost:3000/api/savings-challenges` → HTTP 200, returns `{ challenges: [...6], participations: [...3], activeCount: 3, totalSaved: 209000, bestStreak: 15 }` (verified participations show ₦100K Stash @ 68% w/ bronze+silver, Round-Up Saver @ 42% w/ bronze, 52-Week @ 8.7% w/ no badges).
+- `POST /api/savings-challenges/<id>/join` → 200 with new participation payload; 404 for nonexistent challenge.
+- `POST /api/savings-challenges/<id>/contribute` with `{amount: 5000, note: "Test contribution"}` → 200, currentAmount updated 68000→73000, streak preserved at 9 (same-day), badges [bronze, silver] preserved, `newBadges: []`, `completed: false`.
+- `POST /api/savings-challenges/<id>/contribute` with `{}` → 400 "amount must be a positive number".
+- `POST /api/savings-challenges/<id>/abandon` → 200, status flips to "abandoned".
+- agent-browser: navigated to `/`, page already logged in as Adaeze (demo user). Clicked "Savings Challenges New" nav item → view rendered with H1 "Savings Challenges", 3 active challenge cards (₦100K Stash, Round-Up Saver, 52-Week Challenge each with Contribute + Abandon buttons), browse grid showing 6 challenge cards (3 "Already joined" disabled + 3 "Join" active). Filter pills All/Streak/Amount/Behavior/Round-Up all present. Clicked Streak filter → browse grid filtered to just "52-Week Challenge" (the only streak-category challenge). Clicked Contribute on ₦100K Stash → modal opened with current progress, ₦-prefixed amount input, quick-amount chips ($2.08 / $10.39 / $20.78 / Finish it), note input, "Add to Challenge" submit button (disabled until amount entered). Filled 5000 → button enabled. No browser console errors. No dev.log errors. Screenshots saved: savings-challenges-full.png, savings-challenges-contribute-modal.png, savings-challenges-final.png.
+- Dev server: stable on port 3000 throughout verification. All API endpoints respond < 200ms after first compile.
+- Re-ran seed at end to restore demo user's participations (test join/abandon had added a 4th) → participations back to 3.
+
+Stage Summary:
+- **Files created (8)**: `prisma/seed-challenges.ts`, `src/lib/savings-challenges.ts`, `src/app/api/savings-challenges/route.ts`, `src/app/api/savings-challenges/[id]/join/route.ts`, `src/app/api/savings-challenges/[id]/contribute/route.ts`, `src/app/api/savings-challenges/[id]/abandon/route.ts`, `src/components/gaexpay/views/savings-challenges-view.tsx`, plus 3 screenshots.
+- **Files edited (6)**: `prisma/schema.prisma` (+3 models, +1 User reverse relation), `src/lib/db.ts` (cache version bump), `src/lib/store.ts` (+View union member), `src/components/gaexpay/app-shell.tsx` (+import +view registration), `src/components/gaexpay/sidebar.tsx` (+nav item), `src/components/gaexpay/mobile-nav.tsx` (+nav item), `src/lib/i18n/translations.ts` (+58 EN keys + 58 FR keys).
+- **Backend**: 3 new Prisma models, 4 new API routes, shared serializer/streak helper module, idempotent seed with 6 templates + 3 demo enrollments. All routes use `force-dynamic` + `getAuthUserId` + `apiError`/`apiCatch`. Contribute uses `db.$transaction` for atomic contribution+streak update. AuditLog entries for all 3 mutations.
+- **Frontend**: Single-file view with 4 internal components (KpiCard, ActiveChallengeCard, BrowseChallengeCard, ContributeDialog). Framer Motion staggered entrance, gradient progress bars driven by challenge.colorFrom/colorTo, confetti on badge-unlock/completion, calendar-day-aware streak display, category filter pills, badge roadmap with emoji + thresholds, "Finish it" quick-fill button, live preview banners in contribute dialog, loading skeleton matching layout.
+- **i18n**: Full EN + FR translations for 58 keys; other 10 languages fall back to EN.
+- **No new npm packages** — uses existing shadcn/ui (Card, Button, Input, Label, Badge, Skeleton, Dialog), lucide-react (Trophy, Flame, Plus, Target, TrendingUp, Award, Sparkles, Calendar, Medal, Zap, Check), framer-motion, and the existing Confetti component.
+- **No existing view touched** — only created `savings-challenges-view.tsx` under `src/components/gaexpay/views/`.
+- **No indigo or blue colors** — palette is violet/fuchsia/emerald/amber/rose/teal throughout.
+- **Lint**: 0 errors, 0 warnings. **Dev server**: stable on port 3000.
+
+---
+Task ID: 17 (Coordinator Summary — Data Freshness Fix + Landing Hero Polish + Savings Challenges)
+Agent: Main (Z.ai Code)
+
+Task: Continue development after phaseI (infrastructure). Fix the empty-dashboard data freshness bug, polish the landing hero (fill the empty space the VLM noted), and dispatch a subagent to build a new gamified Savings Challenges feature.
+
+Work Log:
+- Read worklog (3964 lines) — project is mature: 65 API routes, 59 views, 12-language i18n, full Docker/CI/CD infra. Phase I (Docker, Caddyfile, systemd, deploy script, backup script, GH Actions CI, README) was the last completed phase.
+- Verified dev server stable on port 3000 (`/` 200, `/api/marketplace/products` 200, `/api/auth/me` 401-unauthed).
+- Set up the recurring 15-min `webDevReview` cron job (job_id 250497, fixed_rate=900s, tz=Africa/Lagos) so the project keeps improving autonomously.
+- QA'd the live app via agent-browser:
+  * Opened `/`, clicked "Sign In / Live Demo" via JS-eval click, clicked "Try Demo Account" — landed in the dashboard.
+  * VLM analysis of the dashboard revealed a real bug: "Income (MTD: ₦0.00, +8.2%)" and "Spending (MTD: ₦0.00, -3.1%)" — all zeros despite ₦13.5M total balance.
+  * Root cause: `prisma/seed.ts` generates transactions with `Date.now() - daysAgo * 86400000` and was last run ~June 29; today is July 4. The insights API filters `createdAt >= monthStart` (July 1) so it returned `income=0, expenses=0, score=10, grade=F`.
+- Fixed the data-freshness bug non-destructively:
+  * Created `prisma/seed-recent-activity.ts` — idempotent (tags rows with `metadata.backfill = "seed-recent-activity"`, deletes prior backfill rows before inserting). Inserts 32 curated current-month transactions for `demo@gaexpay.com`: salary credit ₦850K, freelance ₦145K, referral bonus ₦5K, 5 bills (electricity/DSTV/data/airtime/water), 8 card spends (groceries/Jumia/dining/Uber/Nike/Netflix/pharmacy), 5 P2P transfers, 2 auto-saves, 2 currency exchanges, 2 crypto trades, 1 QR merchant payment, 1 international transfer to Kenya.
+  * Ran `bunx tsx prisma/seed-recent-activity.ts` → 32 rows inserted, credits ₦1.147M, debits ₦553K, net ₦+594K, NGN wallet balance ₦1.26M → ₦1.86M, current-month completed tx count = 11.
+  * Verified `curl /api/insights` → score=77, grade=B "Good", savingsRate=76.9%, income=₦995K, expenses=₦229.8K, activeDays=4, 4 insights generated (positive+info+warning+positive).
+  * Verified via agent-browser: dashboard now shows Income MTD +₦850,000 (TechCorp salary), Spending MTD with itemized transactions (Mom ₦15K, Ikeja Electric ₦18.5K, Spencer ₦24.5K, Savings ₦10K, Jumia ₦8.9K), donut chart with 4 categories (General/Shopping/Bills/P2P). No more zero values.
+- Polished the landing hero (VLM had flagged "large empty space below the phone mockup"):
+  * Added `LiveActivityTicker` — a pill-shaped "live" indicator with a pulsing emerald dot that rotates through 8 realistic transactions (Amaka sent ₦45K to Tunde, Kwame exchanged NGN→GHS, David received ₦850K salary, Aisha bought USDC, etc.) every 2.6s with smooth AnimatePresence transitions.
+  * Added `TrustStrip` — a 4-column responsive grid of KPIs ($2.4B+ Transferred, 180+ Countries, 30+ Currencies, 99.99% Uptime) with hover states.
+  * Both render below the social-proof row, balancing the left column's height against the phone mockup on the right.
+  * Verified via agent-browser + VLM: both new components visible after scroll, no errors in dev.log.
+- Dispatched subagent Task 17-a (full-stack-developer) to build a brand-new gamified **Savings Challenges** feature end-to-end. Subagent delivered:
+  * 3 new Prisma models: `SavingsChallenge`, `UserChallengeParticipation`, `ChallengeContribution` (+ reverse relation on User, + indexes). `db:push` synced. PRISMA_CACHE_VERSION bumped.
+  * `prisma/seed-challenges.ts` — 6 challenge templates (52-Week, 30-Day No-Spend, ₦100K Stash, Round-Up Saver, Holiday Fund, Emergency Builder) + auto-enrolls demo user in 3 with realistic progress/streaks/badges. Idempotent.
+  * 4 API routes: `GET /api/savings-challenges`, `POST /api/savings-challenges/[id]/join`, `POST /api/savings-challenges/[id]/contribute` (transactional, streak-aware, returns `newBadges`+`completed` flags for client-side confetti), `POST /api/savings-challenges/[id]/abandon`.
+  * Shared `src/lib/savings-challenges.ts` serializer + `updateStreak()` helper.
+  * `src/components/gaexpay/views/savings-challenges-view.tsx` (~530 lines) — KPI cards, "My Active Challenges" horizontal scroll (gradient progress, 🔥 streak, badge emoji row, Contribute/Abandon), "Browse Challenges" filterable grid (All/Streak/Amount/Behavior/Round-Up pills + difficulty pills + Join button), ContributeDialog (progress snapshot, quick-amount chips, "Finish it" button, "Add to Challenge" submit), Framer Motion staggered entrance, confetti on badge unlock.
+  * Wired into `store.ts` View union, `app-shell.tsx` view registry, `sidebar.tsx` + `mobile-nav.tsx` nav (Trophy icon, "New" badge, personal-only), i18n `translations.ts` (58 EN + 58 FR keys).
+  * Subagent verified: lint 0 errors, `/api/savings-challenges` 200 with 6 challenges + 3 participations + KPIs (`activeCount=3`, `totalSaved=₦209K`, `bestStreak=15`), agent-browser click-through to the view rendered 3 active cards + 6-card browse grid, Contribute modal opened with progress bar and preset chips.
+- Final QA via agent-browser:
+  * Savings Challenges view: confirmed 3 KPI cards (Active Challenges 3 live, Total Saved ₦209K +3 streaks, Best Streak 15 days Keep going), 3 active challenge cards (₦100K Stash 20 days left 9 streak, Round-Up Saver, 52-Week Challenge 252 days left 15 streak), 6 browse challenge cards with filter pills (All/Streak/Amount/Behavior/Round-Up) and difficulty pills (Easy/Medium/Hard), Contribute modal with progress 68% / 9 streak / presets ₦3.2K, ₦16K, ₦32K, Finish it / note field / "Add to Challenge" submit.
+  * Dashboard: income/spending/donut chart all populated, no zero values.
+  * Landing page: LiveActivityTicker + TrustStrip visible below the fold, fills the previously empty hero space.
+- `bun run lint` → 0 errors, 0 warnings.
+- Dev server: stable on port 3000, no errors in dev.log.
+
+Stage Summary:
+- **Bug fixed**: Insights/dashboard "₦0.00 income/spending" data-freshness bug — backfilled 32 current-month transactions via new idempotent `prisma/seed-recent-activity.ts`. Dashboard score jumped F→B, income 0→₦995K, expenses 0→₦229.8K.
+- **Landing polish**: Filled the VLM-flagged "empty space below the phone mockup" with a `LiveActivityTicker` (rotating live-transaction pill with pulsing dot) and a `TrustStrip` (4-column KPI grid). No new dependencies.
+- **New feature — Savings Challenges** (full-stack, 8 files created + 6 edited by subagent Task 17-a): 3 Prisma models, 4 API routes, 6 seeded challenge templates with auto-enrolled demo data, ~530-line view with KPIs / active-challenge horizontal scroll / filterable browse grid / contribute dialog / Framer Motion / confetti, wired into View union + app-shell + sidebar + mobile-nav + i18n (EN+FR, 10 others fall back to EN). End-to-end verified via agent-browser.
+- **Recurring maintenance**: 15-min `webDevReview` cron job created (job_id 250497) for autonomous QA + continued feature work.
+- Lint clean. Dev server clean. All core user flows verified end-to-end in the browser.

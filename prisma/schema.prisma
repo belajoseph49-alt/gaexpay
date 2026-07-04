@@ -87,6 +87,9 @@ model User {
   travelDestinations TravelWalletDestination[]
   esimPurchases      ESimPurchase[]
   pockets            Pocket[]
+
+  // Savings Challenges (gamified savings)
+  challengeParticipations UserChallengeParticipation[]
 }
 
 model Wallet {
@@ -885,4 +888,59 @@ model Pocket {
 
   @@unique([userId, code])
   @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Savings Challenges — gamified savings with streaks, badges, milestones
+// ---------------------------------------------------------------------------
+
+model SavingsChallenge {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  title         String
+  description   String
+  icon          String   // emoji
+  category      String   // "streak" | "amount" | "behavior" | "roundup"
+  targetAmount  Float
+  durationDays  Int
+  difficulty    String   // "easy" | "medium" | "hard"
+  colorFrom     String   // tailwind/hex
+  colorTo       String
+  badgeBronze   Float    // progress % for bronze badge
+  badgeSilver   Float
+  badgeGold     Float
+  badgePlatinum Float
+  participants  UserChallengeParticipation[]
+  createdAt     DateTime @default(now())
+}
+
+model UserChallengeParticipation {
+  id                 String   @id @default(cuid())
+  userId             String
+  challengeId        String
+  status             String   @default("active") // "active" | "completed" | "abandoned"
+  currentAmount      Float    @default(0)
+  streak             Int      @default(0)
+  longestStreak      Int      @default(0)
+  lastContributionAt DateTime?
+  joinedAt           DateTime @default(now())
+  completedAt        DateTime?
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge          SavingsChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  contributions      ChallengeContribution[]
+
+  @@unique([userId, challengeId])
+  @@index([userId])
+  @@index([challengeId])
+}
+
+model ChallengeContribution {
+  id              String   @id @default(cuid())
+  participationId String
+  amount          Float
+  note            String?
+  createdAt       DateTime @default(now())
+  participation   UserChallengeParticipation @relation(fields: [participationId], references: [id], onDelete: Cascade)
+
+  @@index([participationId])
 }

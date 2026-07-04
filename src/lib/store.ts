@@ -46,7 +46,8 @@ export type View =
   | "treasury"
   | "developer"
   | "referral"
-  | "marketplace";
+  | "marketplace"
+  | "savings-challenges";
 
 interface AppState {
   view: View;
