@@ -1,0 +1,582 @@
+     1→"use client";
+     2→
+     3→import { useState, useMemo, useEffect } from "react";
+     4→import { motion } from "framer-motion";
+     5→import {
+     6→  Search, Filter, Download, ArrowDownRight, ArrowUpRight, ArrowLeftRight,
+     7→  Receipt, Smartphone, QrCode, CreditCard, Gift, Zap, TrendingUp,
+     8→  CheckCircle2, XCircle, Clock, Flag, Repeat, AlertTriangle, FileText, X, Calendar, Check,
+     9→} from "lucide-react";
+    10→import { Card } from "@/components/ui/card";
+    11→import { Button } from "@/components/ui/button";
+    12→import { Input } from "@/components/ui/input";
+    13→import { Label } from "@/components/ui/label";
+    14→import { Textarea } from "@/components/ui/textarea";
+    15→import { Badge } from "@/components/ui/badge";
+    16→import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+    17→import { useFetch } from "@/hooks/use-fetch";
+    18→import { formatMoney, formatDateTime, timeAgo } from "@/lib/gaexpay";
+    19→import { Skeleton } from "@/components/ui/skeleton";
+    20→import {
+    21→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+    22→} from "@/components/ui/dialog";
+    23→import { useApp } from "@/lib/store";
+    24→import { toast } from "sonner";
+    25→import { cn } from "@/lib/utils";
+    26→import { useFormatMoney } from "@/hooks/use-format-money";
+    27→import { useTranslation } from "@/hooks/use-translation";
+    28→
+    29→const TYPE_ICONS: Record<string, any> = {
+    30→  transfer: ArrowLeftRight, deposit: ArrowDownRight, withdrawal: ArrowUpRight,
+    31→  payment: QrCode, bill: Receipt, airtime: Smartphone, exchange: TrendingUp,
+    32→  card: CreditCard, referral: Gift,
+    33→};
+    34→
+    35→const STATUS_STYLES: Record<string, any> = {
+    36→  completed: { icon: CheckCircle2, color: "text-violet-600 bg-violet-500/10" },
+    37→  failed: { icon: XCircle, color: "text-rose-600 bg-rose-500/10" },
+    38→  pending: { icon: Clock, color: "text-amber-600 bg-amber-500/10" },
+    39→  flagged: { icon: Flag, color: "text-orange-600 bg-orange-500/10" },
+    40→  reversed: { icon: XCircle, color: "text-slate-600 bg-slate-500/10" },
+    41→};
+    42→
+    43→export function TransactionsView() {
+    44→  const { t } = useTranslation();
+    45→  const { data, reload } = useFetch<{ transactions: any[] }>("/api/transactions?limit=200");
+    46→  const { data: disputesData, reload: reloadDisputes } = useFetch<{ disputes: any[]; open: number }>("/api/disputes");
+    47→  const { data: tagsData } = useFetch<{ tags: any[] }>("/api/transactions/tag");
+    48→  const { setView } = useApp();
+    49→  const { fmt, symbol, currency: userCur } = useFormatMoney();
+    50→  const [search, setSearch] = useState("");
+    51→  const [type, setType] = useState("all");
+    52→  const [status, setStatus] = useState("all");
+    53→  const [selected, setSelected] = useState<any>(null);
+    54→  const [disputeTx, setDisputeTx] = useState<any>(null);
+    55→  const [showDisputes, setShowDisputes] = useState(false);
+    56→  const [dateFrom, setDateFrom] = useState("");
+    57→  const [dateTo, setDateTo] = useState("");
+    58→  const [showDateFilter, setShowDateFilter] = useState(false);
+    59→  const [txTags, setTxTags] = useState<string[]>([]);
+    60→
+    61→  const tags = tagsData?.tags ?? [];
+    62→
+    63→  // Load tags when a transaction is selected
+    64→  useEffect(() => {
+    65→    if (selected?.metadata) {
+    66→      try {
+    67→        const meta = JSON.parse(selected.metadata);
+    68→        setTxTags(meta.tags || []);
+    69→      } catch {
+    70→        setTxTags([]);
+    71→      }
+    72→    } else {
+    73→      setTxTags([]);
+    74→    }
+    75→  }, [selected]);
+    76→
+    77→  const toggleTag = async (tagId: string) => {
+    78→    if (!selected) return;
+    79→    const newTags = txTags.includes(tagId)
+    80→      ? txTags.filter((t) => t !== tagId)
+    81→      : [...txTags, tagId];
+    82→    setTxTags(newTags);
+    83→    await fetch("/api/transactions/tag", {
+    84→      method: "PATCH",
+    85→      headers: { "Content-Type": "application/json" },
+    86→      body: JSON.stringify({ transactionId: selected.id, tags: newTags }),
+    87→    });
+    88→    toast.success(newTags.includes(tagId) ? "Tag added" : "Tag removed");
+    89→    reload();
+    90→  };
+    91→
+    92→  const txs = data?.transactions ?? [];
+    93→
+    94→  const filtered = useMemo(() => {
+    95→    return txs.filter((t) => {
+    96→      if (type !== "all" && t.type !== type) return false;
+    97→      if (status !== "all" && t.status !== status) return false;
+    98→      if (dateFrom) {
+    99→        const from = new Date(dateFrom);
+   100→        from.setHours(0, 0, 0, 0);
+   101→        if (new Date(t.createdAt) < from) return false;
+   102→      }
+   103→      if (dateTo) {
+   104→        const to = new Date(dateTo);
+   105→        to.setHours(23, 59, 59, 999);
+   106→        if (new Date(t.createdAt) > to) return false;
+   107→      }
+   108→      if (search) {
+   109→        const q = search.toLowerCase();
+   110→        return (
+   111→          t.description?.toLowerCase().includes(q) ||
+   112→          t.counterpartyName?.toLowerCase().includes(q) ||
+   113→          t.reference?.toLowerCase().includes(q)
+   114→        );
+   115→      }
+   116→      return true;
+   117→    });
+   118→  }, [txs, search, type, status, dateFrom, dateTo]);
+   119→
+   120→  // group by date
+   121→  const grouped = useMemo(() => {
+   122→    const g: Record<string, any[]> = {};
+   123→    for (const t of filtered) {
+   124→      const d = new Date(t.createdAt);
+   125→      const key = d.toLocaleDateString("en", { weekday: "long", month: "short", day: "numeric" });
+   126→      g[key] = g[key] || [];
+   127→      g[key].push(t);
+   128→    }
+   129→    return g;
+   130→  }, [filtered]);
+   131→
+   132→  const totalIn = filtered.filter((t) => t.direction === "credit" && t.status === "completed").reduce((s, t) => s + t.amount, 0);
+   133→  const totalOut = filtered.filter((t) => t.direction === "debit" && t.status === "completed").reduce((s, t) => s + t.amount, 0);
+   134→
+   135→  return (
+   136→    <div className="space-y-6">
+   137→      <div className="flex flex-wrap items-end justify-between gap-3">
+   138→        <div>
+   139→          <h1 className="text-2xl font-bold tracking-tight">{t("transactions.title")}</h1>
+   140→          <p className="text-sm text-muted-foreground">{filtered.length} transactions found</p>
+   141→        </div>
+   142→        <div className="flex gap-2">
+   143→          {!!disputesData?.open && (
+   144→            <Button variant="outline" size="sm" className="text-amber-600 border-amber-500/30" onClick={() => setShowDisputes(true)}>
+   145→              <AlertTriangle className="h-4 w-4 mr-1.5" /> {disputesData.open} Disputes
+   146→            </Button>
+   147→          )}
+   148→          <Button variant="outline" size="sm" onClick={() => window.open("/api/export?format=csv&days=90", "_blank")}>
+   149→            <Download className="h-4 w-4 mr-1.5" /> Export CSV
+   150→          </Button>
+   151→        </div>
+   152→      </div>
+   153→
+   154→      {/* Summary */}
+   155→      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+   156→        <Card className="p-4">
+   157→          <p className="text-xs text-muted-foreground">Total In</p>
+   158→          <p className="text-lg font-bold text-violet-600 tabular-nums">{fmt(totalIn)}</p>
+   159→        </Card>
+   160→        <Card className="p-4">
+   161→          <p className="text-xs text-muted-foreground">Total Out</p>
+   162→          <p className="text-lg font-bold text-rose-600 tabular-nums">{fmt(totalOut)}</p>
+   163→        </Card>
+   164→        <Card className="p-4">
+   165→          <p className="text-xs text-muted-foreground">Net Flow</p>
+   166→          <p className="text-lg font-bold tabular-nums">{fmt(totalIn - totalOut)}</p>
+   167→        </Card>
+   168→        <Card className="p-4">
+   169→          <p className="text-xs text-muted-foreground">Fees Paid</p>
+   170→          <p className="text-lg font-bold tabular-nums">{formatMoney(filtered.reduce((s, t) => s + t.fee, 0), "NGN")}</p>
+   171→        </Card>
+   172→      </div>
+   173→
+   174→      {/* Filters */}
+   175→      <Card className="p-4">
+   176→        <div className="flex flex-wrap items-center gap-2">
+   177→          <div className="relative flex-1 min-w-[200px]">
+   178→            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+   179→            <Input placeholder="Search by name, description, reference..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+   180→          </div>
+   181→          <Select value={type} onValueChange={setType}>
+   182→            <SelectTrigger className="w-[140px]"><Filter className="h-4 w-4 mr-1.5" /><SelectValue /></SelectTrigger>
+   183→            <SelectContent>
+   184→              <SelectItem value="all">All Types</SelectItem>
+   185→              <SelectItem value="transfer">Transfer</SelectItem>
+   186→              <SelectItem value="deposit">Deposit</SelectItem>
+   187→              <SelectItem value="withdrawal">Withdrawal</SelectItem>
+   188→              <SelectItem value="payment">Payment</SelectItem>
+   189→              <SelectItem value="bill">Bill</SelectItem>
+   190→              <SelectItem value="airtime">Airtime</SelectItem>
+   191→              <SelectItem value="card">Card</SelectItem>
+   192→              <SelectItem value="referral">Referral</SelectItem>
+   193→            </SelectContent>
+   194→          </Select>
+   195→          <Select value={status} onValueChange={setStatus}>
+   196→            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+   197→            <SelectContent>
+   198→              <SelectItem value="all">All Status</SelectItem>
+   199→              <SelectItem value="completed">Completed</SelectItem>
+   200→              <SelectItem value="pending">Pending</SelectItem>
+   201→              <SelectItem value="failed">Failed</SelectItem>
+   202→              <SelectItem value="flagged">Flagged</SelectItem>
+   203→            </SelectContent>
+   204→          </Select>
+   205→          <Button
+   206→            variant={showDateFilter || dateFrom || dateTo ? "default" : "outline"}
+   207→            size="sm"
+   208→            className="h-9"
+   209→            onClick={() => setShowDateFilter(!showDateFilter)}
+   210→          >
+   211→            <Calendar className="h-4 w-4 mr-1.5" /> Date
+   212→            {(dateFrom || dateTo) && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-white" />}
+   213→          </Button>
+   214→          {(dateFrom || dateTo) && (
+   215→            <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => { setDateFrom(""); setDateTo(""); }}>
+   216→              <X className="h-3.5 w-3.5" /> Clear
+   217→            </Button>
+   218→          )}
+   219→        </div>
+   220→        {showDateFilter && (
+   221→          <div className="mt-3 flex flex-wrap items-end gap-3 border-t pt-3">
+   222→            <div className="space-y-1">
+   223→              <Label className="text-xs">From Date</Label>
+   224→              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-auto h-9" />
+   225→            </div>
+   226→            <div className="space-y-1">
+   227→              <Label className="text-xs">To Date</Label>
+   228→              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-auto h-9" />
+   229→            </div>
+   230→            <div className="flex gap-1">
+   231→              {[
+   232→                { label: "Today", days: 0 },
+   233→                { label: "7d", days: 7 },
+   234→                { label: "30d", days: 30 },
+   235→                { label: "90d", days: 90 },
+   236→              ].map((r) => (
+   237→                <button
+   238→                  key={r.label}
+   239→                  onClick={() => {
+   240→                    const to = new Date();
+   241→                    const from = new Date();
+   242→                    from.setDate(from.getDate() - r.days);
+   243→                    if (r.days === 0) {
+   244→                      setDateFrom(to.toISOString().slice(0, 10));
+   245→                      setDateTo(to.toISOString().slice(0, 10));
+   246→                    } else {
+   247→                      setDateFrom(from.toISOString().slice(0, 10));
+   248→                      setDateTo(to.toISOString().slice(0, 10));
+   249→                    }
+   250→                  }}
+   251→                  className="rounded-md border px-2 py-1 text-xs hover:bg-muted transition"
+   252→                >
+   253→                  {r.label}
+   254→                </button>
+   255→              ))}
+   256→            </div>
+   257→          </div>
+   258→        )}
+   259→      </Card>
+   260→
+   261→      {/* List */}
+   262→      <Card className="p-2">
+   263→        {filtered.length === 0 ? (
+   264→          <div className="grid place-items-center py-16 text-center">
+   265→            <Search className="h-10 w-10 text-muted-foreground/40 mb-2" />
+   266→            <p className="text-sm text-muted-foreground">No transactions match your filters</p>
+   267→          </div>
+   268→        ) : (
+   269→          <div className="space-y-4 p-2">
+   270→            {Object.entries(grouped).map(([date, items]) => (
+   271→              <div key={date}>
+   272→                <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{date}</p>
+   273→                <div className="space-y-0.5">
+   274→                  {items.map((t) => {
+   275→                    const Icon = TYPE_ICONS[t.type] || ArrowLeftRight;
+   276→                    const isCredit = t.direction === "credit";
+   277→                    const S = STATUS_STYLES[t.status] || STATUS_STYLES.completed;
+   278→                    const StatusIcon = S.icon;
+   279→                    return (
+   280→                      <motion.button
+   281→                        key={t.id}
+   282→                        initial={{ opacity: 0 }}
+   283→                        animate={{ opacity: 1 }}
+   284→                        onClick={() => setSelected(t)}
+   285→                        className="flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition hover:bg-muted/50"
+   286→                      >
+   287→                        <div className={cn(
+   288→                          "grid h-10 w-10 shrink-0 place-items-center rounded-full",
+   289→                          isCredit ? "bg-violet-500/15 text-violet-500" : "bg-rose-500/15 text-rose-500",
+   290→                        )}>
+   291→                          <Icon className="h-4 w-4" />
+   292→                        </div>
+   293→                        <div className="flex-1 min-w-0">
+   294→                          <p className="text-sm font-medium truncate">{t.counterpartyName || t.description}</p>
+   295→                          <p className="text-xs text-muted-foreground truncate">
+   296→                            {t.type} · {formatDateTime(t.createdAt)}
+   297→                          </p>
+   298→                        </div>
+   299→                        <div className="flex items-center gap-2">
+   300→                          <span className={cn("inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium", S.color)}>
+   301→                            <StatusIcon className="h-3 w-3" /> {t.status}
+   302→                          </span>
+   303→                          <p className={cn("text-sm font-semibold tabular-nums w-28 text-right", isCredit ? "text-violet-600" : "")}>
+   304→                            {isCredit ? "+" : "-"}{formatMoney(t.amount, t.currency)}
+   305→                          </p>
+   306→                        </div>
+   307→                      </motion.button>
+   308→                    );
+   309→                  })}
+   310→                </div>
+   311→              </div>
+   312→            ))}
+   313→          </div>
+   314→        )}
+   315→      </Card>
+   316→
+   317→      {/* Detail dialog */}
+   318→      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+   319→        <DialogContent className="max-w-md">
+   320→          <DialogHeader>
+   321→            <DialogTitle>Transaction Details</DialogTitle>
+   322→          </DialogHeader>
+   323→          {selected && (
+   324→            <div className="space-y-4">
+   325→              <div className="flex flex-col items-center py-4">
+   326→                <div className={cn(
+   327→                  "grid h-14 w-14 place-items-center rounded-full mb-2",
+   328→                  selected.direction === "credit" ? "bg-violet-500/15 text-violet-500" : "bg-rose-500/15 text-rose-500",
+   329→                )}>
+   330→                  {selected.direction === "credit" ? <ArrowDownRight className="h-6 w-6" /> : <ArrowUpRight className="h-6 w-6" />}
+   331→                </div>
+   332→                <p className="text-2xl font-bold tabular-nums">
+   333→                  {selected.direction === "credit" ? "+" : "-"}{formatMoney(selected.amount, selected.currency)}
+   334→                </p>
+   335→                <Badge className={cn("mt-2", STATUS_STYLES[selected.status]?.color)} variant="outline">
+   336→                  {selected.status}
+   337→                </Badge>
+   338→              </div>
+   339→              <div className="space-y-2 rounded-xl border bg-muted/30 p-4 text-sm">
+   340→                <DetailRow label="Reference" value={selected.reference} mono />
+   341→                <DetailRow label="Type" value={selected.type} />
+   342→                <DetailRow label="Category" value={selected.category} />
+   343→                <DetailRow label="Description" value={selected.description} />
+   344→                <DetailRow label="Counterparty" value={selected.counterpartyName || "—"} />
+   345→                {selected.counterpartyAccount && <DetailRow label="Account" value={selected.counterpartyAccount} />}
+   346→                {selected.counterpartyBank && <DetailRow label="Bank/Provider" value={selected.counterpartyBank} />}
+   347→                <DetailRow label="Method" value={selected.method} />
+   348→                {selected.provider && <DetailRow label="Provider" value={selected.provider} />}
+   349→                <DetailRow label="Fee" value={formatMoney(selected.fee, selected.currency)} />
+   350→                <DetailRow label="Date" value={formatDateTime(selected.createdAt)} />
+   351→                {selected.completedAt && <DetailRow label="Completed" value={formatDateTime(selected.completedAt)} />}
+   352→                {selected.riskScore > 0.5 && <DetailRow label="Risk Score" value={`${(selected.riskScore * 100).toFixed(0)}%`} />}
+   353→              </div>
+   354→
+   355→              {/* Tags */}
+   356→              <div>
+   357→                <p className="text-xs font-medium text-muted-foreground mb-2">Tags</p>
+   358→                <div className="flex flex-wrap gap-1.5">
+   359→                  {tags.map((tag) => {
+   360→                    const active = txTags.includes(tag.id);
+   361→                    return (
+   362→                      <button
+   363→                        key={tag.id}
+   364→                        onClick={() => toggleTag(tag.id)}
+   365→                        className={cn(
+   366→                          "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition",
+   367→                          active
+   368→                            ? "border-primary bg-primary/10 text-primary"
+   369→                            : "border-border text-muted-foreground hover:bg-muted",
+   370→                        )}
+   371→                      >
+   372→                        <span>{tag.icon}</span>
+   373→                        {tag.label}
+   374→                        {active && <Check className="h-3 w-3" />}
+   375→                      </button>
+   376→                    );
+   377→                  })}
+   378→                </div>
+   379→              </div>
+   380→
+   381→              <div className="flex gap-2">
+   382→                <Button variant="outline" className="flex-1" type="button"><Download className="h-4 w-4 mr-1.5" /> Receipt</Button>
+   383→                {selected.direction === "debit" && selected.status === "completed" && (
+   384→                  <Button variant="outline" className="flex-1" type="button" onClick={() => {
+   385→                    setSelected(null);
+   386→                    setView("send");
+   387→                  }}>
+   388→                    <Repeat className="h-4 w-4 mr-1.5" /> Send Again
+   389→                  </Button>
+   390→                )}
+   391→                <Button variant="outline" className="flex-1 text-amber-600 hover:bg-amber-500/10" type="button" onClick={() => {
+   392→                  const tx = selected;
+   393→                  setSelected(null);
+   394→                  setTimeout(() => setDisputeTx(tx), 100);
+   395→                }}>
+   396→                  <AlertTriangle className="h-4 w-4 mr-1.5" /> Dispute
+   397→                </Button>
+   398→              </div>
+   399→            </div>
+   400→          )}
+   401→        </DialogContent>
+   402→      </Dialog>
+   403→
+   404→      {/* Dispute filing dialog */}
+   405→      <DisputeDialog
+   406→        tx={disputeTx}
+   407→        onClose={() => setDisputeTx(null)}
+   408→        onSubmitted={() => { setDisputeTx(null); reloadDisputes(); reload(); }}
+   409→      />
+   410→
+   411→      {/* Disputes list dialog */}
+   412→      <Dialog open={showDisputes} onOpenChange={setShowDisputes}>
+   413→        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+   414→          <DialogHeader>
+   415→            <DialogTitle>My Disputes</DialogTitle>
+   416→          </DialogHeader>
+   417→          <div className="space-y-2">
+   418→            {disputesData?.disputes?.length === 0 && (
+   419→              <div className="py-8 text-center text-sm text-muted-foreground">No disputes filed</div>
+   420→            )}
+   421→            {disputesData?.disputes?.map((d) => (
+   422→              <div key={d.id} className="rounded-lg border p-3">
+   423→                <div className="flex items-center justify-between mb-1">
+   424→                  <span className="text-xs font-mono text-muted-foreground">{d.transactionRef}</span>
+   425→                  <Badge variant="outline" className={cn("text-[10px]",
+   426→                    d.status === "open" ? "text-amber-600" :
+   427→                    d.status === "resolved" || d.status === "refunded" ? "text-violet-600" :
+   428→                    d.status === "rejected" ? "text-rose-600" : "text-sky-600")}>
+   429→                    {d.status.replace("_", " ")}
+   430→                  </Badge>
+   431→                </div>
+   432→                <p className="text-sm font-medium capitalize">{d.reason.replace(/_/g, " ")}</p>
+   433→                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{d.description}</p>
+   434→                <p className="text-[10px] text-muted-foreground mt-1">Filed {timeAgo(d.createdAt)}</p>
+   435→              </div>
+   436→            ))}
+   437→          </div>
+   438→        </DialogContent>
+   439→      </Dialog>
+   440→    </div>
+   441→  );
+   442→}
+   443→
+   444→function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+   445→  return (
+   446→    <div className="flex items-start justify-between gap-3">
+   447→      <span className="text-xs text-muted-foreground shrink-0">{label}</span>
+   448→      <span className={cn("text-sm font-medium text-right break-all", mono && "font-mono text-xs")}>{value}</span>
+   449→    </div>
+   450→  );
+   451→}
+   452→
+   453→const DISPUTE_REASONS = [
+   454→  { id: "unauthorized", label: "Unauthorized transaction", desc: "I didn't authorize this payment" },
+   455→  { id: "failed_not_received", label: "Payment not received", desc: "Recipient didn't get the funds" },
+   456→  { id: "wrong_amount", label: "Wrong amount", desc: "The amount charged is incorrect" },
+   457→  { id: "duplicate", label: "Duplicate charge", desc: "I was charged more than once" },
+   458→  { id: "merchant_issue", label: "Merchant issue", desc: "Goods/services not delivered" },
+   459→  { id: "other", label: "Other", desc: "Something else" },
+   460→];
+   461→
+   462→function DisputeDialog({ tx, onClose, onSubmitted }: { tx: any; onClose: () => void; onSubmitted: () => void }) {
+   463→  const [reason, setReason] = useState("unauthorized");
+   464→  const [description, setDescription] = useState("");
+   465→  const [priority, setPriority] = useState("medium");
+   466→  const [loading, setLoading] = useState(false);
+   467→
+   468→  if (!tx) return null;
+   469→
+   470→  const submit = async () => {
+   471→    setLoading(true);
+   472→    try {
+   473→      const res = await fetch("/api/disputes", {
+   474→        method: "POST",
+   475→        headers: { "Content-Type": "application/json" },
+   476→        body: JSON.stringify({
+   477→          transactionId: tx.id,
+   478→          transactionRef: tx.reference,
+   479→          reason,
+   480→          description,
+   481→          priority,
+   482→        }),
+   483→      });
+   484→      if (res.ok) {
+   485→        toast.success("Dispute filed successfully. We'll review it within 48 hours.");
+   486→        onSubmitted();
+   487→      } else {
+   488→        toast.error("Failed to file dispute");
+   489→      }
+   490→    } catch {
+   491→      toast.error("Something went wrong");
+   492→    } finally {
+   493→      setLoading(false);
+   494→    }
+   495→  };
+   496→
+   497→  return (
+   498→    <Dialog open={!!tx} onOpenChange={(o) => !o && onClose()}>
+   499→      <DialogContent className="max-w-md">
+   500→        <DialogHeader>
+   501→          <DialogTitle className="flex items-center gap-2">
+   502→            <AlertTriangle className="h-5 w-5 text-amber-500" /> File a Dispute
+   503→          </DialogTitle>
+   504→        </DialogHeader>
+   505→        <div className="space-y-4 py-2">
+   506→          <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+   507→            <div className="flex items-center justify-between">
+   508→              <span className="text-xs text-muted-foreground">Transaction</span>
+   509→              <span className="font-mono text-xs">{tx.reference}</span>
+   510→            </div>
+   511→            <div className="flex items-center justify-between mt-1">
+   512→              <span className="text-xs text-muted-foreground">Amount</span>
+   513→              <span className="font-semibold">{formatMoney(tx.amount, tx.currency)}</span>
+   514→            </div>
+   515→            <div className="flex items-center justify-between mt-1">
+   516→              <span className="text-xs text-muted-foreground">Date</span>
+   517→              <span className="text-xs">{formatDateTime(tx.createdAt)}</span>
+   518→            </div>
+   519→          </div>
+   520→
+   521→          <div className="space-y-2">
+   522→            <Label>Reason</Label>
+   523→            <div className="space-y-1.5 max-h-48 overflow-y-auto">
+   524→              {DISPUTE_REASONS.map((r) => (
+   525→                <button
+   526→                  key={r.id}
+   527→                  onClick={() => setReason(r.id)}
+   528→                  className={cn(
+   529→                    "flex w-full items-start gap-2 rounded-lg border p-2.5 text-left transition",
+   530→                    reason === r.id ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "hover:bg-muted",
+   531→                  )}
+   532→                >
+   533→                  <div className={cn("mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full border-2", reason === r.id ? "border-primary" : "border-muted-foreground/30")}>
+   534→                    {reason === r.id && <div className="h-2 w-2 rounded-full bg-primary" />}
+   535→                  </div>
+   536→                  <div>
+   537→                    <p className="text-sm font-medium">{r.label}</p>
+   538→                    <p className="text-xs text-muted-foreground">{r.desc}</p>
+   539→                  </div>
+   540→                </button>
+   541→              ))}
+   542→            </div>
+   543→          </div>
+   544→
+   545→          <div className="space-y-2">
+   546→            <Label>Describe the issue</Label>
+   547→            <Textarea
+   548→              value={description}
+   549→              onChange={(e) => setDescription(e.target.value)}
+   550→              placeholder="Please provide details about what happened..."
+   551→              rows={3}
+   552→            />
+   553→          </div>
+   554→
+   555→          <div className="space-y-2">
+   556→            <Label>Priority</Label>
+   557→            <Select value={priority} onValueChange={setPriority}>
+   558→              <SelectTrigger><SelectValue /></SelectTrigger>
+   559→              <SelectContent>
+   560→                <SelectItem value="low">Low</SelectItem>
+   561→                <SelectItem value="medium">Medium</SelectItem>
+   562→                <SelectItem value="high">High</SelectItem>
+   563→              </SelectContent>
+   564→            </Select>
+   565→          </div>
+   566→
+   567→          <div className="flex items-start gap-2 rounded-lg bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
+   568→            <FileText className="h-4 w-4 shrink-0 mt-0.5" />
+   569→            <span>Our team will review your dispute within 48 hours. You'll receive updates via email and in-app notifications. Filing a dispute doesn't guarantee a refund.</span>
+   570→          </div>
+   571→        </div>
+   572→        <DialogFooter>
+   573→          <Button variant="outline" onClick={onClose}>Cancel</Button>
+   574→          <Button onClick={submit} disabled={!description.trim() || loading} className="bg-amber-600 hover:bg-amber-700">
+   575→            {loading ? "Filing..." : "File Dispute"}
+   576→          </Button>
+   577→        </DialogFooter>
+   578→      </DialogContent>
+   579→    </Dialog>
+   580→  );
+   581→}
+   582→

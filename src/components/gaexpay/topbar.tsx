@@ -36,7 +36,6 @@ export function Topbar() {
   const { data } = useFetch<{ unread: number; notifications: any[] }>("/api/notifications");
   const { data: meData } = useFetch<{ user: CurrentUser }>("/api/me");
 
-  // Compute initials for the avatar fallback
   const initials = (() => {
     const f = meData?.user?.firstName?.trim() ?? "";
     const l = meData?.user?.lastName?.trim() ?? "";
@@ -56,20 +55,17 @@ export function Topbar() {
     }
     clearAuthed();
     toast.success("Signed out");
-    // Hard reload — the page.tsx gate will then show the landing/auth modal.
     setTimeout(() => window.location.reload(), 200);
   }
 
-  // Keyboard accessibility: keep the mobile menu button from being tab-able
-  // twice in the same region. (No-op; just documents intent.)
   useEffect(() => {}, []);
 
   return (
-    <header className="sticky top-0 z-30 flex h-[60px] shrink-0 items-center gap-2 border-b border-border/50 bg-background/70 px-4 backdrop-blur-2xl lg:px-6">
+    <header className="sticky top-0 z-30 flex h-[60px] shrink-0 items-center gap-2 border-b border-border/50 bg-background/80 backdrop-blur-2xl px-4 lg:px-6">
       {/* Mobile menu */}
       <Sheet>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9">
+          <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9 rounded-xl">
             <Menu className="h-5 w-5" />
           </Button>
         </SheetTrigger>
@@ -85,11 +81,11 @@ export function Topbar() {
           const ev = new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true });
           window.dispatchEvent(ev);
         }}
-        className="relative hidden md:flex flex-1 max-w-md items-center h-9 rounded-lg border border-border/50 bg-muted/40 px-3 text-[13px] text-muted-foreground transition hover:bg-muted/70 hover:border-border cursor-pointer"
+        className="relative hidden md:flex flex-1 max-w-md items-center h-9 rounded-xl border border-border/60 bg-muted/40 px-3 text-[13px] text-muted-foreground transition hover:bg-muted/70 hover:border-border cursor-pointer"
       >
         <Search className="h-4 w-4 mr-2 shrink-0" />
         <span className="flex-1 text-left">{t("topbar.search")}</span>
-        <kbd className="hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] text-muted-foreground/70">
+        <kbd className="hidden lg:inline-flex h-5 select-none items-center gap-1 rounded-md border bg-background px-1.5 font-mono text-[10px] text-muted-foreground/70">
           ⌘K
         </kbd>
       </button>
@@ -101,7 +97,7 @@ export function Topbar() {
         <Button
           variant="default"
           size="sm"
-          className="hidden sm:inline-flex h-9 rounded-lg text-[13px]"
+          className="hidden sm:inline-flex h-9 rounded-xl text-[13px] font-semibold shadow-premium-sm"
           onClick={() => setView("send")}
         >
           <Plus className="h-3.5 w-3.5 mr-1" /> {t("topbar.send")}
@@ -110,27 +106,28 @@ export function Topbar() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 rounded-lg"
+          className="h-9 w-9 rounded-xl"
           onClick={() => setAiOpen(true)}
+          aria-label="AI Assistant"
         >
           <Sparkles className="h-[18px] w-[18px] text-primary" />
         </Button>
 
-        {/* Language switcher */}
+        {/* Language switcher — compact */}
         <button
           onClick={() => setLanguagePickerOpen(true)}
           aria-label={t("settings.language")}
-          className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] font-bold uppercase transition hover:bg-muted"
+          className="hidden sm:flex items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] font-bold uppercase transition hover:bg-muted"
           title={LANGUAGE_BY_CODE[language]?.nativeName ?? language}
         >
           <Languages className="h-4 w-4 text-muted-foreground" />
           {language}
         </button>
 
-        {/* Currency switcher */}
+        {/* Currency switcher — compact */}
         <button
           onClick={() => setCurrencyPickerOpen(true)}
-          className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[13px] font-semibold transition hover:bg-muted"
+          className="hidden sm:flex items-center gap-1 rounded-lg px-2 py-1.5 text-[13px] font-semibold transition hover:bg-muted"
         >
           <Globe className="h-4 w-4 text-muted-foreground" />
           {userCurrency}
@@ -140,10 +137,10 @@ export function Topbar() {
 
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg relative">
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl relative">
               <Bell className="h-[18px] w-[18px]" />
               {!!data?.unread && (
-                <span className="absolute top-1.5 right-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+                <span className="absolute top-1.5 right-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground ring-2 ring-background">
                   {data.unread > 99 ? "99+" : data.unread}
                 </span>
               )}
@@ -161,7 +158,7 @@ export function Topbar() {
               className="ml-1 flex items-center gap-1 rounded-full p-0.5 transition hover:ring-2 hover:ring-primary/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               aria-label={t("topbar.accountMenu")}
             >
-              <Avatar className="h-8 w-8 ring-1 ring-border/50">
+              <Avatar className="h-8 w-8 ring-1 ring-border/60">
                 <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-[11px] font-bold">
                   {initials || "AO"}
                 </AvatarFallback>
@@ -169,21 +166,21 @@ export function Topbar() {
               <ChevronDown className="hidden sm:block h-3.5 w-3.5 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-60">
+          <DropdownMenuContent align="end" className="w-60 rounded-xl">
             <DropdownMenuLabel className="flex flex-col gap-0.5 py-2">
               <span className="text-sm font-semibold truncate">{displayName}</span>
               <span className="text-xs font-normal text-muted-foreground truncate">{displayEmail}</span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              className="cursor-pointer"
+              className="cursor-pointer rounded-lg"
               onSelect={() => setView("settings")}
             >
               <Settings className="h-4 w-4 mr-2" />
               <span>{t("topbar.settings")}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
-              className="cursor-pointer"
+              className="cursor-pointer rounded-lg"
               onSelect={() => setView("kyc")}
             >
               <ShieldCheck className="h-4 w-4 mr-2" />
@@ -191,7 +188,7 @@ export function Topbar() {
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              className={cn("cursor-pointer text-destructive focus:text-destructive")}
+              className={cn("cursor-pointer text-destructive focus:text-destructive rounded-lg")}
               onSelect={handleSignOut}
             >
               <LogOut className="h-4 w-4 mr-2" />

@@ -55,6 +55,7 @@ import { OnboardingTour } from "./onboarding-tour";
 import { InstallPrompt } from "./install-prompt";
 import { CurrencyPicker } from "./currency-picker";
 import { LanguagePicker } from "./language-picker";
+import { BottomNav } from "./bottom-nav";
 import { motion, AnimatePresence } from "framer-motion";
 import { hydratePreferencesFromStorage } from "@/lib/store";
 import { SocialView } from "./views/social-view";
@@ -156,13 +157,14 @@ export function AppShell() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -3 }}
               transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-              className="mx-auto max-w-7xl px-4 py-6 lg:px-8"
+              className="mx-auto max-w-7xl px-4 py-6 pb-28 lg:px-8 lg:pb-6"
             >
               {views[view] || <DashboardView />}
             </motion.div>
           </AnimatePresence>
         </main>
       </div>
+      <BottomNav />
       <AiAssistant />
       <CommandPalette />
       <AchievementMonitor />

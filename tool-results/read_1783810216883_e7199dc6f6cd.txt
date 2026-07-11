@@ -1,0 +1,603 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→import { useEffect, useState } from "react";
+     4→     4→import { motion } from "framer-motion";
+     5→     5→import {
+     6→     6→  SendHorizontal, Download, QrCode, ArrowDownToLine, ArrowUpRight, ArrowDownRight,
+     7→     7→  Wallet, TrendingUp, TrendingDown, Eye, EyeOff, Plus, ChevronRight, Smartphone,
+     8→     8→  Zap, Receipt, Gift, ShieldCheck, ArrowRight,
+     9→     9→} from "lucide-react";
+    10→    10→import { Card } from "@/components/ui/card";
+    11→    11→import { Button } from "@/components/ui/button";
+    12→    12→import { Badge } from "@/components/ui/badge";
+    13→    13→import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+    14→    14→import { Progress } from "@/components/ui/progress";
+    15→    15→import { useFetch } from "@/hooks/use-fetch";
+    16→    16→import { formatMoney, timeAgo, CURRENCY_SYMBOL } from "@/lib/gaexpay";
+    17→    17→import { useApp } from "@/lib/store";
+    18→    18→import { Skeleton } from "@/components/ui/skeleton";
+    19→    19→import {
+    20→    20→  AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid,
+    21→    21→  PieChart, Pie, Cell,
+    22→    22→} from "recharts";
+    23→    23→import { AnimatedNumber } from "@/components/gaexpay/animated-number";
+    24→    24→import { cn } from "@/lib/utils";
+    25→    25→import { useFormatMoney } from "@/hooks/use-format-money";
+    26→    26→import { useTranslation } from "@/hooks/use-translation";
+    27→    27→
+    28→    28→const QUICK_ACTIONS = [
+    29→    29→  { id: "send", labelKey: "common.send", icon: SendHorizontal, color: "from-emerald-500 to-teal-600" },
+    30→    30→  { id: "pay", labelKey: "common.scan", icon: QrCode, color: "from-violet-500 to-fuchsia-600" },
+    31→    31→  { id: "pay", labelKey: "common.topUp", icon: ArrowDownToLine, color: "from-amber-500 to-orange-600", prefill: "topup" },
+    32→    32→  { id: "pay", labelKey: "common.bills", icon: Receipt, color: "from-rose-500 to-red-600" },
+    33→    33→  { id: "pay", labelKey: "common.airtime", icon: Smartphone, color: "from-teal-500 to-cyan-600" },
+    34→    34→  { id: "referral", labelKey: "common.rewards", icon: Gift, color: "from-fuchsia-500 to-pink-600" },
+    35→    35→];
+    36→    36→
+    37→    37→export function DashboardView() {
+    38→    38→  const { setView, setSendPrefill, userCurrency } = useApp();
+    39→    39→  const { fmt, symbol, currency: userCur } = useFormatMoney();
+    40→    40→  const { t } = useTranslation();
+    41→    41→  const { data: walletData } = useFetch<{ wallets: any[]; totalNGN: number }>("/api/wallets");
+    42→    42→  const { data: txData } = useFetch<{ transactions: any[] }>("/api/transactions?limit=8");
+    43→    43→  const { data: userData } = useFetch<{ user: any }>("/api/me");
+    44→    44→  const [hidden, setHidden] = useState(false);
+    45→    45→
+    46→    46→  const user = userData?.user;
+    47→    47→  const wallets = walletData?.wallets ?? [];
+    48→    48→  const totalNGN = walletData?.totalNGN ?? 0;
+    49→    49→  const transactions = txData?.transactions ?? [];
+    50→    50→
+    51→    51→  // Convert total to user's preferred currency
+    52→    52→  const RATES_TO_NGN: Record<string, number> = {
+    53→    53→    NGN: 1, USD: 1540, EUR: 1660, GBP: 1950, GHS: 125, KES: 12,
+    54→    54→    XAF: 2.55, XOF: 2.55, ZAR: 82, UGX: 0.42, TZS: 0.61, RWF: 1.28,
+    55→    55→    ETB: 27.5, EGP: 32, MAD: 154, CNY: 213, AED: 419, INR: 18.5,
+    56→    56→  };
+    57→    57→  const userTotal = totalNGN / (RATES_TO_NGN[userCurrency] || 1);
+    58→    58→
+    59→    59→  // build 30-day series from transactions
+    60→    60→  const series = build30DaySeries(transactions);
+    61→    61→  const spendingByCat = buildCategoryBreakdown(transactions);
+    62→    62→
+    63→    63→  // monthly income/expense
+    64→    64→  const now = new Date();
+    65→    65→  const monthTx = transactions.filter((tx) => new Date(tx.createdAt).getMonth() === now.getMonth());
+    66→    66→  const income = monthTx.filter((tx) => tx.direction === "credit" && tx.status === "completed").reduce((s, tx) => s + tx.amount, 0);
+    67→    67→  const expense = monthTx.filter((tx) => tx.direction === "debit" && tx.status === "completed").reduce((s, tx) => s + tx.amount, 0);
+    68→    68→
+    69→    69→  return (
+    70→    70→    <div className="space-y-6">
+    71→    71→      {/* Greeting */}
+    72→    72→      <div className="flex flex-wrap items-end justify-between gap-3">
+    73→    73→        <div>
+    74→    74→          <p className="text-sm text-muted-foreground">
+    75→    75→            {greeting(t)}, {t("dashboard.welcomeBack")}
+    76→    76→          </p>
+    77→    77→          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+    78→    78→            {user?.firstName ? `${user.firstName} ${user.lastName}` : "Adaeze Okonkwo"} <span className="inline-block animate-gentle-float">👋</span>
+    79→    79→          </h1>
+    80→    80→        </div>
+    81→    81→        <div className="flex items-center gap-2">
+    82→    82→          {user?.kycStatus === "verified" ? (
+    83→    83→            <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border-0 rounded-full">
+    84→    84→              <ShieldCheck className="h-3.5 w-3.5 mr-1" /> {t("dashboard.tierVerified", { tier: user.kycTier ?? 1 })}
+    85→    85→            </Badge>
+    86→    86→          ) : (
+    87→    87→            <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setView("kyc")}>
+    88→    88→              <ShieldCheck className="h-4 w-4 mr-1.5" /> {t("dashboard.verifyIdentity")}
+    89→    89→            </Button>
+    90→    90→          )}
+    91→    91→        </div>
+    92→    92→      </div>
+    93→    93→
+    94→    94→      {/* Top grid */}
+    95→    95→      <div className="grid gap-3 lg:gap-4 lg:grid-cols-3">
+    96→    96→        {/* Balance hero card */}
+    97→    97→        <motion.div
+    98→    98→          initial={{ opacity: 0, y: 10 }}
+    99→    99→          animate={{ opacity: 1, y: 0 }}
+   100→   100→          className="lg:col-span-2"
+   101→   101→        >
+   102→   102→          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 p-5 sm:p-7 text-white shadow-premium-lg">
+   103→   103→            <div className="absolute inset-0 opacity-30 mesh-bg" />
+   104→   104→            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+   105→   105→            <div className="absolute -right-6 top-10 h-24 w-24 rounded-full bg-white/10 blur-xl" />
+   106→   106→            <div className="relative">
+   107→   107→              <div className="flex items-start justify-between gap-2">
+   108→   108→                <div className="min-w-0 flex-1">
+   109→   109→                  <p className="text-xs sm:text-sm text-white/80">{t("dashboard.totalBalance")} ({userCurrency})</p>
+   110→   110→                  <div className="mt-1 flex items-center gap-2">
+   111→   111→                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight tabular-nums truncate">
+   112→   112→                      {hidden ? `${CURRENCY_SYMBOL[userCurrency] || ""} • • • •` : <AnimatedNumber value={userTotal} prefix={CURRENCY_SYMBOL[userCurrency] || ""} decimals={2} />}
+   113→   113→                    </h2>
+   114→   114→                    <button onClick={() => setHidden(!hidden)} className="text-white/70 hover:text-white shrink-0">
+   115→   115→                      {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+   116→   116→                    </button>
+   117→   117→                  </div>
+   118→   118→                  <p className="mt-1 text-[10px] sm:text-xs text-white/60 truncate">
+   119→   119→                    {t("dashboard.acrossWallets", { count: wallets.length })}
+   120→   120→                  </p>
+   121→   121→                </div>
+   122→   122→                <div className="flex flex-col items-end gap-1.5 shrink-0">
+   123→   123→                  <Badge className="bg-white/20 text-white border-0 backdrop-blur text-[10px]">
+   124→   124→                    <Zap className="h-2.5 w-2.5 mr-0.5" /> {t("dashboard.instant")}
+   125→   125→                  </Badge>
+   126→   126→                  <div className="flex items-center gap-0.5 text-[10px] sm:text-xs text-white/80">
+   127→   127→                    <TrendingUp className="h-3 w-3" /> +12.4%
+   128→   128→                  </div>
+   129→   129→                </div>
+   130→   130→              </div>
+   131→   131→
+   132→   132→              <div className="mt-3 sm:mt-6 grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5 sm:gap-2">
+   133→   133→                <Button
+   134→   134→                  size="sm"
+   135→   135→                  variant="secondary"
+   136→   136→                  className="bg-white/20 text-white border-0 backdrop-blur hover:bg-white/30 text-xs h-8"
+   137→   137→                  onClick={() => setView("send")}
+   138→   138→                >
+   139→   139→                  <SendHorizontal className="h-3.5 w-3.5 mr-1" /> {t("common.send")}
+   140→   140→                </Button>
+   141→   141→                <Button
+   142→   142→                  size="sm"
+   143→   143→                  variant="secondary"
+   144→   144→                  className="bg-white/20 text-white border-0 backdrop-blur hover:bg-white/30 text-xs h-8"
+   145→   145→                  onClick={() => setView("send")}
+   146→   146→                >
+   147→   147→                  <ArrowDownToLine className="h-3.5 w-3.5 mr-1" /> {t("common.request")}
+   148→   148→                </Button>
+   149→   149→                <Button
+   150→   150→                  size="sm"
+   151→   151→                  variant="secondary"
+   152→   152→                  className="bg-white/20 text-white border-0 backdrop-blur hover:bg-white/30 text-xs h-8"
+   153→   153→                  onClick={() => setView("pay")}
+   154→   154→                >
+   155→   155→                  <QrCode className="h-3.5 w-3.5 mr-1" /> {t("common.scan")}
+   156→   156→                </Button>
+   157→   157→                <Button
+   158→   158→                  size="sm"
+   159→   159→                  variant="secondary"
+   160→   160→                  className="bg-white/20 text-white border-0 backdrop-blur hover:bg-white/30 text-xs h-8"
+   161→   161→                  onClick={() => setView("wallets")}
+   162→   162→                >
+   163→   163→                  <Plus className="h-3.5 w-3.5 mr-1" /> {t("common.add")}
+   164→   164→                </Button>
+   165→   165→              </div>
+   166→   166→            </div>
+   167→   167→          </Card>
+   168→   168→        </motion.div>
+   169→   169→
+   170→   170→        {/* Income/Expense mini — stack on mobile, column on desktop */}
+   171→   171→        <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 lg:gap-4">
+   172→   172→          <Card className="p-3 sm:p-4 card-lift border-border/60 shadow-premium-sm">
+   173→   173→            <div className="flex items-center justify-between gap-1">
+   174→   174→              <div className="flex items-center gap-2 min-w-0">
+   175→   175→                <div className="grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-lg bg-emerald-500/15 text-emerald-600 shrink-0">
+   176→   176→                  <ArrowDownRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+   177→   177→                </div>
+   178→   178→                <div className="min-w-0">
+   179→   179→                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{t("dashboard.income")} (MTD)</p>
+   180→   180→                  <p className="text-sm sm:text-lg font-bold tabular-nums truncate">{fmt(income)}</p>
+   181→   181→                </div>
+   182→   182→              </div>
+   183→   183→              <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 shrink-0 text-[9px]">+8.2%</Badge>
+   184→   184→            </div>
+   185→   185→          </Card>
+   186→   186→          <Card className="p-3 sm:p-4 card-lift border-border/60 shadow-premium-sm">
+   187→   187→            <div className="flex items-center justify-between gap-1">
+   188→   188→              <div className="flex items-center gap-2 min-w-0">
+   189→   189→                <div className="grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-lg bg-rose-500/15 text-rose-500 shrink-0">
+   190→   190→                  <ArrowUpRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+   191→   191→                </div>
+   192→   192→                <div className="min-w-0">
+   193→   193→                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{t("dashboard.spending")} (MTD)</p>
+   194→   194→                  <p className="text-sm sm:text-lg font-bold tabular-nums truncate">{fmt(expense)}</p>
+   195→   195→                </div>
+   196→   196→              </div>
+   197→   197→              <Badge variant="outline" className="text-rose-600 border-rose-500/30 shrink-0 text-[9px]">-3.1%</Badge>
+   198→   198→            </div>
+   199→   199→          </Card>
+   200→   200→        </div>
+   201→   201→      </div>
+   202→   202→
+   203→   203→      {/* Quick actions */}
+   204→   204→      <div className="grid grid-cols-3 gap-2 sm:gap-3 sm:grid-cols-6">
+   205→   205→        {QUICK_ACTIONS.map((a) => {
+   206→   206→          const Icon = a.icon;
+   207→   207→          return (
+   208→   208→            <button
+   209→   209→              key={a.labelKey}
+   210→   210→              onClick={() => {
+   211→   211→                setSendPrefill(a.prefill ? { recipient: a.prefill } : null);
+   212→   212→                setView(a.id as any);
+   213→   213→              }}
+   214→   214→              className="group flex flex-col items-center gap-1.5 sm:gap-2"
+   215→   215→            >
+   216→   216→              <div className={cn("grid h-11 w-11 sm:h-14 sm:w-14 place-items-center rounded-2xl bg-gradient-to-br text-white shadow-lg transition group-hover:scale-105", a.color)}>
+   217→   217→                <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
+   218→   218→              </div>
+   219→   219→              <span className="text-[11px] sm:text-xs font-medium">{t(a.labelKey)}</span>
+   220→   220→            </button>
+   221→   221→          );
+   222→   222→        })}
+   223→   223→      </div>
+   224→   224→
+   225→   225→      {/* Wallets strip + spending chart */}
+   226→   226→      <div className="grid gap-4 lg:grid-cols-3">
+   227→   227→        {/* Wallets */}
+   228→   228→        <Card className="p-5 lg:col-span-1">
+   229→   229→          <div className="mb-3 flex items-center justify-between">
+   230→   230→            <h3 className="font-semibold">{t("dashboard.myWallets")}</h3>
+   231→   231→            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setView("wallets")}>
+   232→   232→              {t("dashboard.viewAll")} <ChevronRight className="h-3.5 w-3.5" />
+   233→   233→            </Button>
+   234→   234→          </div>
+   235→   235→          <div className="space-y-2.5">
+   236→   236→            {wallets.length === 0 && [1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
+   237→   237→            {wallets.slice(0, 4).map((w) => (
+   238→   238→              <button
+   239→   239→                key={w.id}
+   240→   240→                onClick={() => setView("wallets")}
+   241→   241→                className="flex w-full items-center justify-between rounded-xl border bg-card p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+   242→   242→              >
+   243→   243→                <div className="flex items-center gap-3">
+   244→   244→                  <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 font-bold text-primary">
+   245→   245→                    {w.currency}
+   246→   246→                  </div>
+   247→   247→                  <div>
+   248→   248→                    <p className="text-sm font-medium">{w.label}</p>
+   249→   249→                    <p className="text-xs text-muted-foreground">{w.type === "primary" ? t("dashboard.main") : w.type}</p>
+   250→   250→                  </div>
+   251→   251→                </div>
+   252→   252→                <div className="text-right">
+   253→   253→                  <p className="text-sm font-bold tabular-nums">{formatMoney(w.balance, w.currency)}</p>
+   254→   254→                </div>
+   255→   255→              </button>
+   256→   256→            ))}
+   257→   257→          </div>
+   258→   258→        </Card>
+   259→   259→
+   260→   260→        {/* Spending chart */}
+   261→   261→        <Card className="p-5 lg:col-span-2">
+   262→   262→          <div className="mb-3 flex items-center justify-between">
+   263→   263→            <div>
+   264→   264→              <h3 className="font-semibold">{t("dashboard.cashFlow")}</h3>
+   265→   265→              <p className="text-xs text-muted-foreground">{t("dashboard.last30Days")}</p>
+   266→   266→            </div>
+   267→   267→            <div className="flex items-center gap-3 text-xs">
+   268→   268→              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Inflow</span>
+   269→   269→              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-500" /> Outflow</span>
+   270→   270→            </div>
+   271→   271→          </div>
+   272→   272→          <ResponsiveContainer width="100%" height={240}>
+   273→   273→            <AreaChart data={series} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+   274→   274→              <defs>
+   275→   275→                <linearGradient id="gIn" x1="0" y1="0" x2="0" y2="1">
+   276→   276→                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.4} />
+   277→   277→                  <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+   278→   278→                </linearGradient>
+   279→   279→                <linearGradient id="gOut" x1="0" y1="0" x2="0" y2="1">
+   280→   280→                  <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.3} />
+   281→   281→                  <stop offset="100%" stopColor="#f43f5e" stopOpacity={0} />
+   282→   282→                </linearGradient>
+   283→   283→              </defs>
+   284→   284→              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+   285→   285→              <XAxis dataKey="day" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} interval={4} />
+   286→   286→              <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${v / 1000}k`} />
+   287→   287→              <Tooltip
+   288→   288→                contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", fontSize: 12 }}
+   289→   289→                formatter={(v: any) => formatMoney(Number(v), "NGN")}
+   290→   290→              />
+   291→   291→              <Area type="monotone" dataKey="in" stroke="#10b981" strokeWidth={2} fill="url(#gIn)" />
+   292→   292→              <Area type="monotone" dataKey="out" stroke="#f43f5e" strokeWidth={2} fill="url(#gOut)" />
+   293→   293→            </AreaChart>
+   294→   294→          </ResponsiveContainer>
+   295→   295→        </Card>
+   296→   296→      </div>
+   297→   297→
+   298→   298→      {/* Recent transactions + spending by category */}
+   299→   299→      <div className="grid gap-4 lg:grid-cols-3">
+   300→   300→        <Card className="p-5 lg:col-span-2">
+   301→   301→          <div className="mb-3 flex items-center justify-between">
+   302→   302→            <h3 className="font-semibold">{t("dashboard.recentActivity")}</h3>
+   303→   303→            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setView("transactions")}>
+   304→   304→              {t("dashboard.viewAll")} <ChevronRight className="h-3.5 w-3.5" />
+   305→   305→            </Button>
+   306→   306→          </div>
+   307→   307→          <div className="space-y-1">
+   308→   308→            {transactions.length === 0 && [1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+   309→   309→            {transactions.slice(0, 6).map((tx) => (
+   310→   310→              <TxRow key={tx.id} tx={tx} onClick={() => setView("transactions")} />
+   311→   311→            ))}
+   312→   312→          </div>
+   313→   313→        </Card>
+   314→   314→
+   315→   315→        <Card className="p-5">
+   316→   316→          <h3 className="font-semibold mb-1">{t("dashboard.spendingByCategory")}</h3>
+   317→   317→          <p className="text-xs text-muted-foreground mb-3">{t("dashboard.thisMonth")}</p>
+   318→   318→          <ResponsiveContainer width="100%" height={180}>
+   319→   319→            <PieChart>
+   320→   320→              <Pie data={spendingByCat} dataKey="value" nameKey="name" innerRadius={50} outerRadius={75} paddingAngle={3}>
+   321→   321→                {spendingByCat.map((_, i) => (
+   322→   322→                  <Cell key={i} fill={["#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4", "#f43f5e"][i % 6]} />
+   323→   323→                ))}
+   324→   324→              </Pie>
+   325→   325→              <Tooltip formatter={(v: any) => formatMoney(Number(v), "NGN")} contentStyle={{ borderRadius: 12, fontSize: 12 }} />
+   326→   326→            </PieChart>
+   327→   327→          </ResponsiveContainer>
+   328→   328→          <div className="mt-3 space-y-1.5">
+   329→   329→            {spendingByCat.slice(0, 4).map((c, i) => (
+   330→   330→              <div key={c.name} className="flex items-center justify-between text-xs">
+   331→   331→                <span className="flex items-center gap-2">
+   332→   332→                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: ["#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4", "#f43f5e"][i % 6] }} />
+   333→   333→                  <span className="capitalize">{c.name}</span>
+   334→   334→                </span>
+   335→   335→                <span className="font-medium tabular-nums">{fmt(c.value)}</span>
+   336→   336→              </div>
+   337→   337→            ))}
+   338→   338→          </div>
+   339→   339→        </Card>
+   340→   340→      </div>
+   341→   341→
+   342→   342→      {/* Savings goals preview + Budget progress */}
+   343→   343→      <div className="grid gap-4 lg:grid-cols-2">
+   344→   344→        {/* Savings goals */}
+   345→   345→        <Card className="p-5">
+   346→   346→          <div className="mb-3 flex items-center justify-between">
+   347→   347→            <div>
+   348→   348→              <h3 className="font-semibold">{t("dashboard.savingsGoals")}</h3>
+   349→   349→              <p className="text-xs text-muted-foreground">{t("dashboard.yourProgress")}</p>
+   350→   350→            </div>
+   351→   351→            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setView("savings")}>
+   352→   352→              {t("dashboard.viewAll")} <ChevronRight className="h-3.5 w-3.5" />
+   353→   353→            </Button>
+   354→   354→          </div>
+   355→   355→          <DashboardSavingsPreview onClick={() => setView("savings")} />
+   356→   356→        </Card>
+   357→   357→
+   358→   358→        {/* Budget progress */}
+   359→   359→        <Card className="p-5">
+   360→   360→          <div className="mb-3 flex items-center justify-between">
+   361→   361→            <div>
+   362→   362→              <h3 className="font-semibold">{t("dashboard.monthlyBudgets")}</h3>
+   363→   363→              <p className="text-xs text-muted-foreground">{t("dashboard.spendingVsLimit")}</p>
+   364→   364→            </div>
+   365→   365→            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setView("budgets")}>
+   366→   366→              {t("common.manage")} <ChevronRight className="h-3.5 w-3.5" />
+   367→   367→            </Button>
+   368→   368→          </div>
+   369→   369→          <DashboardBudgetsPreview onClick={() => setView("budgets")} />
+   370→   370→        </Card>
+   371→   371→      </div>
+   372→   372→
+   373→   373→      {/* Financial Health Score */}
+   374→   374→      <FinancialHealthWidget onClick={() => setView("analytics")} />
+   375→   375→
+   376→   376→      {/* Cards promo */}
+   377→   377→      <Card className="overflow-hidden border-0 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-5 text-white shadow-premium-lg">
+   378→   378→        <div className="flex flex-wrap items-center justify-between gap-4">
+   379→   379→          <div className="flex items-center gap-4">
+   380→   380→            <div className="grid h-12 w-16 place-items-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-black shadow-premium-sm">
+   381→   381→              <Wallet className="h-6 w-6" />
+   382→   382→            </div>
+   383→   383→            <div>
+   384→   384→              <h3 className="font-semibold">{t("dashboard.getVirtualCard")}</h3>
+   385→   385→              <p className="text-sm text-white/70">{t("dashboard.virtualCardDesc")}</p>
+   386→   386→            </div>
+   387→   387→          </div>
+   388→   388→          <Button variant="secondary" className="bg-white text-slate-900 hover:bg-white/90" onClick={() => setView("cards")}>
+   389→   389→            {t("dashboard.orderCard")} <ArrowRight className="h-4 w-4 ml-1" />
+   390→   390→          </Button>
+   391→   391→        </div>
+   392→   392→      </Card>
+   393→   393→    </div>
+   394→   394→  );
+   395→   395→}
+   396→   396→
+   397→   397→function TxRow({ tx, onClick }: { tx: any; onClick?: () => void }) {
+   398→   398→  const isCredit = tx.direction === "credit";
+   399→   399→  const icon = isCredit ? ArrowDownRight : ArrowUpRight;
+   400→   400→  const Icon = icon;
+   401→   401→  return (
+   402→   402→    <button
+   403→   403→      onClick={onClick}
+   404→   404→      className="flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left transition hover:bg-muted/60"
+   405→   405→    >
+   406→   406→      <div className={cn(
+   407→   407→        "grid h-10 w-10 shrink-0 place-items-center rounded-full",
+   408→   408→        isCredit ? "bg-emerald-500/15 text-emerald-600" : "bg-rose-500/15 text-rose-500",
+   409→   409→      )}>
+   410→   410→        <Icon className="h-4 w-4" />
+   411→   411→      </div>
+   412→   412→      <div className="flex-1 min-w-0">
+   413→   413→        <p className="text-sm font-medium truncate">{tx.counterpartyName || tx.description}</p>
+   414→   414→        <p className="text-xs text-muted-foreground capitalize">
+   415→   415→          {tx.type} · {timeAgo(tx.createdAt)}
+   416→   416→        </p>
+   417→   417→      </div>
+   418→   418→      <div className="text-right">
+   419→   419→        <p className={cn("text-sm font-semibold tabular-nums", isCredit ? "text-emerald-600" : "text-foreground")}>
+   420→   420→          {isCredit ? "+" : "-"}{formatMoney(tx.amount, tx.currency)}
+   421→   421→        </p>
+   422→   422→        <p className="text-[10px] text-muted-foreground uppercase">{tx.status}</p>
+   423→   423→      </div>
+   424→   424→    </button>
+   425→   425→  );
+   426→   426→}
+   427→   427→
+   428→   428→function greeting(t: (key: string) => string) {
+   429→   429→  const h = new Date().getHours();
+   430→   430→  if (h < 12) return t("dashboard.goodMorning");
+   431→   431→  if (h < 17) return t("dashboard.goodAfternoon");
+   432→   432→  return t("dashboard.goodEvening");
+   433→   433→}
+   434→   434→
+   435→   435→function build30DaySeries(transactions: any[]) {
+   436→   436→  const days: { day: string; in: number; out: number }[] = [];
+   437→   437→  for (let i = 29; i >= 0; i--) {
+   438→   438→    const d = new Date(Date.now() - i * 86400000);
+   439→   439→    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+   440→   440→    const dayEnd = new Date(dayStart.getTime() + 86400000);
+   441→   441→    const dayTx = transactions.filter((t) => new Date(t.createdAt) >= dayStart && new Date(t.createdAt) < dayEnd);
+   442→   442→    days.push({
+   443→   443→      day: dayStart.toLocaleDateString("en", { month: "short", day: "numeric" }),
+   444→   444→      in: dayTx.filter((t) => t.direction === "credit" && t.status === "completed").reduce((s, t) => s + t.amount, 0),
+   445→   445→      out: dayTx.filter((t) => t.direction === "debit" && t.status === "completed").reduce((s, t) => s + t.amount, 0),
+   446→   446→    });
+   447→   447→  }
+   448→   448→  return days;
+   449→   449→}
+   450→   450→
+   451→   451→function buildCategoryBreakdown(transactions: any[]) {
+   452→   452→  const map: Record<string, number> = {};
+   453→   453→  for (const t of transactions) {
+   454→   454→    if (t.direction === "debit" && t.status === "completed") {
+   455→   455→      map[t.category] = (map[t.category] || 0) + t.amount;
+   456→   456→    }
+   457→   457→  }
+   458→   458→  return Object.entries(map)
+   459→   459→    .map(([name, value]) => ({ name, value }))
+   460→   460→    .sort((a, b) => b.value - a.value)
+   461→   461→    .slice(0, 6);
+   462→   462→}
+   463→   463→
+   464→   464→function DashboardSavingsPreview({ onClick }: { onClick: () => void }) {
+   465→   465→  const { fmt } = useFormatMoney();
+   466→   466→  const { data } = useFetch<{ goals: any[]; totalSaved: number }>("/api/savings-goals");
+   467→   467→  const goals = (data?.goals ?? []).filter((g) => g.status !== "completed").slice(0, 3);
+   468→   468→  if (!data) return <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-12" />)}</div>;
+   469→   469→  if (goals.length === 0) {
+   470→   470→    return (
+   471→   471→      <div className="grid place-items-center py-6 text-center">
+   472→   472→        <p className="text-sm text-muted-foreground mb-2">No active savings goals</p>
+   473→   473→        <Button size="sm" variant="outline" onClick={onClick}>Create a goal</Button>
+   474→   474→      </div>
+   475→   475→    );
+   476→   476→  }
+   477→   477→  return (
+   478→   478→    <div className="space-y-3">
+   479→   479→      {goals.map((g) => {
+   480→   480→        const pct = (g.currentAmount / g.targetAmount) * 100;
+   481→   481→        return (
+   482→   482→          <button key={g.id} onClick={onClick} className="w-full text-left group">
+   483→   483→            <div className="flex items-center gap-2.5">
+   484→   484→              <span className="text-lg">{g.icon}</span>
+   485→   485→              <div className="flex-1 min-w-0">
+   486→   486→                <div className="flex items-center justify-between">
+   487→   487→                  <p className="text-sm font-medium truncate">{g.name}</p>
+   488→   488→                  <span className="text-xs text-muted-foreground tabular-nums">{pct.toFixed(0)}%</span>
+   489→   489→                </div>
+   490→   490→                <Progress value={pct} className="h-1.5 mt-1" />
+   491→   491→                <p className="text-[10px] text-muted-foreground mt-0.5">
+   492→   492→                  {fmt(g.currentAmount)} of {fmt(g.targetAmount)}
+   493→   493→                </p>
+   494→   494→              </div>
+   495→   495→            </div>
+   496→   496→          </button>
+   497→   497→        );
+   498→   498→      })}
+   499→   499→    </div>
+   500→   500→  );
+   501→   501→}
+   502→   502→
+   503→   503→function DashboardBudgetsPreview({ onClick }: { onClick: () => void }) {
+   504→   504→  const { fmt } = useFormatMoney();
+   505→   505→  const { data } = useFetch<{ budgets: any[]; totalLimit: number; totalSpent: number }>("/api/budgets");
+   506→   506→  const budgets = (data?.budgets ?? []).slice(0, 4);
+   507→   507→  if (!data) return <div className="space-y-2">{[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-10" />)}</div>;
+   508→   508→  if (budgets.length === 0) {
+   509→   509→    return (
+   510→   510→      <div className="grid place-items-center py-6 text-center">
+   511→   511→        <p className="text-sm text-muted-foreground mb-2">No budgets set</p>
+   512→   512→        <Button size="sm" variant="outline" onClick={onClick}>Create a budget</Button>
+   513→   513→      </div>
+   514→   514→    );
+   515→   515→  }
+   516→   516→  return (
+   517→   517→    <div className="space-y-2.5">
+   518→   518→      {budgets.map((b) => {
+   519→   519→        const pct = (b.spent / b.limit) * 100;
+   520→   520→        const over = pct > 100;
+   521→   521→        const warn = pct >= 80 && pct <= 100;
+   522→   522→        return (
+   523→   523→          <button key={b.id} onClick={onClick} className="w-full text-left group">
+   524→   524→            <div className="flex items-center justify-between text-xs mb-1">
+   525→   525→              <span className="font-medium">{b.category}</span>
+   526→   526→              <span className={cn("tabular-nums", over ? "text-rose-600" : warn ? "text-amber-600" : "text-muted-foreground")}>
+   527→   527→                {fmt(b.spent)} / {fmt(b.limit)}
+   528→   528→              </span>
+   529→   529→            </div>
+   530→   530→            <Progress
+   531→   531→              value={Math.min(pct, 100)}
+   532→   532→              className={cn("h-1.5", over && "[&>div]:bg-rose-500", warn && "[&>div]:bg-amber-500")}
+   533→   533→            />
+   534→   534→          </button>
+   535→   535→        );
+   536→   536→      })}
+   537→   537→    </div>
+   538→   538→  );
+   539→   539→}
+   540→   540→
+   541→   541→function FinancialHealthWidget({ onClick }: { onClick: () => void }) {
+   542→   542→  const { fmt } = useFormatMoney();
+   543→   543→  const { data } = useFetch<any>("/api/insights");
+   544→   544→  if (!data) return <Card className="p-5"><Skeleton className="h-32" /></Card>;
+   545→   545→
+   546→   546→  const { score, grade, insights, savingsRate, expenseRatio } = data;
+   547→   547→  const gradeColors: Record<string, string> = {
+   548→   548→    emerald: "from-emerald-500 to-teal-600",
+   549→   549→    teal: "from-teal-500 to-emerald-600",
+   550→   550→    amber: "from-amber-500 to-orange-600",
+   551→   551→    orange: "from-orange-500 to-rose-600",
+   552→   552→    rose: "from-rose-500 to-red-600",
+   553→   553→  };
+   554→   554→  const gradient = gradeColors[grade.color] || gradeColors.emerald;
+   555→   555→
+   556→   556→  return (
+   557→   557→    <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 text-white shadow-premium-lg">
+   558→   558→      <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/10 blur-2xl" />
+   559→   559→      <div className="relative flex flex-wrap items-center justify-between gap-6">
+   560→   560→        {/* Score gauge */}
+   561→   561→        <div className="flex items-center gap-5">
+   562→   562→          <div className={cn("relative grid h-24 w-24 place-items-center rounded-full bg-gradient-to-br shadow-lg", gradient)}>
+   563→   563→            <div className="grid h-20 w-20 place-items-center rounded-full bg-slate-900">
+   564→   564→              <div className="text-center">
+   565→   565→                <p className="text-3xl font-bold tabular-nums">{score}</p>
+   566→   566→                <p className="text-[10px] text-white/60">/ 100</p>
+   567→   567→              </div>
+   568→   568→            </div>
+   569→   569→            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-900 shadow">
+   570→   570→              {grade.letter}
+   571→   571→            </div>
+   572→   572→          </div>
+   573→   573→          <div>
+   574→   574→            <p className="text-xs text-white/60 uppercase tracking-wider">Financial Health</p>
+   575→   575→            <h3 className="text-xl font-bold">{grade.label}</h3>
+   576→   576→            <div className="mt-1 flex gap-3 text-xs text-white/70">
+   577→   577→              <span>Savings: <span className="font-semibold text-white">{savingsRate.toFixed(1)}%</span></span>
+   578→   578→              <span>Expense ratio: <span className="font-semibold text-white">{expenseRatio.toFixed(0)}%</span></span>
+   579→   579→            </div>
+   580→   580→          </div>
+   581→   581→        </div>
+   582→   582→
+   583→   583→        {/* Top insights */}
+   584→   584→        <div className="flex-1 min-w-[250px] space-y-2">
+   585→   585→          {insights.slice(0, 2).map((ins: any, i: number) => (
+   586→   586→            <div key={i} className="flex items-start gap-2 rounded-lg bg-white/10 px-3 py-2 backdrop-blur">
+   587→   587→              <span className="text-lg">{ins.icon}</span>
+   588→   588→              <div className="flex-1 min-w-0">
+   589→   589→                <p className="text-xs font-semibold">{ins.title}</p>
+   590→   590→                <p className="text-[11px] text-white/70 line-clamp-1">{ins.message}</p>
+   591→   591→              </div>
+   592→   592→            </div>
+   593→   593→          ))}
+   594→   594→        </div>
+   595→   595→
+   596→   596→        <Button variant="secondary" className="bg-white/20 text-white border-0 backdrop-blur hover:bg-white/30" onClick={onClick}>
+   597→   597→          View Details <ChevronRight className="h-4 w-4 ml-1" />
+   598→   598→        </Button>
+   599→   599→      </div>
+   600→   600→    </Card>
+   601→   601→  );
+   602→   602→}
+   603→   603→

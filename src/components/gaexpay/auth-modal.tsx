@@ -67,14 +67,14 @@ const STRENGTH_COLORS = [
   "bg-red-500",
   "bg-amber-500",
   "bg-yellow-400",
-  "bg-violet-500",
+  "bg-emerald-500",
 ];
 const STRENGTH_TEXT = [
   "text-muted-foreground",
   "text-red-500",
   "text-amber-500",
   "text-yellow-500",
-  "text-violet-500",
+  "text-emerald-500",
 ];
 
 // ---------------------------------------------------------------------------
@@ -348,7 +348,7 @@ export function AuthModal({ open, mode, onClose, onSuccess }: AuthModalProps) {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
         showCloseButton
-        className="max-w-md gap-0 overflow-hidden p-0 sm:rounded-2xl [&>button]:top-3 [&>button]:right-3 [&>button]:z-30"
+        className="max-w-md gap-0 overflow-hidden p-0 sm:rounded-3xl shadow-premium-xl [&>button]:top-3 [&>button]:right-3 [&>button]:z-30"
       >
         <DialogTitle className="sr-only">
           {flow === "forgot" ? "Reset password" : flow === "reset" ? "Set new password" : tab === "login" ? "Sign in to GaexPay" : "Create your GaexPay account"}
@@ -357,11 +357,11 @@ export function AuthModal({ open, mode, onClose, onSuccess }: AuthModalProps) {
           GaexPay authentication — sign in or create a personal / business account.
         </DialogDescription>
 
-        {/* Gradient header */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-violet-700 px-6 pb-5 pt-6 text-white">
+        {/* Gradient header — premium emerald */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 px-6 pb-5 pt-6 text-white">
           <div className="absolute inset-0 opacity-30">
             <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/20 blur-2xl" />
-            <div className="absolute -left-10 bottom-0 h-24 w-24 rounded-full bg-purple-300/30 blur-2xl" />
+            <div className="absolute -left-10 bottom-0 h-24 w-24 rounded-full bg-emerald-300/30 blur-2xl" />
           </div>
           <div className="relative flex items-center justify-between">
             <Logo size={28} className="text-white [&_span]:text-white" />
@@ -417,15 +417,15 @@ export function AuthModal({ open, mode, onClose, onSuccess }: AuthModalProps) {
                     onChange={(e) => setForgotEmail(e.target.value)}
                     required
                   />
-                  <Button type="submit" disabled={loading} className="h-11 w-full rounded-lg">
+                  <Button type="submit" disabled={loading} className="h-11 w-full rounded-xl shadow-premium-sm">
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Send reset link
                   </Button>
                 </>
               ) : (
-                <div className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-4 text-sm">
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm">
                   <div className="flex items-start gap-2">
-                    <Mail className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
+                    <Mail className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                     <div>
                       <p className="font-medium text-foreground">Check your inbox</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
@@ -479,15 +479,15 @@ export function AuthModal({ open, mode, onClose, onSuccess }: AuthModalProps) {
                       </button>
                     </div>
                   </div>
-                  <Button type="submit" disabled={loading} className="h-11 w-full rounded-lg">
+                  <Button type="submit" disabled={loading} className="h-11 w-full rounded-xl shadow-premium-sm">
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Reset password
                   </Button>
                 </>
               ) : (
-                <div className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-4 text-sm">
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm">
                   <div className="flex items-start gap-2">
-                    <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
+                    <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                     <div>
                       <p className="font-medium text-foreground">Password reset</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
@@ -510,9 +510,9 @@ export function AuthModal({ open, mode, onClose, onSuccess }: AuthModalProps) {
           {/* ---------- AUTH (login + signup tabs) ---------- */}
           {flow === "auth" && (
             <Tabs value={tab} onValueChange={(v) => setTab(v as Mode)} className="w-full">
-              <TabsList className="grid h-10 w-full grid-cols-2 rounded-lg">
-                <TabsTrigger value="login" className="rounded-md text-sm">Sign In</TabsTrigger>
-                <TabsTrigger value="signup" className="rounded-md text-sm">Create Account</TabsTrigger>
+              <TabsList className="grid h-11 w-full grid-cols-2 rounded-xl">
+                <TabsTrigger value="login" className="rounded-lg text-sm font-semibold">Sign In</TabsTrigger>
+                <TabsTrigger value="signup" className="rounded-lg text-sm font-semibold">Create Account</TabsTrigger>
               </TabsList>
 
               {/* ---------------- SIGN IN ---------------- */}
@@ -560,7 +560,7 @@ export function AuthModal({ open, mode, onClose, onSuccess }: AuthModalProps) {
                       </button>
                     </div>
                   </div>
-                  <Button type="submit" disabled={loading} className="h-11 w-full rounded-lg">
+                  <Button type="submit" disabled={loading} className="h-11 w-full rounded-xl shadow-premium-sm">
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Sign In <ArrowRight className="ml-1 h-4 w-4" />
                   </Button>
@@ -581,7 +581,7 @@ export function AuthModal({ open, mode, onClose, onSuccess }: AuthModalProps) {
                     variant="outline"
                     onClick={handleDemo}
                     disabled={loading}
-                    className="h-11 w-full rounded-lg"
+                    className="h-11 w-full rounded-xl"
                   >
                     <Sparkles className="mr-2 h-4 w-4 text-primary" />
                     Try Demo Account
@@ -748,7 +748,7 @@ export function AuthModal({ open, mode, onClose, onSuccess }: AuthModalProps) {
                     )}
                   </div>
 
-                  <Button type="submit" disabled={loading} className="h-11 w-full rounded-lg">
+                  <Button type="submit" disabled={loading} className="h-11 w-full rounded-xl shadow-premium-sm">
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Create Account <ArrowRight className="ml-1 h-4 w-4" />
                   </Button>

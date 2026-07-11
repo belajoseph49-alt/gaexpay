@@ -37,86 +37,158 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 16px);
 }
 
-/* ─────────────────────────────────────────────
-   LIGHT THEME — white, clean, purple accent
-   Inspired by the video app design (#6A11CB purple)
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   GAEXPAY DESIGN SYSTEM — Premium Fintech (MIMI-Pay-level)
+
+   Principles:
+   • Light, airy surfaces with generous whitespace
+   • Single emerald accent (brand) + violet secondary (used sparingly)
+   • Soft, layered shadows — never harsh
+   • Refined typography scale, tabular numbers for money
+   • Calm micro-interactions (160–220ms cubic-bezier)
+   • NO indigo, NO blue as primary accents
+   ═══════════════════════════════════════════════════════════════ */
+
 :root {
-  --radius: 0.875rem;
-  --background: oklch(0.99 0 0);
-  --foreground: oklch(0.15 0.005 285);
+  /* Radius scale — generous but not bubble-gummy */
+  --radius: 1rem;
+
+  /* Surfaces — near-white canvas, pure-white cards */
+  --background: oklch(0.985 0.002 165);
+  --foreground: oklch(0.18 0.01 165);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0.005 285);
+  --card-foreground: oklch(0.18 0.01 165);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0.005 285);
-  --primary: oklch(0.50 0.20 285);
+  --popover-foreground: oklch(0.18 0.01 165);
+
+  /* Primary — GaexPay emerald */
+  --primary: oklch(0.62 0.14 162);
   --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.96 0.005 285);
-  --secondary-foreground: oklch(0.22 0.01 285);
-  --muted: oklch(0.97 0.003 285);
-  --muted-foreground: oklch(0.50 0.01 285);
-  --accent: oklch(0.93 0.03 285);
-  --accent-foreground: oklch(0.22 0.04 285);
-  --destructive: oklch(0.56 0.22 25);
-  --border: oklch(0.90 0.005 285);
-  --input: oklch(0.92 0.005 285);
-  --ring: oklch(0.50 0.20 285);
-  --chart-1: oklch(0.50 0.20 285);
-  --chart-2: oklch(0.60 0.15 195);
-  --chart-3: oklch(0.72 0.14 85);
-  --chart-4: oklch(0.58 0.17 300);
-  --chart-5: oklch(0.62 0.19 25);
-  --sidebar: oklch(0.98 0.002 285);
-  --sidebar-foreground: oklch(0.15 0.005 285);
-  --sidebar-primary: oklch(0.50 0.20 285);
+
+  /* Secondary — soft neutral */
+  --secondary: oklch(0.96 0.004 165);
+  --secondary-foreground: oklch(0.25 0.01 165);
+
+  /* Muted — for labels, captions, supporting text */
+  --muted: oklch(0.97 0.003 165);
+  --muted-foreground: oklch(0.52 0.012 165);
+
+  /* Accent — very soft emerald tint for hover backgrounds */
+  --accent: oklch(0.95 0.02 162);
+  --accent-foreground: oklch(0.30 0.05 162);
+
+  /* Semantic colors */
+  --success: oklch(0.62 0.14 152);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.72 0.16 70);
+  --warning-foreground: oklch(0.20 0.02 70);
+  --info: oklch(0.62 0.12 220);
+  --info-foreground: oklch(0.99 0 0);
+  --destructive: oklch(0.58 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+
+  /* Borders & inputs — barely-there hairlines */
+  --border: oklch(0.92 0.004 165);
+  --input: oklch(0.94 0.004 165);
+  --ring: oklch(0.62 0.14 162);
+
+  /* Charts — coordinated palette, no clashing */
+  --chart-1: oklch(0.62 0.14 162);
+  --chart-2: oklch(0.62 0.16 285);
+  --chart-3: oklch(0.72 0.14 70);
+  --chart-4: oklch(0.60 0.13 195);
+  --chart-5: oklch(0.62 0.18 25);
+
+  /* Sidebar — slightly off-canvas, frosted */
+  --sidebar: oklch(0.99 0.001 165);
+  --sidebar-foreground: oklch(0.18 0.01 165);
+  --sidebar-primary: oklch(0.62 0.14 162);
   --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.93 0.03 285);
-  --sidebar-accent-foreground: oklch(0.22 0.04 285);
-  --sidebar-border: oklch(0.90 0.005 285);
-  --sidebar-ring: oklch(0.50 0.20 285);
+  --sidebar-accent: oklch(0.95 0.02 162);
+  --sidebar-accent-foreground: oklch(0.30 0.05 162);
+  --sidebar-border: oklch(0.93 0.003 165);
+  --sidebar-ring: oklch(0.62 0.14 162);
+
+  /* Premium layered shadows — soft, never harsh */
+  --shadow-xs: 0 1px 2px 0 oklch(0.18 0.01 165 / 0.04);
+  --shadow-sm: 0 1px 3px 0 oklch(0.18 0.01 165 / 0.06), 0 1px 2px -1px oklch(0.18 0.01 165 / 0.05);
+  --shadow-md: 0 4px 12px -2px oklch(0.18 0.01 165 / 0.08), 0 2px 6px -2px oklch(0.18 0.01 165 / 0.05);
+  --shadow-lg: 0 12px 28px -6px oklch(0.18 0.01 165 / 0.10), 0 6px 12px -4px oklch(0.18 0.01 165 / 0.06);
+  --shadow-xl: 0 24px 48px -8px oklch(0.18 0.01 165 / 0.14), 0 12px 24px -8px oklch(0.18 0.01 165 / 0.08);
+  --shadow-glow: 0 0 0 1px oklch(0.62 0.14 162 / 0.10), 0 8px 24px -4px oklch(0.62 0.14 162 / 0.18);
 }
 
-/* ─────────────────────────────────────────────
-   DARK THEME — deep purple-dark, premium feel
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   DARK THEME — deep emerald-charcoal, calm and premium
+   ═══════════════════════════════════════════════════════════════ */
 .dark {
-  --background: oklch(0.13 0.01 285);
-  --foreground: oklch(0.96 0.005 285);
-  --card: oklch(0.17 0.012 285);
-  --card-foreground: oklch(0.96 0.005 285);
-  --popover: oklch(0.17 0.012 285);
-  --popover-foreground: oklch(0.96 0.005 285);
-  --primary: oklch(0.65 0.20 285);
-  --primary-foreground: oklch(0.13 0.01 285);
-  --secondary: oklch(0.22 0.015 285);
-  --secondary-foreground: oklch(0.96 0.005 285);
-  --muted: oklch(0.22 0.012 285);
-  --muted-foreground: oklch(0.62 0.01 285);
-  --accent: oklch(0.25 0.03 285);
-  --accent-foreground: oklch(0.96 0.005 285);
-  --destructive: oklch(0.65 0.18 22);
+  --background: oklch(0.14 0.008 165);
+  --foreground: oklch(0.96 0.004 165);
+  --card: oklch(0.18 0.010 165);
+  --card-foreground: oklch(0.96 0.004 165);
+  --popover: oklch(0.18 0.010 165);
+  --popover-foreground: oklch(0.96 0.004 165);
+
+  --primary: oklch(0.70 0.15 162);
+  --primary-foreground: oklch(0.13 0.008 165);
+
+  --secondary: oklch(0.22 0.010 165);
+  --secondary-foreground: oklch(0.96 0.004 165);
+
+  --muted: oklch(0.22 0.008 165);
+  --muted-foreground: oklch(0.62 0.012 165);
+
+  --accent: oklch(0.26 0.025 162);
+  --accent-foreground: oklch(0.92 0.04 162);
+
+  --success: oklch(0.70 0.15 152);
+  --success-foreground: oklch(0.13 0.008 165);
+  --warning: oklch(0.78 0.16 70);
+  --warning-foreground: oklch(0.18 0.02 70);
+  --info: oklch(0.70 0.13 220);
+  --info-foreground: oklch(0.13 0.008 165);
+  --destructive: oklch(0.68 0.20 22);
+  --destructive-foreground: oklch(0.99 0 0);
+
   --border: oklch(1 0 0 / 8%);
   --input: oklch(1 0 0 / 10%);
-  --ring: oklch(0.65 0.20 285);
-  --chart-1: oklch(0.65 0.20 285);
-  --chart-2: oklch(0.60 0.13 195);
-  --chart-3: oklch(0.72 0.14 85);
-  --chart-4: oklch(0.58 0.17 300);
-  --chart-5: oklch(0.63 0.20 25);
-  --sidebar: oklch(0.15 0.01 285);
-  --sidebar-foreground: oklch(0.96 0.005 285);
-  --sidebar-primary: oklch(0.65 0.20 285);
-  --sidebar-primary-foreground: oklch(0.13 0.01 285);
-  --sidebar-accent: oklch(0.22 0.02 285);
-  --sidebar-accent-foreground: oklch(0.96 0.005 285);
+  --ring: oklch(0.70 0.15 162);
+
+  --chart-1: oklch(0.70 0.15 162);
+  --chart-2: oklch(0.68 0.16 285);
+  --chart-3: oklch(0.78 0.14 70);
+  --chart-4: oklch(0.66 0.13 195);
+  --chart-5: oklch(0.68 0.18 25);
+
+  --sidebar: oklch(0.16 0.008 165);
+  --sidebar-foreground: oklch(0.96 0.004 165);
+  --sidebar-primary: oklch(0.70 0.15 162);
+  --sidebar-primary-foreground: oklch(0.13 0.008 165);
+  --sidebar-accent: oklch(0.24 0.02 162);
+  --sidebar-accent-foreground: oklch(0.92 0.04 162);
   --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.65 0.20 285);
+  --sidebar-ring: oklch(0.70 0.15 162);
+
+  --shadow-xs: 0 1px 2px 0 oklch(0 0 0 / 0.20);
+  --shadow-sm: 0 1px 3px 0 oklch(0 0 0 / 0.30), 0 1px 2px -1px oklch(0 0 0 / 0.24);
+  --shadow-md: 0 4px 12px -2px oklch(0 0 0 / 0.36), 0 2px 6px -2px oklch(0 0 0 / 0.24);
+  --shadow-lg: 0 12px 28px -6px oklch(0 0 0 / 0.42), 0 6px 12px -4px oklch(0 0 0 / 0.28);
+  --shadow-xl: 0 24px 48px -8px oklch(0 0 0 / 0.50), 0 12px 24px -8px oklch(0 0 0 / 0.32);
+  --shadow-glow: 0 0 0 1px oklch(0.70 0.15 162 / 0.16), 0 8px 24px -4px oklch(0.70 0.15 162 / 0.28);
 }
 
 @layer base {
@@ -125,94 +197,106 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "cv11", "ss01";
+    font-feature-settings: "cv11", "ss01", "tnum";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    letter-spacing: -0.011em;
+  }
+  h1, h2, h3, h4, h5 {
+    letter-spacing: -0.022em;
   }
 }
 
-/* ─────────────────────────────────────────────
-   SCROLLBAR — sleek, minimal
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   SCROLLBAR — sleek, minimal, themed
+   ═══════════════════════════════════════════════════════════════ */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: oklch(0.5 0.15 285 / 0.25);
+  background: oklch(0.62 0.14 162 / 0.18);
   border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.6 0.08 155 / 0.4);
+  background: oklch(0.62 0.14 162 / 0.32);
+  background-clip: padding-box;
 }
 .dark ::-webkit-scrollbar-thumb {
-  background: oklch(0.7 0.08 155 / 0.2);
+  background: oklch(0.70 0.15 162 / 0.20);
+  background-clip: padding-box;
 }
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.7 0.08 155 / 0.35);
+  background: oklch(0.70 0.15 162 / 0.34);
+  background-clip: padding-box;
 }
 
-/* ─────────────────────────────────────────────
-   GLASSMORPHISM — frosted glass effect
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   GLASS — frosted, premium, for elevated bars/modals
+   ═══════════════════════════════════════════════════════════════ */
 .glass {
-  background: oklch(1 0 0 / 0.55);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: oklch(1 0 0 / 0.72);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 .dark .glass {
-  background: oklch(0.17 0.015 168 / 0.65);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: oklch(0.18 0.010 165 / 0.72);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 
-/* ─────────────────────────────────────────────
-   GRADIENT TEXT — brand accent
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   GRADIENT TEXT — emerald → teal brand accent
+   ═══════════════════════════════════════════════════════════════ */
 .gradient-text {
-  background: linear-gradient(135deg, oklch(0.70 0.16 158), oklch(0.65 0.12 195));
+  background: linear-gradient(135deg, oklch(0.62 0.14 162), oklch(0.60 0.13 195));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* ─────────────────────────────────────────────
-   MESH BACKGROUND — subtle ambient glow
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   MESH BACKGROUND — ambient, very subtle (for hero/landing)
+   ═══════════════════════════════════════════════════════════════ */
 .mesh-bg {
   background-image:
-    radial-gradient(at 15% 15%, oklch(0.70 0.16 158 / 0.08) 0px, transparent 45%),
-    radial-gradient(at 85% 10%, oklch(0.65 0.12 195 / 0.06) 0px, transparent 45%),
-    radial-gradient(at 50% 90%, oklch(0.72 0.14 85 / 0.05) 0px, transparent 45%);
+    radial-gradient(at 12% 8%, oklch(0.62 0.14 162 / 0.06) 0px, transparent 50%),
+    radial-gradient(at 88% 4%, oklch(0.62 0.16 285 / 0.05) 0px, transparent 50%),
+    radial-gradient(at 50% 96%, oklch(0.72 0.14 70 / 0.04) 0px, transparent 50%);
+}
+.dark .mesh-bg {
+  background-image:
+    radial-gradient(at 12% 8%, oklch(0.70 0.15 162 / 0.08) 0px, transparent 50%),
+    radial-gradient(at 88% 4%, oklch(0.68 0.16 285 / 0.06) 0px, transparent 50%),
+    radial-gradient(at 50% 96%, oklch(0.78 0.14 70 / 0.05) 0px, transparent 50%);
 }
 
-/* ─────────────────────────────────────────────
-   CARD INTERACTIONS — smooth lift + glow
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   CARD LIFT — smooth, restrained hover
+   ═══════════════════════════════════════════════════════════════ */
 .card-lift {
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.22s ease;
 }
 .card-lift:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 24px -8px oklch(0 0 0 / 0.15);
-}
-.dark .card-lift:hover {
-  box-shadow: 0 12px 24px -8px oklch(0 0 0 / 0.4);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
-/* ─────────────────────────────────────────────
-   SHIMMER — skeleton loading animation
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   SHIMMER — premium skeleton loading
+   ═══════════════════════════════════════════════════════════════ */
 @keyframes shimmer {
   0% { background-position: -1000px 0; }
   100% { background-position: 1000px 0; }
 }
 .shimmer {
-  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.08), transparent);
+  background: linear-gradient(90deg, transparent, oklch(0.62 0.14 162 / 0.06), transparent);
   background-size: 1000px 100%;
   animation: shimmer 1.8s infinite;
 }
@@ -221,28 +305,28 @@
   background-size: 1000px 100%;
 }
 
-/* ─────────────────────────────────────────────
-   PULSE GLOW — attention-drawing elements
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   PULSE GLOW — attention indicators (notifications, badges)
+   ═══════════════════════════════════════════════════════════════ */
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 oklch(0.70 0.16 158 / 0.35); }
-  50% { box-shadow: 0 0 0 10px oklch(0.70 0.16 158 / 0); }
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.62 0.14 162 / 0.35); }
+  50% { box-shadow: 0 0 0 8px oklch(0.62 0.14 162 / 0); }
 }
 .pulse-glow {
-  animation: pulse-glow 2s infinite;
+  animation: pulse-glow 2.2s infinite;
 }
 
-/* ─────────────────────────────────────────────
-   TABULAR NUMBERS — for financial data
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   TABULAR NUMBERS — financial precision
+   ═══════════════════════════════════════════════════════════════ */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.012em;
 }
 
-/* ─────────────────────────────────────────────
-   HIDE SCROLLBAR — for scrollable areas
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   HIDE SCROLLBAR — for horizontal scroll areas
+   ═══════════════════════════════════════════════════════════════ */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -251,62 +335,40 @@
   scrollbar-width: none;
 }
 
-/* ─────────────────────────────────────────────
-   FOCUS RING — accessible, visible
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   FOCUS RING — accessible, refined
+   ═══════════════════════════════════════════════════════════════ */
 *:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+  border-radius: 6px;
 }
 
-/* ─────────────────────────────────────────────
-   PRINT STYLES — for statement PDF export
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   PRINT — statement PDF export
+   ═══════════════════════════════════════════════════════════════ */
 @media print {
-  body * {
-    visibility: hidden;
-  }
-  .printable-statement,
-  .printable-statement * {
-    visibility: visible;
-  }
+  body * { visibility: hidden; }
+  .printable-statement, .printable-statement * { visibility: visible; }
   .printable-statement {
     position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
+    left: 0; top: 0; width: 100%;
   }
-  .no-print {
-    display: none !important;
-  }
+  .no-print { display: none !important; }
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  @page {
-    margin: 1.5cm;
-    size: A4;
-  }
+  @page { margin: 1.5cm; size: A4; }
 }
 
-/* ─────────────────────────────────────────────
-   SELECTION — brand-colored text selection
-   ───────────────────────────────────────────── */
 ::selection {
-  background: oklch(0.70 0.16 158 / 0.2);
+  background: oklch(0.62 0.14 162 / 0.18);
 }
 
-/* ─────────────────────────────────────────────
-   GAEXPAY LOGO ANIMATIONS
-   Premium, subtle motion for the brand mark.
-   - Shimmer: light highlight sweeps across every 3.5s
-   - Glow:    outer emerald box-shadow breathes
-   - Gradient: background-position slowly cycles hue
-   - Float:   gentle vertical bob for hero contexts
-   - Rotate:  decorative ring rotation for hero
-   ───────────────────────────────────────────── */
-
-/* Shimmer sweep — a soft white highlight crosses the mark */
+/* ═══════════════════════════════════════════════════════════════
+   GAEXPAY LOGO ANIMATIONS — premium, subtle brand motion
+   ═══════════════════════════════════════════════════════════════ */
 @keyframes gxp-shimmer {
   0% { transform: translateX(-120%) skewX(-15deg); }
   60%, 100% { transform: translateX(220%) skewX(-15deg); }
@@ -321,41 +383,32 @@
 .gxp-shimmer-overlay::after {
   content: "";
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
+  top: 0; bottom: 0; left: 0;
   width: 45%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.45) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.45) 50%, transparent 100%);
   transform: translateX(-120%) skewX(-15deg);
   animation: gxp-shimmer 3.5s ease-in-out infinite;
   animation-delay: 1.2s;
 }
 
-/* Glow pulse — outer emerald box-shadow breathes */
 @keyframes gxp-glow {
   0%, 100% {
     box-shadow:
-      0 0 12px rgba(124, 58, 237, 0.30),
-      0 0 24px rgba(124, 58, 237, 0.15),
-      0 4px 10px rgba(6, 78, 59, 0.18);
+      0 0 12px oklch(0.62 0.14 162 / 0.30),
+      0 0 24px oklch(0.62 0.14 162 / 0.15),
+      0 4px 10px oklch(0.18 0.01 165 / 0.18);
   }
   50% {
     box-shadow:
-      0 0 18px rgba(124, 58, 237, 0.55),
-      0 0 36px rgba(124, 58, 237, 0.25),
-      0 6px 14px rgba(6, 78, 59, 0.22);
+      0 0 18px oklch(0.62 0.14 162 / 0.55),
+      0 0 36px oklch(0.62 0.14 162 / 0.25),
+      0 6px 14px oklch(0.18 0.01 165 / 0.22);
   }
 }
 .gxp-glow {
   animation: gxp-glow 3s ease-in-out infinite;
 }
 
-/* Gradient hue shift — the background gradient slowly cycles */
 @keyframes gxp-gradient-shift {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -366,7 +419,6 @@
   animation: gxp-gradient-shift 5s ease infinite;
 }
 
-/* Subtle float — for landing page hero logo */
 @keyframes gxp-float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-4px); }
@@ -375,7 +427,6 @@
   animation: gxp-float 3s ease-in-out infinite;
 }
 
-/* Rotate ring — decorative ring around the logo on hero */
 @keyframes gxp-rotate {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -384,9 +435,7 @@
   animation: gxp-rotate 8s linear infinite;
 }
 
-/* ─────────────────────────────────────────────
-   QR SCANNER — animated scan line
-   ───────────────────────────────────────────── */
+/* QR scanner — animated scan line */
 @keyframes scan-line {
   0% { top: 0%; }
   50% { top: calc(100% - 2px); }
@@ -396,7 +445,6 @@
   animation: scan-line 2s ease-in-out infinite;
 }
 
-/* Scanning frame corner pulse */
 @keyframes scan-corner {
   0%, 100% { opacity: 0.7; }
   50% { opacity: 1; }
@@ -405,7 +453,122 @@
   animation: scan-corner 1.5s ease-in-out infinite;
 }
 
-/* Respect reduced-motion preferences: disable all GaexPay logo animations */
+/* ═══════════════════════════════════════════════════════════════
+   PREMIUM ANIMATIONS — MIMI-Pay-level micro-interactions
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Fade-up entrance — for view transitions and list items */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fade-up 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Scale-in — for modals, dialogs */
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-scale-in {
+  animation: scale-in 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Slide-in — for sheets, drawers */
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.animate-slide-in-right {
+  animation: slide-in-right 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Ripple — for button taps (mobile) */
+@keyframes ripple {
+  to { transform: scale(2.2); opacity: 0; }
+}
+.ripple-anim {
+  animation: ripple 0.6s ease-out;
+}
+
+/* Gentle float — for hero phone mockup */
+@keyframes gentle-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-6px) rotate(-0.5deg); }
+}
+.animate-gentle-float {
+  animation: gentle-float 4s ease-in-out infinite;
+}
+
+/* Marquee — for currency ticker strips */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 28s linear infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PREMIUM SHADOWS — utility classes mapped to tokens
+   ═══════════════════════════════════════════════════════════════ */
+.shadow-premium-xs { box-shadow: var(--shadow-xs); }
+.shadow-premium-sm { box-shadow: var(--shadow-sm); }
+.shadow-premium-md { box-shadow: var(--shadow-md); }
+.shadow-premium-lg { box-shadow: var(--shadow-lg); }
+.shadow-premium-xl { box-shadow: var(--shadow-xl); }
+.shadow-premium-glow { box-shadow: var(--shadow-glow); }
+
+/* ═══════════════════════════════════════════════════════════════
+   PREMIUM CARD — refined surface treatment
+   ═══════════════════════════════════════════════════════════════ */
+.card-premium {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.22s ease;
+}
+.card-premium:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RING — accent focus rings for inputs/buttons
+   ═══════════════════════════════════════════════════════════════ */
+.ring-accent {
+  box-shadow: 0 0 0 3px oklch(0.62 0.14 162 / 0.15);
+}
+.dark .ring-accent {
+  box-shadow: 0 0 0 3px oklch(0.70 0.15 162 / 0.20);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   STATUS PILLS — semantic, soft
+   ═══════════════════════════════════════════════════════════════ */
+.pill-success { background: oklch(0.95 0.04 152); color: oklch(0.40 0.13 152); }
+.pill-warning { background: oklch(0.96 0.05 70); color: oklch(0.45 0.13 70); }
+.pill-info    { background: oklch(0.95 0.04 220); color: oklch(0.40 0.12 220); }
+.pill-danger  { background: oklch(0.95 0.05 25); color: oklch(0.45 0.18 25); }
+.dark .pill-success { background: oklch(0.30 0.06 152 / 0.30); color: oklch(0.80 0.13 152); }
+.dark .pill-warning { background: oklch(0.30 0.06 70 / 0.30); color: oklch(0.82 0.13 70); }
+.dark .pill-info    { background: oklch(0.30 0.06 220 / 0.30); color: oklch(0.80 0.12 220); }
+.dark .pill-danger  { background: oklch(0.30 0.08 25 / 0.30); color: oklch(0.78 0.16 25); }
+
+/* ═══════════════════════════════════════════════════════════════
+   BOTTOM NAV — safe-area aware for mobile
+   ═══════════════════════════════════════════════════════════════ */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   REDUCED MOTION — accessibility
+   ═══════════════════════════════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
   .gxp-glow,
   .gxp-shimmer-overlay::after,
@@ -413,7 +576,14 @@
   .gxp-float,
   .gxp-rotate,
   .animate-scan,
-  .scan-corner {
+  .scan-corner,
+  .animate-fade-up,
+  .animate-scale-in,
+  .animate-slide-in-right,
+  .animate-gentle-float,
+  .animate-marquee,
+  .shimmer,
+  .pulse-glow {
     animation: none !important;
   }
 }

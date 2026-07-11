@@ -8,7 +8,7 @@ import {
   FileWarning, ScrollText, Building2, BookOpen, School, FileText, Home,
   Fuel, Car, Bus, Film, Gamepad2, HeartPulse, Dumbbell, Dice5, Gift, Key,
   Package, ShieldCheck, ArrowLeft, Camera, RefreshCw, Printer, Hash, Calendar,
-  Wallet, Database, AlertCircle, Globe2, Signal, Clock,
+  Wallet, Database, AlertCircle, Globe2, Signal, Clock, ArrowDownRight, ArrowUpRight,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useFetch } from "@/hooks/use-fetch";
-import { BILL_CATEGORIES, formatMoney } from "@/lib/gaexpay";
+import { BILL_CATEGORIES, formatMoney, timeAgo } from "@/lib/gaexpay";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
@@ -57,23 +57,88 @@ const DATA_PLANS = [
   { id: "monthly_10000", label: "50 GB · 30 Days", amount: 10000 },
 ];
 
+// Quick actions — emerald-forward tonal palette (NO blue, NO indigo)
+const QUICK_ACTIONS = [
+  { id: "airtime", label: "Airtime", icon: Smartphone, tone: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" },
+  { id: "airtime", label: "Data", icon: Database, tone: "bg-teal-500/15 text-teal-600 dark:text-teal-400" },
+  { id: "bills", label: "Electricity", icon: Zap, tone: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
+  { id: "bills", label: "TV", icon: Tv, tone: "bg-rose-500/15 text-rose-500" },
+  { id: "bills", label: "Water", icon: Droplet, tone: "bg-teal-500/15 text-teal-600 dark:text-teal-400" },
+  { id: "bills", label: "Internet", icon: Wifi, tone: "bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400" },
+];
+
 export function PayView() {
   const { t } = useTranslation();
+  const [tab, setTab] = useState("qr");
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t("pay.title")}</h1>
-        <p className="text-sm text-muted-foreground">
-          {t("pay.subtitle")}
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t("pay.title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("pay.subtitle")}</p>
       </div>
-      <Tabs defaultValue="qr">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
-          <TabsTrigger value="qr"><QrCode className="h-4 w-4 mr-1.5" /> {t("pay.scanPay")}</TabsTrigger>
-          <TabsTrigger value="merchants"><Store className="h-4 w-4 mr-1.5" /> {t("pay.merchants")}</TabsTrigger>
-          <TabsTrigger value="bills"><Receipt className="h-4 w-4 mr-1.5" /> {t("pay.bills")}</TabsTrigger>
-          <TabsTrigger value="airtime"><Smartphone className="h-4 w-4 mr-1.5" /> {t("pay.airtime")}</TabsTrigger>
-          <TabsTrigger value="esim"><Wifi className="h-4 w-4 mr-1.5" /> eSim</TabsTrigger>
+
+      {/* QR scan CTA hero */}
+      <motion.button
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        onClick={() => setTab("qr")}
+        className="group block w-full text-left"
+      >
+        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 p-5 sm:p-6 text-white shadow-premium-lg card-lift">
+          <div className="absolute inset-0 opacity-30 mesh-bg" />
+          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+          <div className="absolute -right-4 top-8 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+          <div className="relative flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="grid h-14 w-14 sm:h-16 sm:w-16 shrink-0 place-items-center rounded-2xl bg-white/20 backdrop-blur ring-1 ring-white/30">
+                <QrCode className="h-7 w-7 sm:h-8 sm:w-8" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-lg sm:text-xl font-bold">Scan to Pay</h3>
+                <p className="text-xs sm:text-sm text-white/80 truncate">
+                  Pay any GaexPay merchant instantly by scanning their QR code
+                </p>
+              </div>
+            </div>
+            <div className="hidden sm:flex items-center gap-1 rounded-full bg-white/20 backdrop-blur px-3 py-1.5 text-xs font-medium ring-1 ring-white/30 group-hover:translate-x-1 transition">
+              <ScanLine className="h-3.5 w-3.5" /> Open
+            </div>
+          </div>
+        </Card>
+      </motion.button>
+
+      {/* Quick actions grid */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 sm:grid-cols-6">
+        {QUICK_ACTIONS.map((a, i) => {
+          const Icon = a.icon;
+          return (
+            <button
+              key={`${a.label}-${i}`}
+              onClick={() => setTab(a.id)}
+              className="group flex flex-col items-center gap-2"
+            >
+              <div className={cn(
+                "grid h-12 w-12 sm:h-14 sm:w-14 place-items-center rounded-2xl border border-border/60 card-lift shadow-premium-sm transition group-hover:scale-105",
+                a.tone,
+              )}>
+                <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
+              </div>
+              <span className="text-[11px] sm:text-xs font-medium">{a.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tabs */}
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto">
+          <TabsTrigger value="qr" className="rounded-xl py-2"><QrCode className="h-4 w-4 mr-1.5" /> {t("pay.scanPay")}</TabsTrigger>
+          <TabsTrigger value="merchants" className="rounded-xl py-2"><Store className="h-4 w-4 mr-1.5" /> {t("pay.merchants")}</TabsTrigger>
+          <TabsTrigger value="bills" className="rounded-xl py-2"><Receipt className="h-4 w-4 mr-1.5" /> {t("pay.bills")}</TabsTrigger>
+          <TabsTrigger value="airtime" className="rounded-xl py-2"><Smartphone className="h-4 w-4 mr-1.5" /> {t("pay.airtime")}</TabsTrigger>
+          <TabsTrigger value="esim" className="rounded-xl py-2"><Wifi className="h-4 w-4 mr-1.5" /> eSim</TabsTrigger>
         </TabsList>
         <TabsContent value="qr" className="mt-4"><QrPay /></TabsContent>
         <TabsContent value="merchants" className="mt-4"><MerchantsPay /></TabsContent>
@@ -324,7 +389,7 @@ function QrPay() {
   };
 
   return (
-    <Card className="mx-auto max-w-md p-6">
+    <Card className="mx-auto max-w-md p-6 card-premium border-border/60 shadow-premium-md">
       {!found && !done && (
         <div className="text-center">
           {/* ── Camera preview / scanning frame ── */}
@@ -367,11 +432,11 @@ function QrPay() {
           )}
 
           {scanning ? (
-            <Button variant="outline" onClick={stopScan} className="w-full">
+            <Button variant="outline" className="w-full rounded-xl" onClick={stopScan}>
               <X className="h-4 w-4 mr-2" /> Stop Scanning
             </Button>
           ) : (
-            <Button onClick={startScan} className="w-full">
+            <Button className="w-full rounded-xl shadow-premium-sm h-12" onClick={startScan}>
               <Camera className="h-4 w-4 mr-2" /> Start Scanning
             </Button>
           )}
@@ -388,6 +453,7 @@ function QrPay() {
             </div>
             <div className="mt-3 flex gap-2">
               <Input
+                className="rounded-xl"
                 placeholder="Merchant ID, QR code, or URL"
                 value={manualCode}
                 onChange={(e) => setManualCode(e.target.value)}
@@ -400,6 +466,7 @@ function QrPay() {
               />
               <Button
                 variant="secondary"
+                className="rounded-xl"
                 onClick={() => {
                   if (manualCode.trim()) {
                     handleQrResult(manualCode);
@@ -434,8 +501,8 @@ function QrPay() {
               <X className="h-4 w-4" />
             </Button>
           </div>
-          <div className="rounded-xl border bg-muted/30 p-4 text-center">
-            <div className="mx-auto mb-2 grid h-14 w-14 place-items-center rounded-full bg-primary/10 text-primary">
+          <div className="rounded-2xl border border-border/60 bg-muted/30 p-4 text-center">
+            <div className="mx-auto mb-2 grid h-14 w-14 place-items-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
               <Store className="h-6 w-6" />
             </div>
             <p className="font-semibold">{found.name}</p>
@@ -450,11 +517,11 @@ function QrPay() {
                 </>
               )}
               {found.manual ? (
-                <Badge variant="outline" className="border-amber-500/40 text-[10px] text-amber-600 dark:text-amber-400">
+                <Badge variant="outline" className="border-amber-500/40 text-[10px] text-amber-600 dark:text-amber-400 rounded-full">
                   Unverified
                 </Badge>
               ) : (
-                <span className="text-violet-600 dark:text-violet-400">Verified Merchant</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-medium">Verified Merchant</span>
               )}
             </div>
             {found.account && (
@@ -465,20 +532,25 @@ function QrPay() {
           </div>
           <div className="mt-4 space-y-2">
             <Label>Amount to pay ({userCur})</Label>
-            <Input
-              type="number"
-              inputMode="decimal"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              className="text-xl font-bold"
-            />
+            <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-center">
+              <div className="flex items-center justify-center gap-1">
+                <span className="text-lg text-muted-foreground">{symbol}</span>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="border-0 bg-transparent p-0 text-3xl font-bold tabular-nums text-center focus-visible:ring-0"
+                />
+              </div>
+            </div>
             <div className="flex flex-wrap gap-2">
               {[500, 1000, 2000, 5000].map((v) => (
                 <button
                   key={v}
                   onClick={() => setAmount(String(v))}
-                  className="flex-1 rounded-lg border py-1.5 text-xs font-medium hover:bg-muted"
+                  className="flex-1 rounded-lg border border-border/60 py-1.5 text-xs font-medium hover:bg-emerald-500/10 hover:text-emerald-600 transition"
                 >
                   {symbol}
                   {v.toLocaleString()}
@@ -486,7 +558,7 @@ function QrPay() {
               ))}
             </div>
           </div>
-          <Button onClick={pay} disabled={!amount || paying} className="mt-4 w-full">
+          <Button onClick={pay} disabled={!amount || paying} className="mt-4 w-full rounded-xl shadow-premium-sm h-12">
             {paying ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Paying...
@@ -510,7 +582,7 @@ function QrPay() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", delay: 0.1 }}
-              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-violet-500 text-white"
+              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white pulse-glow shadow-premium-lg"
             >
               <Check className="h-8 w-8" strokeWidth={3} />
             </motion.div>
@@ -520,7 +592,7 @@ function QrPay() {
             </p>
           </div>
 
-          <div className="mt-5 rounded-xl border bg-muted/30 p-4 text-sm">
+          <div className="mt-5 rounded-xl border border-border/60 bg-muted/30 p-4 text-sm">
             <div className="space-y-2.5">
               <ReceiptRow icon={Hash} label="Reference" value={done.reference || "—"} mono />
               <ReceiptRow
@@ -541,7 +613,7 @@ function QrPay() {
               <ReceiptRow
                 icon={Check}
                 label="Status"
-                value={<span className="font-semibold text-violet-600 dark:text-violet-400">Completed</span>}
+                value={<span className="font-semibold text-emerald-600 dark:text-emerald-400">Completed</span>}
               />
             </div>
           </div>
@@ -549,12 +621,12 @@ function QrPay() {
           <div className="mt-4 flex gap-2">
             <Button
               variant="outline"
-              className="flex-1"
+              className="flex-1 rounded-xl"
               onClick={() => window.print()}
             >
               <Printer className="h-4 w-4 mr-2" /> Print
             </Button>
-            <Button className="flex-1" onClick={reset}>
+            <Button className="flex-1 rounded-xl shadow-premium-sm" onClick={reset}>
               <RefreshCw className="h-4 w-4 mr-2" /> New Payment
             </Button>
           </div>
@@ -599,19 +671,19 @@ function MerchantsPay() {
         {merchants.length === 0 &&
           [1, 2, 3].map((i) => <Skeleton key={i} className="h-28" />)}
         {merchants.map((m) => (
-          <Card key={m.id} className="card-lift cursor-pointer p-4">
+          <Card key={m.id} className="card-premium border-border/60 shadow-premium-sm cursor-pointer p-4 card-lift">
             <div className="flex items-start gap-3">
-              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
                 <Store className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">{m.name}</p>
                 <p className="capitalize text-xs text-muted-foreground">{m.category}</p>
                 <div className="mt-1 flex items-center gap-2">
-                  <Badge variant="outline" className="text-[10px]">
+                  <Badge variant="outline" className="text-[10px] rounded-full">
                     ★ {m.rating.toFixed(1)}
                   </Badge>
-                  <Badge variant="outline" className="text-[10px] text-violet-600">
+                  <Badge variant="outline" className="text-[10px] text-emerald-600 dark:text-emerald-400 border-emerald-500/30 rounded-full">
                     Verified
                   </Badge>
                 </div>
@@ -657,6 +729,41 @@ function BillsPay() {
     { label: "Entertainment & Health", cats: ["streaming", "gaming", "health", "gym"] },
     { label: "Other", cats: ["betting", "donations", "rent", "other"] },
   ];
+
+  // Tonal icon tiles for biller categories
+  const CAT_TONES: Record<string, string> = {
+    electricity: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+    water: "bg-teal-500/15 text-teal-600 dark:text-teal-400",
+    gas: "bg-rose-500/15 text-rose-500",
+    internet: "bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400",
+    tv: "bg-rose-500/15 text-rose-500",
+    phone: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+    education: "bg-teal-500/15 text-teal-600 dark:text-teal-400",
+    betting: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+    government: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+    taxes: "bg-rose-500/15 text-rose-500",
+    customs: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+    fines: "bg-rose-500/15 text-rose-500",
+    permits: "bg-teal-500/15 text-teal-600 dark:text-teal-400",
+    social: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+    university: "bg-teal-500/15 text-teal-600 dark:text-teal-400",
+    college: "bg-teal-500/15 text-teal-600 dark:text-teal-400",
+    school: "bg-teal-500/15 text-teal-600 dark:text-teal-400",
+    exams: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+    loan: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+    insurance: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+    mortgage: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+    fuel: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+    toll: "bg-rose-500/15 text-rose-500",
+    transport: "bg-teal-500/15 text-teal-600 dark:text-teal-400",
+    streaming: "bg-rose-500/15 text-rose-500",
+    gaming: "bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400",
+    health: "bg-rose-500/15 text-rose-500",
+    gym: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+    donations: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+    rent: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+    other: "bg-muted text-muted-foreground",
+  };
 
   const resetForm = () => {
     setSelected(null);
@@ -726,7 +833,7 @@ function BillsPay() {
   // ── Receipt view ──
   if (receipt) {
     return (
-      <Card className="mx-auto max-w-md p-6">
+      <Card className="mx-auto max-w-md p-6 card-premium border-border/60 shadow-premium-md">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -736,7 +843,7 @@ function BillsPay() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", delay: 0.1 }}
-              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-violet-500 text-white"
+              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white pulse-glow shadow-premium-lg"
             >
               <Check className="h-8 w-8" strokeWidth={3} />
             </motion.div>
@@ -746,7 +853,7 @@ function BillsPay() {
             </p>
           </div>
 
-          <div className="mt-5 rounded-xl border bg-muted/30 p-4 text-sm">
+          <div className="mt-5 rounded-xl border border-border/60 bg-muted/30 p-4 text-sm">
             <div className="mb-3 border-b pb-3 text-center">
               <p className="font-semibold">{receipt.billerName}</p>
               <p className="text-xs capitalize text-muted-foreground">
@@ -774,7 +881,7 @@ function BillsPay() {
                 icon={Check}
                 label="Status"
                 value={
-                  <span className="font-semibold capitalize text-violet-600 dark:text-violet-400">
+                  <span className="font-semibold capitalize text-emerald-600 dark:text-emerald-400">
                     {receipt.status}
                   </span>
                 }
@@ -783,10 +890,10 @@ function BillsPay() {
           </div>
 
           <div className="mt-4 flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => window.print()}>
+            <Button variant="outline" className="flex-1 rounded-xl" onClick={() => window.print()}>
               <Printer className="h-4 w-4 mr-2" /> Print
             </Button>
-            <Button className="flex-1" onClick={resetForm}>
+            <Button className="flex-1 rounded-xl shadow-premium-sm" onClick={resetForm}>
               <Receipt className="h-4 w-4 mr-2" /> Pay Another
             </Button>
           </div>
@@ -798,8 +905,9 @@ function BillsPay() {
   // ── Biller form (selected biller) ──
   if (selected) {
     const biller = selected;
+    const tone = CAT_TONES[biller.category] || "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400";
     return (
-      <Card className="mx-auto max-w-md p-6">
+      <Card className="mx-auto max-w-md p-6 card-premium border-border/60 shadow-premium-md">
         <div className="mb-4 flex items-center justify-between">
           <Button
             size="sm"
@@ -810,7 +918,7 @@ function BillsPay() {
             <ArrowLeft className="h-4 w-4 mr-1" /> Back
           </Button>
           <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
+            <div className={cn("grid h-9 w-9 place-items-center rounded-lg", tone)}>
               {(() => {
                 const Icon = BILLER_ICONS[biller.category] || Receipt;
                 return <Icon className="h-4 w-4" />;
@@ -850,6 +958,7 @@ function BillsPay() {
               <span className="ml-1 text-rose-500">*</span>
             </Label>
             <Input
+              className="rounded-xl"
               value={account}
               onChange={(e) => setAccount(e.target.value)}
               placeholder={biller.accountLabel}
@@ -859,6 +968,7 @@ function BillsPay() {
           <div className="space-y-2">
             <Label>Phone / Email (optional)</Label>
             <Input
+              className="rounded-xl"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="For receipt delivery"
@@ -870,14 +980,32 @@ function BillsPay() {
               Amount ({symbol})
               <span className="ml-1 text-rose-500">*</span>
             </Label>
-            <Input
-              type="number"
-              inputMode="decimal"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder={`Min ${symbol}${biller.minAmount.toLocaleString()}`}
-              disabled={paying}
-            />
+            <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-center">
+              <div className="flex items-center justify-center gap-1">
+                <span className="text-lg text-muted-foreground">{symbol}</span>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder={`Min ${biller.minAmount.toLocaleString()}`}
+                  disabled={paying}
+                  className="border-0 bg-transparent p-0 text-3xl font-bold tabular-nums text-center focus-visible:ring-0"
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[500, 1000, 2000, 5000].map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setAmount(String(v))}
+                  className="flex-1 rounded-lg border border-border/60 py-1.5 text-xs font-medium hover:bg-emerald-500/10 hover:text-emerald-600 transition"
+                >
+                  {symbol}
+                  {v.toLocaleString()}
+                </button>
+              ))}
+            </div>
             <p className="text-[11px] text-muted-foreground">
               Range: {symbol}{biller.minAmount.toLocaleString()} – {symbol}{biller.maxAmount.toLocaleString()}
               {biller.fee > 0 && ` · Fee: ${symbol}${biller.fee}`}
@@ -887,6 +1015,7 @@ function BillsPay() {
           <div className="space-y-2">
             <Label>Description (optional)</Label>
             <Input
+              className="rounded-xl"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g. March electricity bill"
@@ -896,10 +1025,29 @@ function BillsPay() {
           </div>
         </div>
 
+        {amount && (
+          <div className="mt-4 rounded-xl border border-border/60 bg-card p-4 text-sm shadow-premium-sm space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Amount</span>
+              <span className="font-medium tabular-nums">{symbol}{Number(amount).toLocaleString()}</span>
+            </div>
+            {biller.fee > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Fee</span>
+                <span className="font-medium tabular-nums">{symbol}{biller.fee}</span>
+              </div>
+            )}
+            <div className="border-t pt-2 flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Total</span>
+              <span className="font-bold tabular-nums">{symbol}{(Number(amount) + (biller.fee || 0)).toLocaleString()}</span>
+            </div>
+          </div>
+        )}
+
         <Button
           onClick={pay}
           disabled={!account || !amount || paying}
-          className="mt-4 w-full"
+          className="mt-4 w-full rounded-xl shadow-premium-sm h-12"
         >
           {paying ? (
             <>
@@ -930,16 +1078,17 @@ function BillsPay() {
                 {groupCats.map((catItem) => {
                   const catBillers = billers.filter((b) => b.category === catItem.id);
                   const isExpanded = expandedCat === catItem.id;
+                  const tone = CAT_TONES[catItem.id] || "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400";
                   return (
                     <div key={catItem.id} className="space-y-2">
                       <Card
-                        className="card-lift cursor-pointer p-4"
+                        className="card-premium border-border/60 shadow-premium-sm cursor-pointer p-4 card-lift"
                         onClick={() =>
                           setExpandedCat(isExpanded ? null : catItem.id)
                         }
                       >
                         <div className="flex items-center gap-3">
-                          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                          <div className={cn("grid h-11 w-11 shrink-0 place-items-center rounded-xl", tone)}>
                             <span className="text-xl">{catItem.icon}</span>
                           </div>
                           <div className="min-w-0 flex-1">
@@ -994,13 +1143,14 @@ function BillsPay() {
                               <div className="space-y-1 p-2">
                                 {catBillers.map((b) => {
                                   const Icon = BILLER_ICONS[b.category] || Receipt;
+                                  const bTone = CAT_TONES[b.category] || "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400";
                                   return (
                                     <button
                                       key={b.id}
                                       onClick={() => setSelected(b)}
                                       className="flex w-full items-center gap-3 rounded-lg p-2 text-left transition hover:bg-muted"
                                     >
-                                      <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-primary/10 text-primary">
+                                      <div className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-md", bTone)}>
                                         <Icon className="h-4 w-4" />
                                       </div>
                                       <div className="min-w-0 flex-1">
@@ -1035,15 +1185,15 @@ function BillsPay() {
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Recent Bill Payments
           </h3>
-          <div className="space-y-2">
-            <ScrollArea className="max-h-96 rounded-lg border">
-              <div className="divide-y">
+          <Card className="card-premium border-border/60 shadow-premium-sm p-3">
+            <ScrollArea className="max-h-96">
+              <div className="space-y-1">
                 {history.map((tx) => (
                   <div
                     key={tx.id}
-                    className="flex items-center gap-3 p-3"
+                    className="flex items-center gap-3 rounded-xl p-2 transition hover:bg-muted/60"
                   >
-                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-primary/10 text-primary">
+                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-rose-500/15 text-rose-500">
                       <Receipt className="h-4 w-4" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -1051,22 +1201,25 @@ function BillsPay() {
                         {tx.counterpartyName || "Bill payment"}
                       </p>
                       <p className="truncate text-[11px] text-muted-foreground">
-                        {tx.counterpartyAccount} · {new Date(tx.createdAt).toLocaleDateString()}
+                        {tx.counterpartyAccount} · {timeAgo(tx.createdAt)}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold">
+                      <p className="text-sm font-semibold tabular-nums">
                         -{formatMoney(tx.amount, tx.currency)}
                       </p>
-                      <p className="text-[10px] capitalize text-muted-foreground">
+                      <span className={cn(
+                        "inline-block rounded-full px-1.5 py-0.5 text-[9px] uppercase",
+                        tx.status === "completed" ? "pill-success" : tx.status === "pending" ? "pill-warning" : "pill-danger",
+                      )}>
                         {tx.status}
-                      </p>
+                      </span>
                     </div>
                   </div>
                 ))}
               </div>
             </ScrollArea>
-          </div>
+          </Card>
         </div>
       )}
     </div>
@@ -1080,11 +1233,11 @@ function BillsPay() {
 function AirtimePay() {
   return (
     <Tabs defaultValue="airtime">
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="airtime">
+      <TabsList className="grid w-full grid-cols-2 h-auto">
+        <TabsTrigger value="airtime" className="rounded-xl py-2">
           <Phone className="h-4 w-4 mr-1.5" /> Airtime
         </TabsTrigger>
-        <TabsTrigger value="data">
+        <TabsTrigger value="data" className="rounded-xl py-2">
           <Database className="h-4 w-4 mr-1.5" /> Data
         </TabsTrigger>
       </TabsList>
@@ -1095,6 +1248,29 @@ function AirtimePay() {
         <DataForm />
       </TabsContent>
     </Tabs>
+  );
+}
+
+function NetworkPicker({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
+  return (
+    <div className="grid grid-cols-4 gap-2">
+      {NETWORKS.map((n) => (
+        <button
+          key={n.id}
+          onClick={() => onChange(n.id)}
+          disabled={disabled}
+          className={cn(
+            "rounded-xl border p-2.5 text-center transition card-lift",
+            value === n.id
+              ? "border-primary ring-2 ring-primary/20 bg-primary/5"
+              : "border-border/60 hover:bg-muted/40",
+          )}
+        >
+          <div className="mx-auto mb-1.5 h-2 w-8 rounded-full" style={{ background: n.color }} />
+          <span className="text-[10px] font-medium">{n.name}</span>
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -1145,14 +1321,14 @@ function AirtimeForm() {
 
   if (done) {
     return (
-      <Card className="mx-auto max-w-md p-6">
+      <Card className="mx-auto max-w-md p-6 card-premium border-border/60 shadow-premium-md">
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
           <div className="text-center">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", delay: 0.1 }}
-              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-violet-500 text-white"
+              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white pulse-glow shadow-premium-lg"
             >
               <Check className="h-8 w-8" strokeWidth={3} />
             </motion.div>
@@ -1161,7 +1337,7 @@ function AirtimeForm() {
               {fmt(done.amount)} sent to {done.phone}
             </p>
           </div>
-          <div className="mt-5 rounded-xl border bg-muted/30 p-4 text-sm">
+          <div className="mt-5 rounded-xl border border-border/60 bg-muted/30 p-4 text-sm">
             <div className="space-y-2.5">
               <ReceiptRow icon={Hash} label="Reference" value={done.reference} mono />
               <ReceiptRow icon={Phone} label="Number" value={done.phone} mono />
@@ -1174,7 +1350,7 @@ function AirtimeForm() {
               />
             </div>
           </div>
-          <Button className="mt-4 w-full" onClick={() => setDone(null)}>
+          <Button className="mt-4 w-full rounded-xl shadow-premium-sm h-12" onClick={() => setDone(null)}>
             <RefreshCw className="h-4 w-4 mr-2" /> Buy More
           </Button>
         </motion.div>
@@ -1183,29 +1359,16 @@ function AirtimeForm() {
   }
 
   return (
-    <Card className="mx-auto max-w-md p-6">
+    <Card className="mx-auto max-w-md p-6 card-premium border-border/60 shadow-premium-md">
       <div className="space-y-4">
         <div>
           <Label className="mb-2 block">Select Network</Label>
-          <div className="grid grid-cols-4 gap-2">
-            {NETWORKS.map((n) => (
-              <button
-                key={n.id}
-                onClick={() => setNetwork(n.id)}
-                className={cn(
-                  "rounded-lg border p-2 text-center transition",
-                  network === n.id ? "border-primary ring-2 ring-primary/20" : "hover:bg-muted",
-                )}
-              >
-                <div className="mx-auto mb-1 h-2 w-8 rounded-full" style={{ background: n.color }} />
-                <span className="text-[10px] font-medium">{n.name}</span>
-              </button>
-            ))}
-          </div>
+          <NetworkPicker value={network} onChange={setNetwork} />
         </div>
         <div className="space-y-2">
           <Label>Phone Number</Label>
           <Input
+            className="rounded-xl"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="0801 234 5678"
@@ -1214,19 +1377,25 @@ function AirtimeForm() {
         </div>
         <div className="space-y-2">
           <Label>Amount ({symbol})</Label>
-          <Input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-            disabled={paying}
-          />
+          <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-center">
+            <div className="flex items-center justify-center gap-1">
+              <span className="text-lg text-muted-foreground">{symbol}</span>
+              <Input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                disabled={paying}
+                className="border-0 bg-transparent p-0 text-3xl font-bold tabular-nums text-center focus-visible:ring-0"
+              />
+            </div>
+          </div>
           <div className="flex flex-wrap gap-2">
             {[100, 200, 500, 1000, 2000, 5000].map((v) => (
               <button
                 key={v}
                 onClick={() => setAmount(String(v))}
-                className="flex-1 rounded-lg border py-1.5 text-xs font-medium hover:bg-muted"
+                className="flex-1 rounded-lg border border-border/60 py-1.5 text-xs font-medium hover:bg-emerald-500/10 hover:text-emerald-600 transition"
               >
                 {symbol}
                 {v}
@@ -1240,7 +1409,7 @@ function AirtimeForm() {
         <Button
           onClick={pay}
           disabled={!phone || !amount || paying}
-          className="w-full"
+          className="w-full rounded-xl shadow-premium-sm h-12"
         >
           {paying ? (
             <>
@@ -1306,14 +1475,14 @@ function DataForm() {
 
   if (done) {
     return (
-      <Card className="mx-auto max-w-md p-6">
+      <Card className="mx-auto max-w-md p-6 card-premium border-border/60 shadow-premium-md">
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
           <div className="text-center">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", delay: 0.1 }}
-              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-violet-500 text-white"
+              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white pulse-glow shadow-premium-lg"
             >
               <Database className="h-8 w-8" strokeWidth={2.5} />
             </motion.div>
@@ -1322,7 +1491,7 @@ function DataForm() {
               {done.plan} sent to {done.phone}
             </p>
           </div>
-          <div className="mt-5 rounded-xl border bg-muted/30 p-4 text-sm">
+          <div className="mt-5 rounded-xl border border-border/60 bg-muted/30 p-4 text-sm">
             <div className="space-y-2.5">
               <ReceiptRow icon={Hash} label="Reference" value={done.reference} mono />
               <ReceiptRow icon={Phone} label="Number" value={done.phone} mono />
@@ -1336,7 +1505,7 @@ function DataForm() {
               />
             </div>
           </div>
-          <Button className="mt-4 w-full" onClick={() => setDone(null)}>
+          <Button className="mt-4 w-full rounded-xl shadow-premium-sm h-12" onClick={() => setDone(null)}>
             <RefreshCw className="h-4 w-4 mr-2" /> Buy More
           </Button>
         </motion.div>
@@ -1345,29 +1514,16 @@ function DataForm() {
   }
 
   return (
-    <Card className="mx-auto max-w-md p-6">
+    <Card className="mx-auto max-w-md p-6 card-premium border-border/60 shadow-premium-md">
       <div className="space-y-4">
         <div>
           <Label className="mb-2 block">Select Network</Label>
-          <div className="grid grid-cols-4 gap-2">
-            {NETWORKS.map((n) => (
-              <button
-                key={n.id}
-                onClick={() => setNetwork(n.id)}
-                className={cn(
-                  "rounded-lg border p-2 text-center transition",
-                  network === n.id ? "border-primary ring-2 ring-primary/20" : "hover:bg-muted",
-                )}
-              >
-                <div className="mx-auto mb-1 h-2 w-8 rounded-full" style={{ background: n.color }} />
-                <span className="text-[10px] font-medium">{n.name}</span>
-              </button>
-            ))}
-          </div>
+          <NetworkPicker value={network} onChange={setNetwork} />
         </div>
         <div className="space-y-2">
           <Label>Phone Number</Label>
           <Input
+            className="rounded-xl"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="0801 234 5678"
@@ -1376,18 +1532,20 @@ function DataForm() {
         </div>
         <div className="space-y-2">
           <Label>Select Data Plan</Label>
-          <div className="grid max-h-72 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
+          <div className="grid max-h-72 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2 pr-1">
             {DATA_PLANS.map((p) => (
               <button
                 key={p.id}
                 onClick={() => setPlan(p.id)}
                 className={cn(
-                  "rounded-lg border p-3 text-left transition",
-                  plan === p.id ? "border-primary ring-2 ring-primary/20" : "hover:bg-muted",
+                  "rounded-xl border p-3 text-left transition card-lift",
+                  plan === p.id
+                    ? "border-primary ring-2 ring-primary/20 bg-primary/5"
+                    : "border-border/60 hover:bg-muted/40",
                 )}
               >
                 <p className="text-sm font-semibold">{p.label}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground tabular-nums">
                   {symbol}
                   {p.amount.toLocaleString()}
                 </p>
@@ -1398,7 +1556,7 @@ function DataForm() {
         <Button
           onClick={pay}
           disabled={!phone || !selectedPlan || paying}
-          className="w-full"
+          className="w-full rounded-xl shadow-premium-sm h-12"
         >
           {paying ? (
             <>
@@ -1458,20 +1616,20 @@ function ESimPay() {
 
   return (
     <div className="space-y-4">
-      <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-700 p-5 text-white shadow-lg">
+      <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 p-5 text-white shadow-premium-lg">
         <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-xl" />
         <div className="relative flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="grid h-12 w-12 place-items-center rounded-xl bg-white/20 text-3xl backdrop-blur">📶</div>
+            <div className="grid h-12 w-12 place-items-center rounded-xl bg-white/20 text-3xl backdrop-blur ring-1 ring-white/30">📶</div>
             <div>
               <h3 className="font-bold">Travel data, instantly</h3>
-              <p className="text-xs text-white/70">
+              <p className="text-xs text-white/80">
                 Buy an eSim data plan for 190+ countries. No SIM swap, no roaming fees.
               </p>
             </div>
           </div>
           {purchases.length > 0 && (
-            <Button size="sm" variant="secondary" className="bg-white/20 text-white border-0 hover:bg-white/30" onClick={() => setShowPurchases(!showPurchases)}>
+            <Button size="sm" variant="secondary" className="bg-white/20 text-white border-0 hover:bg-white/30 rounded-xl" onClick={() => setShowPurchases(!showPurchases)}>
               My eSims ({purchases.length})
             </Button>
           )}
@@ -1479,10 +1637,10 @@ function ESimPay() {
       </Card>
 
       {showPurchases && purchases.length > 0 && (
-        <Card className="p-4 space-y-3">
+        <Card className="p-4 space-y-3 card-premium border-border/60 shadow-premium-sm">
           <h4 className="font-semibold text-sm">Your eSims</h4>
           {purchases.map((p) => (
-            <div key={p.id} className="flex items-center justify-between rounded-lg border p-3">
+            <div key={p.id} className="flex items-center justify-between rounded-xl border border-border/60 p-3">
               <div className="flex items-center gap-3">
                 <span className="text-2xl">{p.flag}</span>
                 <div>
@@ -1493,8 +1651,8 @@ function ESimPay() {
                 </div>
               </div>
               <Badge className={cn(
-                "border-0",
-                p.status === "active" ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground",
+                "border-0 rounded-full",
+                p.status === "active" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-muted text-muted-foreground",
               )}>
                 {p.status}
               </Badge>
@@ -1504,7 +1662,7 @@ function ESimPay() {
       )}
 
       {!purchased ? (
-        <Card className="p-5">
+        <Card className="p-5 card-premium border-border/60 shadow-premium-sm">
           <div className="grid gap-5 md:grid-cols-2">
             <div>
               <h4 className="font-semibold text-sm mb-3">1. Pick destination</h4>
@@ -1517,10 +1675,10 @@ function ESimPay() {
                       key={c.code}
                       onClick={() => { setSelectedCountry(c); setSelectedPlan(null); }}
                       className={cn(
-                        "flex flex-col items-center gap-1 rounded-lg border p-2 transition",
+                        "flex flex-col items-center gap-1 rounded-xl border p-2 transition card-lift",
                         selectedCountry?.code === c.code
-                          ? "border-violet-500 bg-violet-500/10"
-                          : "hover:bg-muted/50",
+                          ? "border-emerald-500 bg-emerald-500/10 ring-2 ring-emerald-500/20"
+                          : "border-border/60 hover:bg-muted/50",
                       )}
                     >
                       <span className="text-2xl">{c.flag}</span>
@@ -1534,7 +1692,7 @@ function ESimPay() {
             <div>
               <h4 className="font-semibold text-sm mb-3">2. Choose a plan</h4>
               {!selectedCountry ? (
-                <div className="flex h-48 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
+                <div className="flex h-48 items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
                   <Globe2 className="h-6 w-6 mr-2" /> Select a country
                 </div>
               ) : (
@@ -1544,10 +1702,10 @@ function ESimPay() {
                       key={p.id}
                       onClick={() => setSelectedPlan(p)}
                       className={cn(
-                        "w-full text-left rounded-lg border p-3 transition",
+                        "w-full text-left rounded-xl border p-3 transition card-lift",
                         selectedPlan?.id === p.id
-                          ? "border-violet-500 bg-violet-500/10"
-                          : "hover:bg-muted/50",
+                          ? "border-emerald-500 bg-emerald-500/10 ring-2 ring-emerald-500/20"
+                          : "border-border/60 hover:bg-muted/50",
                       )}
                     >
                       <div className="flex items-center justify-between">
@@ -1568,7 +1726,7 @@ function ESimPay() {
             <motion.div
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-5 rounded-xl bg-violet-500/10 p-4 flex items-center justify-between"
+              className="mt-5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-4 flex items-center justify-between"
             >
               <div>
                 <p className="text-xs text-muted-foreground">Selected plan</p>
@@ -1581,7 +1739,7 @@ function ESimPay() {
                   Valid {selectedPlan.durationDays} days
                 </p>
               </div>
-              <Button onClick={buy} disabled={buying}>
+              <Button onClick={buy} disabled={buying} className="rounded-xl shadow-premium-sm">
                 {buying ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
                 Buy · {fmtRaw(selectedPlan.price, "USD")}
               </Button>
@@ -1589,27 +1747,27 @@ function ESimPay() {
           )}
         </Card>
       ) : (
-        <Card className="p-5">
+        <Card className="p-5 card-premium border-border/60 shadow-premium-md">
           <div className="flex flex-col items-center text-center py-4">
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className="rounded-2xl bg-emerald-500/15 p-3 mb-3"
             >
-              <Check className="h-8 w-8 text-emerald-600" />
+              <Check className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
             </motion.div>
             <h3 className="font-bold text-lg">eSim Activated!</h3>
             <p className="text-sm text-muted-foreground mb-4">
               Scan this QR with your phone's camera to install the eSim profile.
             </p>
-            <div className="rounded-2xl bg-white p-3 shadow-lg ring-1 ring-violet-500/20 mb-4">
-              <QrCode value={purchased.activationQr} size={200} />
+            <div className="rounded-2xl bg-white p-3 shadow-premium-lg ring-1 ring-emerald-500/20 mb-4">
+              <QrCodeImage value={purchased.activationQr} size={200} />
             </div>
-            <div className="rounded-lg border bg-muted/40 p-3 w-full max-w-md">
+            <div className="rounded-lg border border-border/60 bg-muted/40 p-3 w-full max-w-md">
               <p className="text-xs text-muted-foreground">Activation code</p>
               <code className="text-xs font-mono break-all">{purchased.activationQr}</code>
             </div>
-            <Button className="mt-4" onClick={() => setPurchased(null)}>Buy another</Button>
+            <Button className="mt-4 rounded-xl shadow-premium-sm" onClick={() => setPurchased(null)}>Buy another</Button>
           </div>
         </Card>
       )}

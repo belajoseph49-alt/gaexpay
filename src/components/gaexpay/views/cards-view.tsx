@@ -3,15 +3,17 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import {
-  Plus, Snowflake, Eye, EyeOff, Settings2, Trash2, Wifi, Copy, Check,
-  Lock, ChevronLeft, ChevronRight, ShoppingCart, ShieldCheck,
+  Plus, Snowflake, Eye, EyeOff, Settings2, Wifi, Copy,
+  Lock, ChevronLeft, ChevronRight, ShieldCheck, Wallet,
+  TrendingUp, CreditCard, KeyRound, SlidersHorizontal, Info,
+  ArrowUpRight, ArrowDownRight, Receipt,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useFetch } from "@/hooks/use-fetch";
-import { formatMoney } from "@/lib/gaexpay";
+import { formatMoney, timeAgo } from "@/lib/gaexpay";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -24,17 +26,19 @@ import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
 import { useTranslation } from "@/hooks/use-translation";
 
+// Premium card gradients — emerald-forward, NO blue/indigo
 const CARD_GRADIENTS: Record<string, string> = {
-  emerald: "from-violet-600 via-purple-600 to-violet-800",
+  emerald: "from-emerald-700 via-emerald-800 to-teal-900",
   midnight: "from-slate-800 via-slate-900 to-black",
   sunset: "from-orange-500 via-rose-500 to-fuchsia-600",
-  ocean: "from-purple-500 via-blue-600 to-indigo-700",
   gold: "from-amber-400 via-yellow-500 to-orange-600",
+  teal: "from-teal-600 via-emerald-700 to-emerald-900",
 };
 
 export function CardsView() {
   const { t } = useTranslation();
   const { data, reload } = useFetch<{ cards: any[] }>("/api/cards");
+  const { data: txData } = useFetch<{ transactions: any[] }>("/api/transactions?limit=10");
   const [active, setActive] = useState(0);
   const { fmt, symbol, currency: userCur } = useFormatMoney();
   const [reveal, setReveal] = useState(false);
@@ -42,6 +46,9 @@ export function CardsView() {
 
   const cards = data?.cards ?? [];
   const card = cards[active];
+  const cardTxs = (txData?.transactions ?? []).filter(
+    (tx) => tx.cardId === card?.id || tx.metadata?.cardId === card?.id,
+  ).slice(0, 5);
 
   const toggleFreeze = async (c: any) => {
     const newStatus = c.status === "active" ? "frozen" : "active";
@@ -67,37 +74,52 @@ export function CardsView() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("cards.title")}</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t("cards.title")}</h1>
           <p className="text-sm text-muted-foreground">Virtual & physical cards for every need</p>
         </div>
-        <Button size="sm" onClick={() => setAddOpen(true)}><Plus className="h-4 w-4 mr-1.5" /> New Card</Button>
+        <Button size="sm" className="rounded-xl shadow-premium-sm h-10" onClick={() => setAddOpen(true)}>
+          <Plus className="h-4 w-4 mr-1.5" /> Order Card
+        </Button>
       </div>
 
-      {/* Card carousel */}
-      <div className="relative">
-        {cards.length === 0 ? (
-          <Skeleton className="h-56 w-full max-w-md" />
+      {/* Hero: active card */}
+      <div>
+        {cards.length === 0 && data === undefined ? (
+          <Skeleton className="h-56 w-full max-w-md mx-auto rounded-3xl" />
+        ) : cards.length === 0 ? (
+          <Card className="mx-auto max-w-md p-8 text-center card-premium border-border/60 shadow-premium-md">
+            <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-xl bg-emerald-500/15 text-emerald-600">
+              <CreditCard className="h-6 w-6" />
+            </div>
+            <p className="font-semibold">No cards yet</p>
+            <p className="text-sm text-muted-foreground mt-1 mb-4">Order your first virtual or physical card.</p>
+            <Button className="rounded-xl shadow-premium-sm" onClick={() => setAddOpen(true)}>
+              <Plus className="h-4 w-4 mr-1.5" /> Order Card
+            </Button>
+          </Card>
         ) : (
           <div className="flex items-center gap-2">
             {cards.length > 1 && (
-              <Button variant="outline" size="icon" className="rounded-full shrink-0" onClick={() => setActive((a) => (a - 1 + cards.length) % cards.length)}>
+              <Button variant="outline" size="icon" className="rounded-full shrink-0 shadow-premium-sm" onClick={() => setActive((a) => (a - 1 + cards.length) % cards.length)}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
             )}
             <div className="flex-1 overflow-hidden">
               <motion.div
                 key={card?.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, scale: 0.96, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
                 className="mx-auto max-w-md"
               >
                 <CardDisplay card={card} reveal={reveal} />
               </motion.div>
             </div>
             {cards.length > 1 && (
-              <Button variant="outline" size="icon" className="rounded-full shrink-0" onClick={() => setActive((a) => (a + 1) % cards.length)}>
+              <Button variant="outline" size="icon" className="rounded-full shrink-0 shadow-premium-sm" onClick={() => setActive((a) => (a + 1) % cards.length)}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             )}
@@ -105,56 +127,118 @@ export function CardsView() {
         )}
       </div>
 
-      {/* Card selector dots */}
+      {/* Card thumbnails carousel */}
       {cards.length > 1 && (
-        <div className="flex justify-center gap-1.5">
-          {cards.map((c, i) => (
-            <button
-              key={c.id}
-              onClick={() => setActive(i)}
-              className={cn("h-2 rounded-full transition-all", i === active ? "w-6 bg-primary" : "w-2 bg-muted-foreground/30")}
-            />
-          ))}
+        <div className="-mx-1">
+          <div className="flex gap-3 overflow-x-auto px-1 pb-2 no-scrollbar snap-x">
+            {cards.map((c, i) => (
+              <button
+                key={c.id}
+                onClick={() => setActive(i)}
+                className={cn(
+                  "shrink-0 snap-start transition",
+                  i === active && "ring-2 ring-emerald-500/40 ring-offset-2 ring-offset-background rounded-2xl",
+                )}
+              >
+                <CardDisplay card={c} reveal={false} small />
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Card actions */}
+      {/* KPI row */}
+      {card && (
+        <div className="grid grid-cols-3 gap-3">
+          <KpiCard
+            icon={<Wallet className="h-4 w-4" />}
+            label="Balance"
+            value={formatMoney(Math.max(0, card.limit - card.spending), card.currency)}
+            tone="emerald"
+          />
+          <KpiCard
+            icon={<CreditCard className="h-4 w-4" />}
+            label="Monthly limit"
+            value={formatMoney(card.limit, card.currency)}
+            tone="amber"
+          />
+          <KpiCard
+            icon={<TrendingUp className="h-4 w-4" />}
+            label="Spent (MTD)"
+            value={formatMoney(card.spending, card.currency)}
+            tone="rose"
+          />
+        </div>
+      )}
+
+      {/* Card controls grid */}
       {card && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <ActionButton icon={reveal ? EyeOff : Eye} label={reveal ? "Hide" : "Reveal"} onClick={() => setReveal(!reveal)} />
-          <ActionButton icon={Snowflake} label={card.status === "active" ? "Freeze" : "Unfreeze"} onClick={() => toggleFreeze(card)} danger={card.status === "active"} />
-          <ActionButton icon={Settings2} label="Settings" onClick={() => { setSettingsCard(card); setSettingsOpen(true); }} />
-          <ActionButton icon={Copy} label="Details" onClick={() => { navigator.clipboard?.writeText(card.maskedNumber.slice(-4)); toast.success("Card number copied"); }} />
+          <ControlButton
+            icon={reveal ? EyeOff : Eye}
+            label={reveal ? "Hide" : "Reveal"}
+            tone="emerald"
+            onClick={() => setReveal(!reveal)}
+          />
+          <ControlButton
+            icon={Snowflake}
+            label={card.status === "active" ? "Freeze" : "Unfreeze"}
+            tone={card.status === "active" ? "rose" : "emerald"}
+            active={card.status === "frozen"}
+            onClick={() => toggleFreeze(card)}
+          />
+          <ControlButton
+            icon={KeyRound}
+            label="Set PIN"
+            tone="amber"
+            onClick={() => toast.info("PIN change requires 3D Secure verification")}
+          />
+          <ControlButton
+            icon={Copy}
+            label="Details"
+            tone="teal"
+            onClick={() => { navigator.clipboard?.writeText(card.maskedNumber.slice(-4)); toast.success("Card number copied"); }}
+          />
         </div>
       )}
 
-      {/* Spending & limits */}
+      {/* Spending overview + card controls */}
       {card && (
         <div className="grid gap-4 lg:grid-cols-3">
-          <Card className="p-5 lg:col-span-2">
-            <h3 className="font-semibold mb-4">Spending Overview — {card.nickname}</h3>
+          <Card className="p-5 lg:col-span-2 card-premium border-border/60 shadow-premium-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-semibold">Spending Overview</h3>
+              <Badge variant="outline" className="rounded-full text-[10px] capitalize">{card.nickname}</Badge>
+            </div>
             <div className="space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm text-muted-foreground">Monthly limit</span>
-                  <span className="text-sm font-medium tabular-nums">{formatMoney(card.spending, card.currency)} / {formatMoney(card.limit, card.currency)}</span>
+                  <span className="text-xs text-muted-foreground">Monthly limit</span>
+                  <span className="text-xs font-medium tabular-nums">
+                    {formatMoney(card.spending, card.currency)} / {formatMoney(card.limit, card.currency)}
+                  </span>
                 </div>
-                <Progress value={(card.spending / card.limit) * 100} className="h-2" />
+                <Progress
+                  value={Math.min((card.spending / card.limit) * 100, 100)}
+                  className="h-2"
+                />
               </div>
               <div className="grid grid-cols-2 gap-4 pt-2">
                 <div>
-                  <p className="text-xs text-muted-foreground">Spent this month</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Spent this month</p>
                   <p className="text-xl font-bold tabular-nums">{formatMoney(card.spending, card.currency)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Available</p>
-                  <p className="text-xl font-bold tabular-nums text-violet-600">{formatMoney(Math.max(0, card.limit - card.spending), card.currency)}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Available</p>
+                  <p className="text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                    {formatMoney(Math.max(0, card.limit - card.spending), card.currency)}
+                  </p>
                 </div>
               </div>
             </div>
           </Card>
 
-          <Card className="p-5">
+          <Card className="p-5 card-premium border-border/60 shadow-premium-sm">
             <h3 className="font-semibold mb-3">Card Controls</h3>
             <div className="space-y-2.5">
               {[
@@ -166,7 +250,13 @@ export function CardsView() {
               ].map((c) => (
                 <div key={c.label} className="flex items-center justify-between">
                   <span className="text-sm">{c.label}</span>
-                  <Badge variant={c.on ? "default" : "secondary"} className="text-[10px]">
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "rounded-full text-[10px] border-0",
+                      c.on ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-muted text-muted-foreground",
+                    )}
+                  >
                     {c.on ? "On" : "Off"}
                   </Badge>
                 </div>
@@ -176,21 +266,33 @@ export function CardsView() {
         </div>
       )}
 
-      {/* All cards grid */}
-      <div>
-        <h3 className="font-semibold mb-3">All Cards ({cards.length})</h3>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {cards.map((c, i) => (
-            <button key={c.id} onClick={() => setActive(i)} className="text-left">
-              <CardDisplay card={c} reveal={false} small />
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Recent transactions for this card */}
+      {card && (
+        <Card className="p-5 card-premium border-border/60 shadow-premium-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="font-semibold">Recent Transactions</h3>
+            <Badge variant="outline" className="rounded-full text-[10px]">{cardTxs.length} on this card</Badge>
+          </div>
+          {cardTxs.length === 0 ? (
+            <div className="grid place-items-center py-6 text-center">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-muted mb-2">
+                <Receipt className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground">No transactions on this card yet</p>
+            </div>
+          ) : (
+            <div className="space-y-1 max-h-80 overflow-y-auto">
+              {cardTxs.map((tx) => (
+                <TxRow key={tx.id} tx={tx} />
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* Security note */}
-      <Card className="flex items-center gap-4 border-violet-500/30 bg-violet-500/5 p-5">
-        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-violet-500/15 text-violet-500">
+      <Card className="flex items-center gap-4 border-emerald-500/30 bg-emerald-500/5 p-5 card-premium">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
           <ShieldCheck className="h-5 w-5" />
         </div>
         <div>
@@ -211,14 +313,21 @@ function CardDisplay({ card, reveal, small }: { card: any; reveal: boolean; smal
   const gradient = CARD_GRADIENTS[card.color] || CARD_GRADIENTS.emerald;
   return (
     <div className={cn(
-      "relative overflow-hidden rounded-2xl bg-gradient-to-br p-5 text-white shadow-xl",
+      "relative overflow-hidden rounded-3xl bg-gradient-to-br p-5 text-white shadow-premium-xl",
       gradient,
-      small ? "h-36" : "h-52",
+      small ? "h-36 w-56" : "h-56",
+      // Subtle emerald accent edge
+      "ring-1 ring-white/10",
     )}>
-      <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+      {/* Emerald edge glow */}
+      <div className="absolute inset-0 rounded-3xl ring-1 ring-inset ring-emerald-400/20 pointer-events-none" />
+      {/* Ambient blurs */}
+      <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-emerald-400/20 blur-2xl" />
       <div className="absolute right-10 top-12 h-16 w-16 rounded-full bg-white/5 blur-xl" />
+      {/* Hologram shimmer */}
+      <div className="absolute right-4 top-4 h-8 w-12 rounded-md bg-gradient-to-br from-emerald-300/40 via-transparent to-amber-300/30 backdrop-blur-sm" />
       {card.status === "frozen" && (
-        <div className="absolute inset-0 z-10 grid place-items-center bg-slate-900/40 backdrop-blur-sm">
+        <div className="absolute inset-0 z-10 grid place-items-center bg-slate-950/40 backdrop-blur-sm rounded-3xl">
           <div className="flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-medium backdrop-blur">
             <Snowflake className="h-4 w-4" /> Frozen
           </div>
@@ -228,26 +337,33 @@ function CardDisplay({ card, reveal, small }: { card: any; reveal: boolean; smal
         <div className="flex items-start justify-between">
           <div>
             <p className={cn("font-semibold", small ? "text-xs" : "text-sm")}>{card.nickname}</p>
-            <p className="text-xs text-white/60 capitalize">{card.type} · {card.brand}</p>
+            <p className="text-[10px] text-white/60 capitalize">{card.type} · {card.brand}</p>
           </div>
           <Wifi className={cn("rotate-90 text-white/60", small ? "h-4 w-4" : "h-5 w-5")} />
         </div>
         {/* chip */}
-        <div className={cn("rounded-md bg-gradient-to-br from-amber-200 to-yellow-400", small ? "h-5 w-7" : "h-7 w-10")} />
+        <div className={cn(
+          "rounded-md bg-gradient-to-br from-amber-200 to-yellow-400 shadow-inner",
+          small ? "h-5 w-7" : "h-7 w-10",
+        )}>
+          <div className="h-full w-full rounded-md bg-[linear-gradient(135deg,transparent_45%,rgba(255,255,255,0.4)_50%,transparent_55%)]" />
+        </div>
         <div>
-          <p className={cn("font-mono tracking-widest", small ? "text-sm" : "text-lg")}>
+          <p className={cn("font-mono tracking-widest tabular-nums", small ? "text-sm" : "text-lg")}>
             {reveal ? `4827 3344 1290 ${card.maskedNumber.slice(-4)}` : card.maskedNumber}
           </p>
           <div className="mt-2 flex items-end justify-between">
-            <div>
+            <div className="min-w-0">
               <p className="text-[10px] text-white/60 uppercase">Card Holder</p>
-              <p className={cn("font-medium", small ? "text-[10px]" : "text-xs")}>{card.holderName}</p>
+              <p className={cn("font-medium truncate", small ? "text-[10px]" : "text-xs")}>{card.holderName}</p>
             </div>
-            <div>
+            <div className="px-2">
               <p className="text-[10px] text-white/60 uppercase">Expires</p>
-              <p className={cn("font-medium", small ? "text-[10px]" : "text-xs")}>{card.expiryMonth}/{card.expiryYear}</p>
+              <p className={cn("font-medium tabular-nums", small ? "text-[10px]" : "text-xs")}>{card.expiryMonth}/{card.expiryYear}</p>
             </div>
-            <span className={cn("font-bold italic", small ? "text-xs" : "text-sm")}>{card.brand === "visa" ? "VISA" : card.brand === "mastercard" ? "Mastercard" : "verve"}</span>
+            <span className={cn("font-bold italic tracking-tight", small ? "text-xs" : "text-base")}>
+              {card.brand === "visa" ? "VISA" : card.brand === "mastercard" ? "Mastercard" : "verve"}
+            </span>
           </div>
         </div>
       </div>
@@ -255,30 +371,89 @@ function CardDisplay({ card, reveal, small }: { card: any; reveal: boolean; smal
   );
 }
 
-function ActionButton({ icon: Icon, label, onClick, danger }: { icon: any; label: string; onClick: () => void; danger?: boolean }) {
+function KpiCard({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: string; tone: "emerald" | "amber" | "rose" }) {
+  const tones = {
+    emerald: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+    amber: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+    rose: "bg-rose-500/15 text-rose-500",
+  };
+  return (
+    <Card className="p-3 sm:p-4 card-premium border-border/60 shadow-premium-sm card-lift">
+      <div className={cn("grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-lg mb-2", tones[tone])}>
+        {icon}
+      </div>
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-sm sm:text-base font-bold tabular-nums truncate">{value}</p>
+    </Card>
+  );
+}
+
+function ControlButton({ icon: Icon, label, onClick, tone, active }: { icon: any; label: string; onClick: () => void; tone: "emerald" | "rose" | "amber" | "teal"; active?: boolean }) {
+  const tones = {
+    emerald: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+    rose: "bg-rose-500/15 text-rose-500",
+    amber: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+    teal: "bg-teal-500/15 text-teal-600 dark:text-teal-400",
+  };
   return (
     <button
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center gap-2 rounded-xl border p-4 transition hover:bg-muted/50",
-        danger && "hover:border-rose-500/40 hover:bg-rose-500/5",
+        "flex flex-col items-center gap-2 rounded-2xl border p-4 transition card-lift",
+        active
+          ? "border-emerald-500/40 bg-emerald-500/5"
+          : "border-border/60 hover:border-primary/40 hover:bg-muted/30",
       )}
     >
-      <Icon className={cn("h-5 w-5", danger ? "text-rose-500" : "text-primary")} />
+      <div className={cn("grid h-10 w-10 place-items-center rounded-xl", tones[tone])}>
+        <Icon className="h-5 w-5" />
+      </div>
       <span className="text-xs font-medium">{label}</span>
     </button>
+  );
+}
+
+function TxRow({ tx }: { tx: any }) {
+  const isCredit = tx.direction === "credit";
+  const Icon = isCredit ? ArrowDownRight : ArrowUpRight;
+  return (
+    <div className="flex w-full items-center gap-3 rounded-xl px-2 py-2.5 transition hover:bg-muted/60">
+      <div className={cn(
+        "grid h-9 w-9 shrink-0 place-items-center rounded-full",
+        isCredit ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-rose-500/15 text-rose-500",
+      )}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">{tx.counterpartyName || tx.description}</p>
+        <p className="text-xs text-muted-foreground capitalize truncate">
+          {tx.type} · {timeAgo(tx.createdAt)}
+        </p>
+      </div>
+      <div className="text-right">
+        <p className={cn("text-sm font-semibold tabular-nums", isCredit ? "text-emerald-600 dark:text-emerald-400" : "text-foreground")}>
+          {isCredit ? "+" : "-"}{formatMoney(tx.amount, tx.currency)}
+        </p>
+        <span className={cn(
+          "inline-block rounded-full px-1.5 py-0.5 text-[9px] uppercase",
+          tx.status === "completed" ? "pill-success" : tx.status === "pending" ? "pill-warning" : "pill-danger",
+        )}>
+          {tx.status}
+        </span>
+      </div>
+    </div>
   );
 }
 
 function NewCardDialog({ onSubmit }: { onSubmit: (f: any) => void }) {
   const [type, setType] = useState("virtual");
   const [brand, setBrand] = useState("visa");
-  const [color, setColor] = useState("violet");
+  const [color, setColor] = useState("emerald");
   const [nickname, setNickname] = useState("GaexPay Card");
   const [currency, setCurrency] = useState("NGN");
   const [limit, setLimit] = useState("200000");
   return (
-    <DialogContent>
+    <DialogContent className="sm:rounded-3xl shadow-premium-xl">
       <DialogHeader>
         <DialogTitle>Issue New Card</DialogTitle>
       </DialogHeader>
@@ -321,11 +496,11 @@ function NewCardDialog({ onSubmit }: { onSubmit: (f: any) => void }) {
           <Select value={color} onValueChange={setColor}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="violet">Emerald</SelectItem>
+              <SelectItem value="emerald">Emerald</SelectItem>
               <SelectItem value="midnight">Midnight</SelectItem>
               <SelectItem value="sunset">Sunset</SelectItem>
-              <SelectItem value="ocean">Ocean</SelectItem>
               <SelectItem value="gold">Gold</SelectItem>
+              <SelectItem value="teal">Teal</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -339,7 +514,7 @@ function NewCardDialog({ onSubmit }: { onSubmit: (f: any) => void }) {
         </div>
       </div>
       <DialogFooter>
-        <Button onClick={() => onSubmit({ type, brand, color, nickname, currency, limit: Number(limit) })}>Issue Card</Button>
+        <Button className="rounded-xl shadow-premium-sm" onClick={() => onSubmit({ type, brand, color, nickname, currency, limit: Number(limit) })}>Issue Card</Button>
       </DialogFooter>
     </DialogContent>
   );

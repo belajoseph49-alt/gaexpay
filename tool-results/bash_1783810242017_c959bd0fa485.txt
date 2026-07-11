@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   SendHorizontal, ArrowDownToLine, ArrowUpFromLine, QrCode, Search, UserPlus,
   Smartphone, Landmark, Wallet as WalletIcon, Check, ShieldCheck, ChevronRight,
   ChevronLeft, Loader2, Copy, Share2, Repeat, Contact as ContactIcon,
-  Users, UserCheck, Phone, Mail, Plus, Info, MessageSquare, Bitcoin,
+  Users, UserCheck, Phone, Mail, Plus, Info,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useFetch } from "@/hooks/use-fetch";
-import { formatMoney, CURRENCIES, MOBILE_MONEY_PROVIDERS } from "@/lib/gaexpay";
+import { formatMoney, CURRENCIES, MOBILE_MONEY_PROVIDERS, BANKS } from "@/lib/gaexpay";
 import { useApp } from "@/lib/store";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -30,41 +30,20 @@ import {
 import { useFormatMoney } from "@/hooks/use-format-money";
 import { useTranslation } from "@/hooks/use-translation";
 
-const METHODS = [
-  { id: "wallet", label: "GaexPay", icon: WalletIcon, fee: "Free · Instant" },
-  { id: "bank", label: "Bank", icon: Landmark, fee: "0.5% · max ₦5K" },
-  { id: "momo", label: "Mobile Money", icon: Smartphone, fee: "1.0% · instant" },
-  { id: "crypto", label: "Crypto", icon: Bitcoin, fee: "On-chain" },
-];
-
 export function SendView() {
   const { t } = useTranslation();
   return (
     <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t("send.title")}</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Transfer money instantly, request payments, top up or withdraw
-        </p>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t("send.title")}</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Transfer money instantly, request payments, top up or withdraw</p>
       </div>
       <Tabs defaultValue="send">
-        <TabsList className="grid w-full grid-cols-4 h-10 rounded-xl">
-          <TabsTrigger value="send" className="text-xs sm:text-sm rounded-lg">
-            <SendHorizontal className="h-3.5 w-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Send</span>
-          </TabsTrigger>
-          <TabsTrigger value="request" className="text-xs sm:text-sm rounded-lg">
-            <ArrowDownToLine className="h-3.5 w-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Request</span>
-          </TabsTrigger>
-          <TabsTrigger value="topup" className="text-xs sm:text-sm rounded-lg">
-            <ArrowDownToLine className="h-3.5 w-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Top Up</span>
-          </TabsTrigger>
-          <TabsTrigger value="withdraw" className="text-xs sm:text-sm rounded-lg">
-            <ArrowUpFromLine className="h-3.5 w-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Withdraw</span>
-          </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="send" className="text-xs sm:text-sm"><SendHorizontal className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Send</span></TabsTrigger>
+          <TabsTrigger value="request" className="text-xs sm:text-sm"><ArrowDownToLine className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Request</span></TabsTrigger>
+          <TabsTrigger value="topup" className="text-xs sm:text-sm"><ArrowDownToLine className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Top Up</span></TabsTrigger>
+          <TabsTrigger value="withdraw" className="text-xs sm:text-sm"><ArrowUpFromLine className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Withdraw</span></TabsTrigger>
         </TabsList>
         <TabsContent value="send" className="mt-3 sm:mt-4"><SendFlow /></TabsContent>
         <TabsContent value="request" className="mt-3 sm:mt-4"><RequestFlow /></TabsContent>
@@ -76,7 +55,7 @@ export function SendView() {
 }
 
 function SendFlow() {
-  const { data: contactsData } = useFetch<any>("/api/contacts");
+  const { data: contactsData, reload: reloadContacts } = useFetch<any>("/api/contacts");
   const { data: wData } = useFetch<{ wallets: any[] }>("/api/wallets");
   const {
     deviceContacts, loading: contactsLoading, supported: contactsSupported,
@@ -87,7 +66,7 @@ function SendFlow() {
   const [recipient, setRecipient] = useState<any>(null);
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("NGN");
-  const [method, setMethod] = useState("wallet");
+  const ethod, setMethod] = useState("wallet");
   const [provider, setProvider] = useState("mtn");
   const [note, setNote] = useState("");
   const [otp, setOtp] = useState("");
@@ -95,9 +74,9 @@ function SendFlow() {
   const [done, setDone] = useState<any>(null);
   const [search, setSearch] = useState("");
   const [showManualAdd, setShowManualAdd] = useState(false);
-  const [manualName, setManualName] = useState("");
-  const [manualPhone, setManualPhone] = useState("");
-  const [manualEmail, setManualEmail] = useState("");
+  const anualName, setManualName] = useState("");
+  const anualPhone, setManualPhone] = useState("");
+  const anualEmail, setManualEmail] = useState("");
   const [checkedContacts, setCheckedContacts] = useState<any>(null);
   const [checkingContacts, setCheckingContacts] = useState(false);
   const [activeTab, setActiveTab] = useState<"contacts" | "gaexpay" | "beneficiaries" | "recent">("gaexpay");
@@ -107,6 +86,7 @@ function SendFlow() {
   const recentRecipients = contactsData?.recentRecipients ?? [];
   const wallets = wData?.wallets ?? [];
 
+  // Filter logic
   const filteredBeneficiaries = search
     ? beneficiaries.filter((b: any) =>
         b.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -135,6 +115,7 @@ function SendFlow() {
         c.email?.toLowerCase().includes(search.toLowerCase()))
     : deviceContacts;
 
+  // Handle picking device contacts
   const handlePickContacts = async () => {
     const contacts = await pickContacts();
     if (contacts.length === 0) {
@@ -152,6 +133,7 @@ function SendFlow() {
     setActiveTab("contacts");
   };
 
+  // Handle manual contact add
   const handleManualAdd = () => {
     if (!manualName.trim()) {
       toast.error("Please enter a name");
@@ -167,6 +149,7 @@ function SendFlow() {
     toast.success("Contact added");
   };
 
+  // Check device contacts for membership
   useEffect(() => {
     if (deviceContacts.length > 0 && !checkedContacts) {
       setCheckingContacts(true);
@@ -209,97 +192,37 @@ function SendFlow() {
     setStep(1);
   };
 
-  const quickAmounts = [
-    { label: "1K", value: 1000 },
-    { label: "5K", value: 5000 },
-    { label: "10K", value: 10000 },
-    { label: "25K", value: 25000 },
-  ];
-  const availableBalance = wallets.find((w) => w.currency === currency)?.balance ?? 0;
-
-  const fee =
-    method === "bank" ? Math.min(Number(amount || 0) * 0.005, 5000) :
-    method === "momo" ? Number(amount || 0) * 0.01 :
-    0;
-  const total = Number(amount || 0) + fee;
-
   return (
-    <Card className="mx-auto max-w-2xl p-4 sm:p-6 border-border/60 shadow-premium-sm">
+    <Card className="mx-auto max-w-2xl p-4 sm:p-6">
       {/* Steps indicator */}
       <div className="mb-6 flex items-center justify-between">
         {["Recipient", "Amount", "Review", "Verify"].map((s, i) => (
           <div key={s} className="flex flex-1 items-center">
             <div className={cn(
               "grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-semibold transition",
-              i < step ? "bg-primary text-primary-foreground" :
-              i === step ? "bg-primary text-primary-foreground ring-4 ring-primary/20" :
-              "bg-muted text-muted-foreground",
+              i < step ? "bg-primary text-primary-foreground" : i === step ? "bg-primary text-primary-foreground ring-4 ring-primary/20" : "bg-muted text-muted-foreground",
             )}>
               {i < step ? <Check className="h-4 w-4" /> : i + 1}
             </div>
-            <span className={cn(
-              "ml-2 hidden sm:inline text-xs font-medium",
-              i === step ? "text-foreground" : "text-muted-foreground",
-            )}>{s}</span>
-            {i < 3 && (
-              <div className={cn(
-                "mx-2 h-0.5 flex-1 rounded-full",
-                i < step ? "bg-primary" : "bg-muted",
-              )} />
-            )}
+            <span className={cn("ml-2 hidden sm:inline text-xs font-medium", i === step ? "text-foreground" : "text-muted-foreground")}>{s}</span>
+            {i < 3 && <div className={cn("mx-2 h-0.5 flex-1 rounded", i < step ? "bg-primary" : "bg-muted")} />}
           </div>
         ))}
       </div>
 
       <AnimatePresence mode="wait">
-        {/* Step 0: Recipient */}
+        {/* Step 0: Recipient — NEW DESIGN */}
         {step === 0 && (
           <motion.div key="s0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <h3 className="font-semibold mb-1">Who are you sending to?</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Pick from contacts, GaexPay members, or enter new details
-            </p>
-
-            {/* Recent recipients horizontal scroll */}
-            {recentRecipients.length > 0 && (
-              <div className="mb-4">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Recent</p>
-                <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-                  {recentRecipients.slice(0, 8).map((r: any, i: number) => {
-                    const initials = r.name?.split(" ").map((n: string) => n[0]).slice(0, 2).join("") || "?";
-                    return (
-                      <button
-                        key={i}
-                        onClick={() => selectRecipient({
-                          name: r.name,
-                          account: r.account,
-                          bank: r.bank,
-                          type: r.method,
-                          method: r.method,
-                          provider: r.provider,
-                        })}
-                        className="group flex flex-col items-center gap-1 shrink-0"
-                      >
-                        <Avatar className="h-12 w-12 ring-2 ring-border group-hover:ring-primary/40 transition">
-                          <AvatarFallback className="bg-emerald-500/15 text-emerald-600 text-xs font-semibold">
-                            {initials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-[10px] text-muted-foreground max-w-[56px] truncate">
-                          {r.name?.split(" ")[0]}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            <p className="text-sm text-muted-foreground mb-4">Pick from contacts, GaexPay members, or enter new details</p>
 
             {/* Action buttons row */}
             <div className="mb-4 grid grid-cols-2 gap-2">
+              {/* Access phone contacts */}
               <Button
                 variant="outline"
-                className="h-12 rounded-xl"
+                className="h-12"
                 onClick={handlePickContacts}
                 disabled={contactsLoading}
                 suppressHydrationWarning
@@ -310,9 +233,11 @@ function SendFlow() {
                   Contacts
                 </span>
               </Button>
+
+              {/* New recipient */}
               <Button
                 variant="outline"
-                className="h-12 rounded-xl"
+                className="h-12"
                 onClick={() => setShowManualAdd(!showManualAdd)}
                 suppressHydrationWarning
               >
@@ -329,38 +254,23 @@ function SendFlow() {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                className="mb-4 rounded-xl border border-border/60 bg-muted/30 p-4 space-y-3"
+                className="mb-4 rounded-lg border bg-muted/30 p-4 space-y-3"
               >
                 <p className="text-xs font-medium text-muted-foreground">Enter recipient details manually</p>
-                <Input
-                  placeholder="Full name"
-                  value={manualName}
-                  onChange={(e) => setManualName(e.target.value)}
-                  className="rounded-xl"
-                />
+                <Input placeholder="Full name" value={manualName} onChange={(e) => setManualName(e.target.value)} />
                 <div className="grid grid-cols-2 gap-2">
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Phone"
-                      className="pl-9 rounded-xl"
-                      value={manualPhone}
-                      onChange={(e) => setManualPhone(e.target.value)}
-                    />
+                    <Input placeholder="Phone" className="pl-9" value={manualPhone} onChange={(e) => setManualPhone(e.target.value)} />
                   </div>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Email"
-                      className="pl-9 rounded-xl"
-                      value={manualEmail}
-                      onChange={(e) => setManualEmail(e.target.value)}
-                    />
+                    <Input placeholder="Email" className="pl-9" value={manualEmail} onChange={(e) => setManualEmail(e.target.value)} />
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="ghost" className="rounded-xl" onClick={() => setShowManualAdd(false)}>Cancel</Button>
-                  <Button size="sm" className="rounded-xl" onClick={handleManualAdd}>
+                  <Button size="sm" variant="ghost" onClick={() => setShowManualAdd(false)}>Cancel</Button>
+                  <Button size="sm" onClick={handleManualAdd}>
                     <Plus className="h-3.5 w-3.5 mr-1" /> Add Contact
                   </Button>
                 </div>
@@ -372,41 +282,39 @@ function SendFlow() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search name, phone, email, account..."
-                className="pl-9 rounded-xl h-10"
+                className="pl-9"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
 
-            {/* Source tabs */}
+            {/* Tabs: GaexPay Members | Contacts | Saved | Recent */}
             <div className="mb-3 flex gap-1.5 flex-wrap">
               {[
                 { id: "gaexpay", label: "GaexPay", icon: UserCheck, count: filteredMembers.length },
                 { id: "contacts", label: "Contacts", icon: ContactIcon, count: checkedContacts ? checkedContacts.totalChecked : deviceContacts.length },
                 { id: "beneficiaries", label: "Saved", icon: Users, count: filteredBeneficiaries.length },
                 { id: "recent", label: "Recent", icon: Repeat, count: filteredRecent.length },
-              ].map((tb) => {
-                const Icon = tb.icon;
-                const isActive = activeTab === tb.id;
+              ].map((t) => {
+                const Icon = t.icon;
+                const isActive = activeTab === t.id;
                 return (
                   <button
-                    key={tb.id}
-                    onClick={() => setActiveTab(tb.id as any)}
+                    key={t.id}
+                    onClick={() => setActiveTab(t.id as any)}
                     className={cn(
-                      "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition",
-                      isActive
-                        ? "bg-primary/10 text-primary ring-1 ring-primary/20"
-                        : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground",
+                      "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition",
+                      isActive ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground",
                     )}
                   >
                     <Icon className="h-3.5 w-3.5" />
-                    {tb.label}
-                    {tb.count > 0 && (
+                    {t.label}
+                    {t.count > 0 && (
                       <span className={cn(
                         "rounded-full px-1.5 py-0.5 text-[9px] font-bold",
                         isActive ? "bg-primary text-primary-foreground" : "bg-muted-foreground/20",
                       )}>
-                        {tb.count}
+                        {t.count}
                       </span>
                     )}
                   </button>
@@ -416,10 +324,11 @@ function SendFlow() {
 
             {/* Content per tab */}
             <div className="space-y-1.5 max-h-72 overflow-y-auto overscroll-contain no-scrollbar" style={{ WebkitOverflowScrolling: "touch" }}>
-              {/* GaexPay Members */}
+
+              {/* GaexPay Members tab */}
               {activeTab === "gaexpay" && (
                 <>
-                  {filteredMembers.length === 0 && !contactsData && [1, 2, 3].map((i) => <Skeleton key={i} className="h-14 rounded-xl" />)}
+                  {filteredMembers.length === 0 && !contactsData && [1, 2, 3].map((i) => <Skeleton key={i} className="h-14" />)}
                   {filteredMembers.length === 0 && contactsData && (
                     <div className="grid place-items-center py-8 text-center">
                       <UserCheck className="h-8 w-8 text-muted-foreground/40 mb-2" />
@@ -438,10 +347,10 @@ function SendFlow() {
                         method: "wallet",
                         gaexpayUserId: m.id,
                       })}
-                      className="flex w-full items-center gap-3 rounded-xl border border-border/60 bg-card p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
                     >
                       <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-emerald-500/15 text-emerald-600 text-xs font-semibold">
+                        <AvatarFallback className="bg-violet-500/15 text-violet-600 text-xs font-semibold">
                           {m.firstName[0]}{m.lastName[0]}
                         </AvatarFallback>
                       </Avatar>
@@ -449,7 +358,7 @@ function SendFlow() {
                         <div className="flex items-center gap-1.5">
                           <p className="text-sm font-medium truncate">{m.firstName} {m.lastName}</p>
                           {m.kycStatus === "verified" && (
-                            <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[9px] shrink-0">
+                            <Badge className="bg-violet-500/15 text-violet-600 border-0 text-[9px] shrink-0">
                               <Check className="h-2.5 w-2.5 mr-0.5" /> KYC
                             </Badge>
                           )}
@@ -458,7 +367,7 @@ function SendFlow() {
                           {m.username ? `@${m.username}` : m.phone}
                         </p>
                       </div>
-                      <Badge className="bg-emerald-500/10 text-emerald-600 border-0 shrink-0">
+                      <Badge className="bg-violet-500/10 text-violet-600 border-0 shrink-0">
                         <WalletIcon className="h-3 w-3 mr-0.5" /> Instant
                       </Badge>
                     </button>
@@ -466,7 +375,7 @@ function SendFlow() {
                 </>
               )}
 
-              {/* Device Contacts */}
+              {/* Device Contacts tab */}
               {activeTab === "contacts" && (
                 <>
                   {checkingContacts && (
@@ -479,11 +388,12 @@ function SendFlow() {
                     <div className="grid place-items-center py-8 text-center">
                       <ContactIcon className="h-8 w-8 text-muted-foreground/40 mb-2" />
                       <p className="text-sm text-muted-foreground">No contacts imported yet</p>
-                      <Button size="sm" variant="outline" className="mt-3 rounded-xl" onClick={handlePickContacts}>
+                      <Button size="sm" variant="outline" className="mt-3" onClick={handlePickContacts}>
                         <ContactIcon className="h-4 w-4 mr-1.5" /> Import Contacts
                       </Button>
                     </div>
                   )}
+                  {/* Show contacts that are GaexPay members first */}
                   {checkedContacts?.members?.map((mc: any) => (
                     <button
                       key={mc.gaexpayUser.id}
@@ -495,27 +405,28 @@ function SendFlow() {
                         method: "wallet",
                         gaexpayUserId: mc.gaexpayUser.id,
                       })}
-                      className="flex w-full items-center gap-3 rounded-xl border border-border/60 bg-card p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
                     >
                       <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-emerald-500/15 text-emerald-600 text-xs font-semibold">
+                        <AvatarFallback className="bg-violet-500/15 text-violet-600 text-xs font-semibold">
                           {mc.contactName.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <p className="text-sm font-medium truncate">{mc.contactName}</p>
-                          <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[9px] shrink-0">
+                          <Badge className="bg-violet-500/15 text-violet-600 border-0 text-[9px] shrink-0">
                             <UserCheck className="h-2.5 w-2.5 mr-0.5" /> GaexPay
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground truncate">{mc.phone || mc.email}</p>
                       </div>
-                      <Badge className="bg-emerald-500/10 text-emerald-600 border-0 shrink-0">
+                      <Badge className="bg-violet-500/10 text-violet-600 border-0 shrink-0">
                         <WalletIcon className="h-3 w-3 mr-0.5" /> Instant
                       </Badge>
                     </button>
                   ))}
+                  {/* Non-member contacts */}
                   {checkedContacts?.nonMembers?.filter((nmc: any) =>
                     !search || nmc.name?.toLowerCase().includes(search.toLowerCase()) || nmc.phone?.includes(search)
                   ).map((nmc: any, i: number) => (
@@ -528,7 +439,7 @@ function SendFlow() {
                         type: nmc.phone ? "momo" : "email",
                         method: nmc.phone ? "momo" : "wallet",
                       })}
-                      className="flex w-full items-center gap-3 rounded-xl border border-border/60 bg-card p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
                     >
                       <Avatar className="h-10 w-10">
                         <AvatarFallback className="bg-muted text-muted-foreground text-xs font-semibold">
@@ -545,6 +456,7 @@ function SendFlow() {
                       </Badge>
                     </button>
                   ))}
+                  {/* Device contacts not yet checked */}
                   {!checkedContacts && filteredDeviceContacts.map((c, i) => (
                     <button
                       key={i}
@@ -555,7 +467,7 @@ function SendFlow() {
                         type: c.phone ? "momo" : "email",
                         method: c.phone ? "momo" : "wallet",
                       })}
-                      className="flex w-full items-center gap-3 rounded-xl border border-border/60 bg-card p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
                     >
                       <Avatar className="h-10 w-10">
                         <AvatarFallback className="bg-muted text-muted-foreground text-xs font-semibold">
@@ -571,7 +483,7 @@ function SendFlow() {
                 </>
               )}
 
-              {/* Saved Beneficiaries */}
+              {/* Saved Beneficiaries tab */}
               {activeTab === "beneficiaries" && (
                 <>
                   {filteredBeneficiaries.length === 0 && contactsData && (
@@ -580,17 +492,17 @@ function SendFlow() {
                       <p className="text-sm text-muted-foreground">No saved beneficiaries yet</p>
                     </div>
                   )}
-                  {filteredBeneficiaries.length === 0 && !contactsData && [1, 2, 3].map((i) => <Skeleton key={i} className="h-14 rounded-xl" />)}
+                  {filteredBeneficiaries.length === 0 && !contactsData && [1, 2, 3].map((i) => <Skeleton key={i} className="h-14" />)}
                   {filteredBeneficiaries.map((b: any) => (
                     <button
                       key={b.id}
                       onClick={() => selectRecipient(b)}
-                      className="flex w-full items-center gap-3 rounded-xl border border-border/60 bg-card p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
                     >
                       <Avatar className="h-10 w-10">
                         <AvatarFallback className={cn(
                           "text-xs font-semibold",
-                          b.isGaexpayMember ? "bg-emerald-500/15 text-emerald-600" : "bg-primary/10 text-primary",
+                          b.isGaexpayMember ? "bg-violet-500/15 text-violet-600" : "bg-primary/10 text-primary",
                         )}>
                           {b.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
                         </AvatarFallback>
@@ -599,7 +511,7 @@ function SendFlow() {
                         <div className="flex items-center gap-1.5">
                           <p className="text-sm font-medium truncate">{b.name}</p>
                           {b.isGaexpayMember && (
-                            <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[9px] shrink-0">
+                            <Badge className="bg-violet-500/15 text-violet-600 border-0 text-[9px] shrink-0">
                               <UserCheck className="h-2.5 w-2.5 mr-0.5" /> GaexPay
                             </Badge>
                           )}
@@ -612,7 +524,7 @@ function SendFlow() {
                 </>
               )}
 
-              {/* Recent Recipients */}
+              {/* Recent Recipients tab */}
               {activeTab === "recent" && (
                 <>
                   {filteredRecent.length === 0 && contactsData && (
@@ -632,7 +544,7 @@ function SendFlow() {
                         method: r.method,
                         provider: r.provider,
                       })}
-                      className="flex w-full items-center gap-3 rounded-xl border border-border/60 bg-card p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
+                      className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
                     >
                       <Avatar className="h-10 w-10">
                         <AvatarFallback className="bg-muted text-muted-foreground text-xs font-semibold">
@@ -654,8 +566,8 @@ function SendFlow() {
               )}
             </div>
 
-            {/* Info banner */}
-            <div className="mt-4 flex items-start gap-2 rounded-xl bg-primary/10 p-3 text-xs text-primary">
+            {/* Payment method info */}
+            <div className="mt-4 flex items-start gap-2 rounded-lg bg-sky-500/10 p-3 text-xs text-sky-700 dark:text-sky-400">
               <Info className="h-4 w-4 shrink-0 mt-0.5" />
               <span>
                 <strong>GaexPay members</strong> get instant, free transfers. For others, choose Bank Transfer or Mobile Money — fees apply.
@@ -667,68 +579,11 @@ function SendFlow() {
         {/* Step 1: Amount */}
         {step === 1 && (
           <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-            {/* Recipient summary card */}
-            <div className="mb-5 flex items-center justify-between rounded-2xl border border-border/60 bg-muted/30 p-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <Avatar className="h-10 w-10 shrink-0">
-                  <AvatarFallback className="bg-emerald-500/15 text-emerald-600 text-xs font-semibold">
-                    {recipient?.name?.split(" ").map((n: string) => n[0]).slice(0, 2).join("") || "?"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{recipient?.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {recipient?.account || recipient?.bank}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setStep(0)}
-                className="text-xs font-medium text-primary hover:underline shrink-0"
-              >
-                Change
-              </button>
-            </div>
+            <h3 className="font-semibold mb-1">Enter amount</h3>
+            <p className="text-sm text-muted-foreground mb-4">Sending to {recipient?.name}</p>
 
-            {/* Method selector — horizontal scroll */}
-            <div className="mb-5">
-              <p className="text-xs font-medium text-muted-foreground mb-2">Method</p>
-              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                {METHODS.map((m) => {
-                  const Icon = m.icon;
-                  const isActive = method === m.id;
-                  return (
-                    <button
-                      key={m.id}
-                      onClick={() => setMethod(m.id)}
-                      className={cn(
-                        "group flex min-w-[120px] flex-col gap-1.5 rounded-2xl border p-3 text-left transition shrink-0",
-                        isActive
-                          ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                          : "border-border/60 bg-card hover:border-primary/40 hover:bg-muted/30",
-                      )}
-                    >
-                      <div className={cn(
-                        "grid h-9 w-9 place-items-center rounded-xl transition",
-                        isActive
-                          ? "bg-primary/15 text-primary"
-                          : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary",
-                      )}>
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold">{m.label}</p>
-                        <p className="text-[10px] text-muted-foreground">{m.fee}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Provider picker for MoMo */}
             {method === "momo" && (
-              <div className="mb-5">
+              <div className="mb-4">
                 <Label className="text-xs">Provider</Label>
                 <div className="mt-1.5 grid grid-cols-3 gap-2">
                   {MOBILE_MONEY_PROVIDERS.map((p) => (
@@ -736,9 +591,10 @@ function SendFlow() {
                       key={p.id}
                       onClick={() => setProvider(p.id)}
                       className={cn(
-                        "rounded-xl border p-2 text-center text-xs transition",
-                        provider === p.id ? "border-primary ring-2 ring-primary/20 bg-primary/5" : "border-border/60 hover:bg-muted",
+                        "rounded-lg border p-2 text-center text-xs transition",
+                        provider === p.id ? "border-primary ring-2 ring-primary/20" : "hover:bg-muted",
                       )}
+                      style={provider === p.id ? { borderColor: p.color } : {}}
                     >
                       <div className="h-6 w-full rounded mb-1" style={{ background: p.color }} />
                       {p.name}
@@ -748,11 +604,10 @@ function SendFlow() {
               </div>
             )}
 
-            {/* Large amount display */}
-            <div className="rounded-2xl border border-border/60 bg-muted/30 p-6 text-center">
+            <div className="rounded-2xl border bg-muted/30 p-6 text-center">
               <div className="flex items-center justify-center gap-2">
                 <Select value={currency} onValueChange={setCurrency}>
-                  <SelectTrigger className="w-24 h-10 rounded-xl"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-24 h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {CURRENCIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>)}
                   </SelectContent>
@@ -762,56 +617,36 @@ function SendFlow() {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
-                  className="flex-1 border-0 bg-transparent text-3xl sm:text-4xl font-bold tabular-nums text-center focus-visible:ring-0 h-12"
+                  className="flex-1 border-0 bg-transparent text-3xl font-bold tabular-nums text-center focus-visible:ring-0"
                 />
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Available: {formatMoney(availableBalance, currency)}
+                Available: {formatMoney(wallets.find((w) => w.currency === currency)?.balance ?? 0, currency)}
               </p>
             </div>
 
-            {/* Quick amount chips */}
-            <div className="mt-3 flex flex-wrap gap-2">
-              {quickAmounts.map((qa) => (
+            <div className="mt-3 flex gap-2">
+              {[5000, 10000, 25000, 50000].map((v) => (
                 <button
-                  key={qa.value}
-                  onClick={() => setAmount(String(qa.value))}
-                  className="rounded-xl border border-border/60 bg-card px-3 py-1.5 text-xs font-medium transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                  key={v}
+                  onClick={() => setAmount(String(v))}
+                  className="flex-1 rounded-lg border py-1.5 text-xs font-medium hover:bg-muted transition"
                 >
-                  {symbol}{qa.label}
+                  {symbol}{v.toLocaleString()}
                 </button>
               ))}
-              <button
-                onClick={() => setAmount(String(Math.floor(availableBalance)))}
-                className="rounded-xl border border-border/60 bg-card px-3 py-1.5 text-xs font-medium transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
-              >
-                Max
-              </button>
             </div>
 
-            {/* Note field */}
-            <div className="mt-5 space-y-2">
+            <div className="mt-4 space-y-2">
               <Label className="text-xs">Note (optional)</Label>
-              <div className="relative">
-                <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="What's this for?"
-                  className="pl-9 rounded-xl h-10"
-                />
-              </div>
+              <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="What's this for?" />
             </div>
 
             <div className="mt-6 flex gap-2">
-              <Button variant="outline" className="flex-1 rounded-xl h-12" onClick={() => setStep(0)}>
+              <Button variant="outline" onClick={() => setStep(0)} className="flex-1">
                 <ChevronLeft className="h-4 w-4 mr-1" /> Back
               </Button>
-              <Button
-                onClick={() => setStep(2)}
-                disabled={!amount || Number(amount) <= 0}
-                className="flex-1 rounded-xl h-12 shadow-premium-sm"
-              >
+              <Button onClick={() => setStep(2)} disabled={!amount || Number(amount) <= 0} className="flex-1">
                 Continue <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
@@ -824,50 +659,27 @@ function SendFlow() {
             <h3 className="font-semibold mb-1">Review transfer</h3>
             <p className="text-sm text-muted-foreground mb-4">Please confirm the details below</p>
 
-            {/* Recipient summary card */}
-            <div className="mb-4 flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3">
-              <Avatar className="h-10 w-10 shrink-0">
-                <AvatarFallback className="bg-emerald-500/15 text-emerald-600 text-xs font-semibold">
-                  {recipient?.name?.split(" ").map((n: string) => n[0]).slice(0, 2).join("") || "?"}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium truncate">{recipient?.name}</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {recipient?.account || recipient?.bank}
-                </p>
-              </div>
-              <Badge variant="outline" className="capitalize text-[10px] shrink-0">
-                {method === "momo" ? "Mobile Money" : method === "bank" ? "Bank" : method === "crypto" ? "Crypto" : "GaexPay"}
-              </Badge>
-            </div>
-
-            {/* Fee breakdown */}
-            <div className="space-y-3 rounded-2xl border border-border/60 bg-card p-4">
-              <BreakdownRow label="Amount" value={formatMoney(Number(amount), currency)} />
-              <BreakdownRow
-                label="Fee"
-                value={fee === 0 ? "Free" : formatMoney(fee, currency)}
-                hint={method === "wallet" ? "GaexPay member" : method === "bank" ? "0.5% · capped" : method === "momo" ? "1.0%" : "On-chain"}
-              />
-              <div className="border-t border-border/60 pt-3">
-                <BreakdownRow label="Total" value={formatMoney(total, currency)} bold />
+            <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
+              <Row label="Recipient" value={recipient?.name} />
+              <Row label="Account" value={recipient?.account || recipient?.bank} />
+              <Row label="Method" value={method === "momo" ? `Mobile Money · ${provider.toUpperCase()}` : method === "bank" ? "Bank Transfer" : "GaexPay Wallet"} />
+              <Row label="Amount" value={formatMoney(Number(amount), currency)} />
+              <Row label="Fee" value={method === "bank" ? formatMoney(Math.min(Number(amount) * 0.005, 5000), currency) : method === "momo" ? formatMoney(Number(amount) * 0.01, currency) : "Free"} />
+              <div className="border-t pt-3">
+                <Row label="Total" value={formatMoney(Number(amount) + (method === "bank" ? Math.min(Number(amount) * 0.005, 5000) : method === "momo" ? Number(amount) * 0.01 : 0), currency)} bold />
               </div>
             </div>
 
-            {/* Security note */}
-            <div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-400">
+            <div className="mt-4 flex items-center gap-2 rounded-lg bg-violet-500/10 p-3 text-xs text-violet-violet-700 dark:text-violet-400">
               <ShieldCheck className="h-4 w-4 shrink-0" />
               Protected by GaexPay Buyer Protection & end-to-end encryption.
             </div>
 
             <div className="mt-6 flex gap-2">
-              <Button variant="outline" className="flex-1 rounded-xl h-12" onClick={() => setStep(1)}>
+              <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
                 <ChevronLeft className="h-4 w-4 mr-1" /> Back
               </Button>
-              <Button className="flex-1 rounded-xl h-12 shadow-premium-sm" onClick={() => setStep(3)}>
-                Confirm & Continue
-              </Button>
+              <Button onClick={() => setStep(3)} className="flex-1">Confirm & Continue</Button>
             </div>
           </motion.div>
         )}
@@ -876,10 +688,10 @@ function SendFlow() {
         {step === 3 && (
           <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <div className="text-center">
-              <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-primary/10">
-                <ShieldCheck className="h-8 w-8 text-primary" />
+              <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-primary/10">
+                <ShieldCheck className="h-7 w-7 text-primary" />
               </div>
-              <h3 className="font-semibold text-lg">Verify it's you</h3>
+              <h3 className="font-semibold">Verify it's you</h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 Enter the 6-digit code sent to your registered phone & email
               </p>
@@ -906,17 +718,11 @@ function SendFlow() {
             </p>
 
             <div className="mt-6 flex gap-2">
-              <Button variant="outline" className="flex-1 rounded-xl h-12" onClick={() => setStep(2)}>
+              <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
                 <ChevronLeft className="h-4 w-4 mr-1" /> Back
               </Button>
-              <Button
-                onClick={submit}
-                disabled={otp.length < 6 || loading}
-                className="flex-1 rounded-xl h-12 shadow-premium-sm"
-              >
-                {loading
-                  ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Sending...</>
-                  : "Confirm Transfer"}
+              <Button onClick={submit} disabled={otp.length < 6 || loading} className="flex-1">
+                {loading ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Sending...</> : "Confirm Transfer"}
               </Button>
             </div>
           </motion.div>
@@ -931,7 +737,7 @@ function SendFlow() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", delay: 0.1 }}
-                className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white pulse-glow"
+                className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-violet-500 text-white pulse-glow"
               >
                 <Check className="h-8 w-8" strokeWidth={3} />
               </motion.div>
@@ -941,27 +747,23 @@ function SendFlow() {
               </p>
             </div>
 
-            <div className="my-5 space-y-2 rounded-2xl border border-border/60 bg-muted/30 p-4 text-sm">
-              <BreakdownRow label="Reference" value={done.reference} />
-              <BreakdownRow label="Recipient" value={recipient?.name} />
-              <BreakdownRow label="Amount" value={formatMoney(Number(amount), currency)} />
-              <BreakdownRow label="Fee" value={formatMoney(done.fee, currency)} />
-              <BreakdownRow label="Date" value={new Date(done.completedAt).toLocaleString()} />
-              <BreakdownRow label="Status" value="Completed" />
+            <div className="my-5 space-y-2 rounded-xl border bg-muted/30 p-4 text-sm">
+              <Row label="Reference" value={done.reference} />
+              <Row label="Recipient" value={recipient?.name} />
+              <Row label="Amount" value={formatMoney(Number(amount), currency)} />
+              <Row label="Fee" value={formatMoney(done.fee, currency)} />
+              <Row label="Date" value={new Date(done.completedAt).toLocaleString()} />
+              <Row label="Status" value="Completed" />
             </div>
 
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1 rounded-xl h-11"
-                onClick={() => { navigator.clipboard?.writeText(done.reference); toast.success("Reference copied"); }}
-              >
+              <Button variant="outline" className="flex-1" onClick={() => { navigator.clipboard?.writeText(done.reference); toast.success("Reference copied"); }}>
                 <Copy className="h-4 w-4 mr-1.5" /> Copy Ref
               </Button>
-              <Button variant="outline" className="flex-1 rounded-xl h-11">
+              <Button variant="outline" className="flex-1">
                 <Share2 className="h-4 w-4 mr-1.5" /> Share
               </Button>
-              <Button className="flex-1 rounded-xl h-11 shadow-premium-sm" onClick={reset}>
+              <Button className="flex-1" onClick={reset}>
                 <Repeat className="h-4 w-4 mr-1.5" /> Send Again
               </Button>
             </div>
@@ -972,19 +774,18 @@ function SendFlow() {
   );
 }
 
-function BreakdownRow({ label, value, hint, bold }: { label: string; value?: string; hint?: string; bold?: boolean }) {
+function Row({ label, value, bold }: { label: string; value?: string; bold?: boolean }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <div className="min-w-0">
-        <span className={cn("text-xs", bold ? "font-semibold text-foreground" : "text-muted-foreground")}>{label}</span>
-        {hint && <p className="text-[10px] text-muted-foreground/80">{hint}</p>}
-      </div>
-      <span className={cn("text-sm tabular-nums text-right", bold ? "font-bold text-lg" : "font-medium")}>{value || "—"}</span>
+    <div className="flex items-center justify-between">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className={cn("text-sm", bold ? "font-bold" : "font-medium")}>{value || "—"}</span>
     </div>
   );
 }
 
 function RequestFlow() {
+  const { data: wData } = useFetch<{ wallets: any[] }>("/api/wallets");
+  const wallets = wData?.wallets ?? [];
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("NGN");
   const [note, setNote] = useState("");
@@ -996,16 +797,14 @@ function RequestFlow() {
   };
 
   return (
-    <Card className="mx-auto max-w-2xl p-4 sm:p-6 border-border/60 shadow-premium-sm">
+    <Card className="mx-auto max-w-2xl p-4 sm:p-6">
       <h3 className="font-semibold text-base sm:text-lg">Request Money</h3>
-      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 mb-4">
-        Generate a payment link or QR code to receive funds
-      </p>
+      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 mb-4">Generate a payment link or QR code to receive funds</p>
 
-      <div className="rounded-2xl border border-border/60 bg-muted/30 p-4 sm:p-6 text-center">
+      <div className="rounded-xl sm:rounded-2xl border bg-muted/30 p-4 sm:p-6 text-center">
         <div className="flex items-center justify-center gap-2">
           <Select value={currency} onValueChange={setCurrency}>
-            <SelectTrigger className="w-20 sm:w-24 h-10 rounded-xl"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-20 sm:w-24 h-10"><SelectValue /></SelectTrigger>
             <SelectContent>
               {CURRENCIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>)}
             </SelectContent>
@@ -1015,42 +814,31 @@ function RequestFlow() {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            className="flex-1 border-0 bg-transparent text-3xl sm:text-4xl font-bold tabular-nums text-center focus-visible:ring-0 h-12"
+            className="flex-1 border-0 bg-transparent text-2xl sm:text-3xl font-bold tabular-nums text-center focus-visible:ring-0"
           />
         </div>
       </div>
 
       <div className="mt-4 space-y-2">
         <Label className="text-xs">Note for payer</Label>
-        <Input
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="e.g. Dinner split, rent contribution"
-          className="rounded-xl h-10"
-        />
+        <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Dinner split, rent contribution" />
       </div>
 
-      <Button className="mt-4 w-full h-12 rounded-xl shadow-premium-sm" onClick={generate}>
-        Generate Request Link
-      </Button>
+      <Button className="mt-4 w-full h-11" onClick={generate}>Generate Request Link</Button>
 
       {link && (
         <div className="mt-4 space-y-3">
-          <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-muted/30 p-3">
+          <div className="flex items-center gap-2 rounded-lg border bg-muted/30 p-3">
             <QrCode className="h-7 w-7 text-primary shrink-0" />
             <Input readOnly value={link} className="border-0 bg-transparent text-xs" />
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => { navigator.clipboard?.writeText(link); toast.success("Link copied"); }}
-            >
+            <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard?.writeText(link); toast.success("Link copied"); }}>
               <Copy className="h-4 w-4" />
             </Button>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <Button variant="outline" size="sm" className="h-9 rounded-xl"><Share2 className="h-3.5 w-3.5 mr-1" /> WhatsApp</Button>
-            <Button variant="outline" size="sm" className="h-9 rounded-xl"><Share2 className="h-3.5 w-3.5 mr-1" /> Email</Button>
-            <Button variant="outline" size="sm" className="h-9 rounded-xl"><Copy className="h-3.5 w-3.5 mr-1" /> Copy</Button>
+            <Button variant="outline" size="sm" className="h-9"><Share2 className="h-3.5 w-3.5 mr-1" /> WhatsApp</Button>
+            <Button variant="outline" size="sm" className="h-9"><Share2 className="h-3.5 w-3.5 mr-1" /> Email</Button>
+            <Button variant="outline" size="sm" className="h-9"><Copy className="h-3.5 w-3.5 mr-1" /> Copy</Button>
           </div>
         </div>
       )}
@@ -1060,32 +848,27 @@ function RequestFlow() {
 
 function TopUpFlow() {
   return (
-    <Card className="mx-auto max-w-2xl p-4 sm:p-6 border-border/60 shadow-premium-sm">
+    <Card className="mx-auto max-w-2xl p-4 sm:p-6">
       <h3 className="font-semibold text-base sm:text-lg">Top Up Wallet</h3>
-      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 mb-4">
-        Add funds from card, bank or mobile money
-      </p>
+      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 mb-4">Add funds from card, bank or mobile money</p>
       <div className="grid gap-2.5 sm:gap-3 sm:grid-cols-2">
         {[
-          { icon: Landmark, title: "Bank Transfer", desc: "Free · Instant", color: "bg-emerald-500/15 text-emerald-600" },
-          { icon: Smartphone, title: "Mobile Money", desc: "MTN, Orange, Airtel", color: "bg-amber-500/15 text-amber-600" },
-          { icon: WalletIcon, title: "Debit Card", desc: "Visa, Mastercard", color: "bg-teal-500/15 text-teal-600" },
-          { icon: QrCode, title: "Voucher / Code", desc: "Redeem a code", color: "bg-fuchsia-500/15 text-fuchsia-600" },
+          { icon: Landmark, title: "Bank Transfer", desc: "Free · Instant", color: "bg-violet-500/15 text-violet-500" },
+          { icon: Smartphone, title: "Mobile Money", desc: "MTN, Orange, Airtel", color: "bg-amber-500/15 text-amber-500" },
+          { icon: WalletIcon, title: "Debit Card", desc: "Visa, Mastercard", color: "bg-violet-500/15 text-violet-500" },
+          { icon: QrCode, title: "Voucher / Code", desc: "Redeem a code", color: "bg-sky-500/15 text-sky-500" },
         ].map((m) => {
           const Icon = m.icon;
           return (
-            <button
-              key={m.title}
-              className="group flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-3 sm:p-4 text-left transition hover:border-primary/40 hover:bg-muted/30 card-lift shadow-premium-xs hover:shadow-premium-sm"
-            >
-              <div className={cn("grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-xl shrink-0", m.color)}>
+            <button key={m.title} className="flex items-center gap-3 rounded-xl border p-3 sm:p-4 text-left transition hover:border-primary/40 hover:bg-muted/30">
+              <div className={cn("grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-lg shrink-0", m.color)}>
                 <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">{m.title}</p>
                 <p className="text-[11px] sm:text-xs text-muted-foreground">{m.desc}</p>
               </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 transition group-hover:translate-x-0.5" />
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
             </button>
           );
         })}
@@ -1108,6 +891,7 @@ function WithdrawFlow() {
   const dailyLimit = 5000000;
   const dailyLimitLeft = Math.max(0, dailyLimit - availableBalance * 0.1);
 
+  // Filter beneficiaries for withdrawal destinations (bank + momo)
   const withdrawalDestinations = beneficiaries.filter((b) => b.type === "bank" || b.type === "momo");
 
   const handleWithdraw = async () => {
@@ -1124,18 +908,16 @@ function WithdrawFlow() {
   };
 
   return (
-    <Card className="mx-auto max-w-2xl p-4 sm:p-6 border-border/60 shadow-premium-sm">
+    <Card className="mx-auto max-w-2xl p-4 sm:p-6">
       <h3 className="font-semibold text-base sm:text-lg">Withdraw Funds</h3>
-      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 mb-4">
-        Cash out to bank or mobile money
-      </p>
+      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 mb-4">Cash out to bank or mobile money</p>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-          <div className="rounded-2xl border border-border/60 bg-card p-3 sm:p-4 shadow-premium-xs">
+          <div className="rounded-xl border p-3 sm:p-4">
             <p className="text-[11px] sm:text-xs text-muted-foreground">Available</p>
             <p className="text-base sm:text-xl font-bold tabular-nums">{fmt(availableBalance)}</p>
           </div>
-          <div className="rounded-2xl border border-border/60 bg-card p-3 sm:p-4 shadow-premium-xs">
+          <div className="rounded-xl border p-3 sm:p-4">
             <p className="text-[11px] sm:text-xs text-muted-foreground">Daily limit left</p>
             <p className="text-base sm:text-xl font-bold tabular-nums">{fmt(dailyLimitLeft)}</p>
           </div>
@@ -1144,7 +926,7 @@ function WithdrawFlow() {
           <Label className="text-xs sm:text-sm">Withdraw to</Label>
           {withdrawalDestinations.length > 0 ? (
             <Select value={destination} onValueChange={setDestination}>
-              <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Select destination" /></SelectTrigger>
+              <SelectTrigger className="h-11"><SelectValue placeholder="Select destination" /></SelectTrigger>
               <SelectContent>
                 {withdrawalDestinations.map((b) => (
                   <SelectItem key={b.id} value={b.id}>
@@ -1154,27 +936,17 @@ function WithdrawFlow() {
               </SelectContent>
             </Select>
           ) : (
-            <div className="rounded-xl border border-dashed border-border/60 p-4 text-center">
+            <div className="rounded-lg border border-dashed p-4 text-center">
               <p className="text-xs text-muted-foreground mb-2">No saved bank or mobile money accounts</p>
-              <Button size="sm" variant="outline" className="rounded-xl" onClick={() => useApp.getState().setView("send")}>
-                Add beneficiary
-              </Button>
+              <Button size="sm" variant="outline" onClick={() => useApp.getState().setView("send")}>Add beneficiary</Button>
             </div>
           )}
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs sm:text-sm">Amount ({userCur})</Label>
-          <Input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-            className="h-11 rounded-xl text-base sm:text-lg font-semibold"
-          />
+          <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" className="h-11 text-base sm:text-lg font-semibold" />
         </div>
-        <Button className="w-full h-12 rounded-xl shadow-premium-sm" onClick={handleWithdraw} disabled={!amount || !destination}>
-          Continue
-        </Button>
+        <Button className="w-full h-11" onClick={handleWithdraw} disabled={!amount || !destination}>Continue</Button>
       </div>
     </Card>
   );

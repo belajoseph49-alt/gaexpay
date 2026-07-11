@@ -130,7 +130,7 @@ const NAV: NavGroup[] = [
   },
 ];
 
-export function MobileNav() {
+export function MobileNav({ onNavigate }: { onNavigate?: () => void } = {}) {
   const { view, setView } = useApp();
   const { data: meData, loading: meLoading } = useFetch<{ user: AuthUser }>("/api/auth/me");
   const { data: featureData } = useFetch<{ flags: Record<string, unknown> }>("/api/features");
@@ -180,12 +180,12 @@ export function MobileNav() {
                   return (
                     <button
                       key={item.id}
-                      onClick={() => setView(item.id)}
+                      onClick={() => { setView(item.id); onNavigate?.(); }}
                       className={cn(
-                        "group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                        "group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
                         active
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-sidebar-accent",
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
                       )}
                     >
                       <Icon className="h-[18px] w-[18px]" />
