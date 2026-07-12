@@ -4615,3 +4615,26 @@ Stage Summary:
 - **Communities**: browse 4 demo communities + inline create form (presentational).
 - **Disputes**: Report button on every outgoing payment card → dispute dialog (reason + description) → POST /api/disputes → linked support ticket.
 - Lint clean. Dev server stable. All features verified in the browser.
+
+---
+Task ID: 24 (Bug Fix — messaging-view null user crash)
+Agent: Main (Z.ai Code)
+
+Task: Fix runtime TypeError "Cannot read properties of null (reading 'avatar')" in messaging-view.tsx.
+
+Root Cause:
+- Task 22 updated `GET /api/messaging/conversations` to return group conversations where `user: null` (groups have `groupName`/`groupAvatar` instead).
+- The OLD `messaging-view.tsx` (registered as `"messaging"` in app-shell) still assumed `user` was always non-null. When a group conversation appeared in the list, `ConversationRow` crashed at `item.user.avatar` (line 336).
+- The API returns 7 conversations: 1 group (user=null) + 6 1-to-1. The group caused the crash.
+
+Fix (3 changes in `src/components/gaexpay/views/messaging-view.tsx`):
+1. Updated `ConversationListItem` type: `user` is now `Participant | null`, added `isGroup`, `groupName`, `groupAvatar`, `memberCount` fields.
+2. Filtered out group conversations at the data-loading level: `const conversations = (convData?.conversations ?? []).filter((c) => !c.isGroup && c.user)` — the old messaging view only handles 1-to-1 chats; groups are handled by the new GaexChat view.
+3. Added a null guard in `ConversationRow`: `if (!item.user) return null;` as a safety net.
+4. Added optional chaining in the search filter and prefill logic (`c.user?.username`, `c.user?.id`).
+
+Verification:
+- `bun run lint` → 0 errors, 0 warnings.
+- API confirmed: returns 7 conversations (1 group with user=null, 6 1-to-1). Old messaging view now filters to 6 1-to-1 only.
+- dev.log: no runtime errors.
+- The new GaexChat view (`gaex-chat`) handles groups correctly (uses `isGroup`/`groupName` fields) — no changes needed there.

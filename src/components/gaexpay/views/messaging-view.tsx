@@ -39,7 +39,11 @@ interface Participant {
 
 interface ConversationListItem {
   id: string;
-  user: Participant;
+  user: Participant | null;
+  isGroup?: boolean;
+  groupName?: string | null;
+  groupAvatar?: string | null;
+  memberCount?: number;
   lastMessage: {
     id: string;
     content: string;
@@ -133,7 +137,7 @@ export function MessagingView() {
   const { data: convData, loading: convLoading, reload: reloadConvs } =
     useFetch<ConversationsResponse>("/api/messaging/conversations");
 
-  const conversations = convData?.conversations ?? [];
+  const conversations = (convData?.conversations ?? []).filter((c) => !c.isGroup && c.user);
 
   // ---- Pre-select: if user came from "Send Money → chat" prefill, open that conversation ----
   useEffect(() => {
@@ -141,8 +145,8 @@ export function MessagingView() {
     // Try to find existing conversation matching the recipient
     const matched = conversations.find(
       (c) =>
-        c.user.username === sendPrefill.recipient ||
-        c.user.id === sendPrefill.recipient,
+        c.user?.username === sendPrefill.recipient ||
+        c.user?.id === sendPrefill.recipient,
     );
     if (matched) {
       setActiveId(matched.id);
@@ -159,8 +163,8 @@ export function MessagingView() {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return (
-      fullName(c.user).toLowerCase().includes(q) ||
-      c.user.username?.toLowerCase().includes(q) ||
+      fullName(c.user!).toLowerCase().includes(q) ||
+      c.user?.username?.toLowerCase().includes(q) ||
       c.lastMessage?.content.toLowerCase().includes(q)
     );
   });
@@ -323,6 +327,9 @@ function ConversationRow({
   active: boolean;
   onClick: () => void;
 }) {
+  // Guard: skip rendering if user is null (group conversations are handled
+  // by the new GaexChat view, but the API may still return them here)
+  if (!item.user) return null;
   return (
     <button
       onClick={onClick}
