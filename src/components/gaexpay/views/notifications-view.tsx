@@ -419,12 +419,25 @@ export function NotificationsView() {
               {notifs.map((n) => {
                 const Icon = NOTIFICATION_ICONS[n.type] || Bell;
                 const target = notificationToView(n);
+                // Outer element is a div (not a button) because the row
+                // contains a Switch which itself renders a <button> — nesting
+                // buttons is invalid HTML and triggers a hydration error.
+                // The div is given role="button" + keyboard handler so it
+                // remains keyboard-accessible.
                 return (
-                  <button
+                  <div
                     key={n.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => handleClick(n)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleClick(n);
+                      }
+                    }}
                     className={cn(
-                      "group flex w-full gap-3 px-4 py-3.5 text-left transition hover:bg-muted/40",
+                      "group flex w-full cursor-pointer gap-3 px-4 py-3.5 text-left transition hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-inset",
                       !n.isRead && "bg-primary/5",
                     )}
                   >
@@ -458,13 +471,15 @@ export function NotificationsView() {
                         )}
                       </div>
                     </div>
-                    {/* Per-item mark-as-read toggle. Wrapped in a span so
-                        clicks on the switch don't bubble up to the row's
-                        onClick (which would navigate away). */}
+                    {/* Per-item mark-as-read toggle. The stopPropagation on the
+                        wrapper prevents a click on the Switch from also
+                        triggering the row's onClick (which would navigate
+                        away). */}
                     <span
                       onClick={(e) => e.stopPropagation()}
                       onKeyDown={(e) => e.stopPropagation()}
                       role="presentation"
+                      className="flex items-center"
                     >
                       <Switch
                         checked={n.isRead}
@@ -473,7 +488,7 @@ export function NotificationsView() {
                         aria-label="Mark as read"
                       />
                     </span>
-                  </button>
+                  </div>
                 );
               })}
             </div>

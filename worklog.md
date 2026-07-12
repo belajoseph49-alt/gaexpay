@@ -4327,3 +4327,36 @@ Stage Summary:
 - **No violet/blue primary accents** anywhere (violet kept only for Pi Network section + crypto wallet distinction, as intended).
 - **Files created**: bottom-nav.tsx. **Files rewritten**: globals.css, landing.tsx. **Files edited**: sidebar, topbar, mobile-nav, app-shell, auth-modal, dashboard-view, transactions-view, wallets-view, send-view, cards-view, pay-view, exchange-view (12 view/component files total).
 - Worklog now 4244+ lines. Subagents 18-a and 18-b appended their own detailed entries.
+
+---
+Task ID: 19 (Bug Fix — Notifications hydration error)
+Agent: Main (Z.ai Code)
+
+Task: Fix console hydration error: "In HTML, <button> cannot be a descendant of <button>" in notifications-view.tsx.
+
+Root Cause:
+- In `src/components/gaexpay/views/notifications-view.tsx` (line ~423), each notification row was rendered as a `<button>` element.
+- Inside that row, a `<Switch>` component (from Radix UI) was rendered at line ~469. The Switch renders its own `<button type="button" role="switch">`.
+- Nesting a `<button>` inside another `<button>` is invalid HTML and triggers a React hydration error + console warning.
+
+Fix:
+- Changed the outer `<button>` to a `<div>` with:
+  * `role="button"` — preserves semantic meaning for screen readers.
+  * `tabIndex={0}` — keeps the row keyboard-focusable.
+  * `onKeyDown` handler — activates the row on Enter/Space (matching native button behavior).
+  * `cursor-pointer` — preserves the pointer cursor visual.
+  * `focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-inset` — accessible focus indicator.
+- The inner `<Switch>` (which renders its own button) is now a valid descendant of a `<div>`, no longer nested inside another button.
+- The `<span>` wrapper around the Switch (with `stopPropagation` to prevent the Switch click from also triggering the row's onClick) was preserved and given `className="flex items-center"` for alignment.
+
+Verification:
+- `bun run lint` → 0 errors, 0 warnings.
+- agent-browser: logged in via "Try Demo Account" → navigated to Notifications view → rendered correctly with notification rows and toggle switches on the right, no broken layout.
+- VLM confirmed: "Notifications view with notification rows with toggle switches on the right. No visible error or broken layout."
+- dev.log: no hydration errors, no console warnings, all API calls returning 200.
+
+Stage Summary:
+- Single-file fix: `src/components/gaexpay/views/notifications-view.tsx` (lines ~420-492).
+- No other files touched.
+- Also audited all other `<Switch>` usages across the codebase (24 occurrences) — all others use `<div>` or `<label>` wrappers, not buttons, so no other nesting issues exist.
+- Lint clean. Dev server stable. Hydration error resolved.
