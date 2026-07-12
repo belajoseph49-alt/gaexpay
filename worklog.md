@@ -4360,3 +4360,60 @@ Stage Summary:
 - No other files touched.
 - Also audited all other `<Switch>` usages across the codebase (24 occurrences) — all others use `<div>` or `<label>` wrappers, not buttons, so no other nesting issues exist.
 - Lint clean. Dev server stable. Hydration error resolved.
+
+---
+Task ID: 20 (Bug Fix — Mobile Topbar + Compiling Badge Overlap)
+Agent: Main (Z.ai Code)
+
+Task: Fix 4 mobile UI issues reported by user: (1) "monitor/desktop" icon showing on mobile topbar, (2) icons cramped/poorly aligned on mobile, (3) "Compiling..." badge overlapping the bottom navigation, (4) elements overflowing on small screens (375px).
+
+Root Causes & Fixes:
+
+1. **Monitor/desktop icon on mobile** (`theme-toggle.tsx`):
+   - The `ThemeToggle` component rendered a single dropdown button for all viewports. When `theme === "system"` (or before mount), it showed the `Monitor` (desktop screen) icon — confusing on a phone.
+   - **Fix**: Split into two variants. Mobile (`sm:hidden`) is a simple Sun/Moon toggle button that flips light↔dark directly (no dropdown, no System option, no Monitor icon). Desktop (`hidden sm:inline-flex`) keeps the full Light/Dark/System dropdown. The Monitor icon now only ever appears in the desktop dropdown's "System" menu item, never as the trigger icon on mobile.
+
+2. **Icons cramped/poorly aligned on mobile** (`topbar.tsx`):
+   - The topbar used `gap-1` and several elements were `hidden sm:flex` (so they appeared at ≥640px). On a 375px phone, the remaining elements (Menu, AI, ThemeToggle, Bell, Avatar) were cramped.
+   - **Fix**: Reworked the responsive visibility:
+     * Hamburger menu: always visible on mobile (`lg:hidden`).
+     * Search bar: desktop only (`hidden md:flex`) — unchanged.
+     * Send button: hidden on phones (`hidden sm:inline-flex`) — unchanged.
+     * AI Assistant (Sparkles): now hidden on phones (`hidden sm:inline-flex`) — was always visible before, took space.
+     * Language switcher: icon-only on phones (`<Languages>` icon, text hidden via `hidden sm:inline`), full label on ≥640px.
+     * Currency switcher: icon-only on phones (`<Globe>` icon, text hidden), full label on ≥640px.
+     * Theme toggle: mobile variant (simple Sun/Moon) on phones, desktop dropdown on ≥640px.
+     * Notifications bell: always visible.
+     * Avatar: always visible, chevron hidden on phones.
+   - Spacing: `gap-0.5 sm:gap-1` on the actions container, `px-3 sm:px-4 lg:px-6` on the header, `h-[56px] sm:h-[60px]` for a slightly shorter bar on phones. All icon buttons are uniform `h-9 w-9 rounded-xl` with `h-[18px] w-[18px]` icons (Lucide).
+   - Added `shrink-0` to all action buttons so they never get squeezed.
+
+3. **"Compiling..." badge overlapping bottom nav** (`next.config.ts`):
+   - The Next.js dev indicator (the "Compiling…" / route-info badge in the bottom-right corner) has a high z-index and was overlapping the mobile bottom navigation (z-40).
+   - **Fix**: Added `devIndicators: false` to `next.config.ts`. This completely disables the dev indicator badge in all viewports. Required a dev server restart to take effect.
+   - Also bumped the bottom nav z-index from `z-40` to `z-50` and increased opacity `bg-background/85` → `bg-background/90` so it stays above any overlay.
+
+4. **Elements overflowing on small screens** (`topbar.tsx`):
+   - The language/currency switchers previously showed both icon + text at all breakpoints where they were visible (≥640px). On a 375px screen, even with `hidden sm:flex`, the text labels added width.
+   - **Fix**: Language and currency now show icon-only below `sm` (640px) — the `<span>` with the text is `hidden sm:inline`. This guarantees the topbar fits comfortably on a 375px iPhone SE width: [Menu] [spacer] [Lang-icon] [Cur-icon] [Theme-icon] [Bell] [Avatar] — 6 compact 36px buttons + spacer, well within 375px.
+
+Files Changed (4):
+- `src/components/gaexpay/theme-toggle.tsx` — full rewrite: mobile simple-toggle variant + desktop dropdown variant.
+- `src/components/gaexpay/topbar.tsx` — full rewrite: responsive visibility, icon-only labels on mobile, tighter spacing, shrink-0 on all actions.
+- `src/components/gaexpay/bottom-nav.tsx` — z-40 → z-50, bg opacity 85 → 90.
+- `next.config.ts` — added `devIndicators: false`.
+
+Verification:
+- `bun run lint` → 0 errors, 0 warnings.
+- Dev server restarted for `next.config.ts` change (devIndicators) — confirmed via dev.log "Ready".
+- agent-browser + VLM at desktop viewport: "Top bar icons: Search, Send, language (EN), currency (USD), dark mode icon, notifications (14), avatar (AO). No monitor/desktop icon. No Compiling badge. Spacing clean and even."
+- Mobile simulation (CSS override forcing lg:hidden + sm:hidden): "Top nav: Hamburger, Send, currency icon, language icon, theme icon, bell, avatar. No monitor/desktop icon. No Compiling badge. Spacing clean. Bottom nav (5 tabs: Home, Wallets, Send, Pay, More) visible at bottom; nothing overlaps it."
+- dev.log: no errors, no hydration warnings, all API calls 200.
+
+Stage Summary:
+- 4 files changed, 0 new files.
+- All 4 reported issues resolved: monitor icon gone from mobile, icons properly spaced/aligned, Compiling badge disabled globally, no overflow on 375px screens.
+- Mobile topbar now shows: [Menu] [spacer] [Lang-icon] [Cur-icon] [Theme-toggle] [Bell] [Avatar] — 6 compact buttons, evenly spaced, no overflow.
+- Desktop topbar unchanged: [Search] [Send] [AI] [Lang EN] [Cur USD] [Theme-dropdown] [Bell] [Avatar] — full labels, full dropdown.
+- Bottom nav z-index bumped to 50 (above all overlays), dev indicator disabled so no overlap possible.
+- Lint clean. Dev server stable with auto-restart watcher.

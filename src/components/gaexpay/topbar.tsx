@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Bell, Search, Menu, Plus, Sparkles, Globe, LogOut, Settings, ShieldCheck, ChevronDown, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -61,11 +61,11 @@ export function Topbar() {
   useEffect(() => {}, []);
 
   return (
-    <header className="sticky top-0 z-30 flex h-[60px] shrink-0 items-center gap-2 border-b border-border/50 bg-background/80 backdrop-blur-2xl px-4 lg:px-6">
-      {/* Mobile menu */}
+    <header className="sticky top-0 z-30 flex h-[56px] sm:h-[60px] shrink-0 items-center gap-1.5 sm:gap-2 border-b border-border/50 bg-background/80 backdrop-blur-2xl px-3 sm:px-4 lg:px-6">
+      {/* Mobile menu (hamburger) — mobile only */}
       <Sheet>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9 rounded-xl">
+          <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9 rounded-xl shrink-0" aria-label="Open menu">
             <Menu className="h-5 w-5" />
           </Button>
         </SheetTrigger>
@@ -75,7 +75,7 @@ export function Topbar() {
         </SheetContent>
       </Sheet>
 
-      {/* Search — opens Command Palette */}
+      {/* Search — opens Command Palette (desktop only) */}
       <button
         onClick={() => {
           const ev = new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true });
@@ -90,10 +90,12 @@ export function Topbar() {
         </kbd>
       </button>
 
+      {/* Spacer — pushes actions to the right on mobile/tablet */}
       <div className="flex-1 md:hidden" />
 
-      {/* Actions */}
-      <div className="flex items-center gap-1">
+      {/* ── Actions ─────────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-0.5 sm:gap-1">
+        {/* Send button — desktop/tablet only */}
         <Button
           variant="default"
           size="sm"
@@ -103,41 +105,44 @@ export function Topbar() {
           <Plus className="h-3.5 w-3.5 mr-1" /> {t("topbar.send")}
         </Button>
 
+        {/* AI Assistant — tablet/desktop only (hidden on phones to save space) */}
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 rounded-xl"
+          className="hidden sm:inline-flex h-9 w-9 rounded-xl"
           onClick={() => setAiOpen(true)}
           aria-label="AI Assistant"
         >
           <Sparkles className="h-[18px] w-[18px] text-primary" />
         </Button>
 
-        {/* Language switcher — compact */}
+        {/* Language switcher — icon-only on mobile, full on desktop */}
         <button
           onClick={() => setLanguagePickerOpen(true)}
           aria-label={t("settings.language")}
-          className="hidden sm:flex items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] font-bold uppercase transition hover:bg-muted"
+          className="flex items-center gap-1 rounded-lg px-1.5 sm:px-2 py-1.5 text-[11px] sm:text-[12px] font-bold uppercase transition hover:bg-muted shrink-0"
           title={LANGUAGE_BY_CODE[language]?.nativeName ?? language}
         >
-          <Languages className="h-4 w-4 text-muted-foreground" />
-          {language}
+          <Languages className="h-[18px] w-[18px] text-muted-foreground" />
+          <span className="hidden sm:inline">{language}</span>
         </button>
 
-        {/* Currency switcher — compact */}
+        {/* Currency switcher — icon-only on mobile, full on desktop */}
         <button
           onClick={() => setCurrencyPickerOpen(true)}
-          className="hidden sm:flex items-center gap-1 rounded-lg px-2 py-1.5 text-[13px] font-semibold transition hover:bg-muted"
+          aria-label="Switch currency"
+          className="flex items-center gap-1 rounded-lg px-1.5 sm:px-2 py-1.5 text-[12px] sm:text-[13px] font-semibold transition hover:bg-muted shrink-0"
         >
-          <Globe className="h-4 w-4 text-muted-foreground" />
-          {userCurrency}
+          <Globe className="h-[18px] w-[18px] text-muted-foreground" />
+          <span className="hidden sm:inline">{userCurrency}</span>
         </button>
 
         <ThemeToggle />
 
+        {/* Notifications — always visible */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl relative">
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl relative shrink-0" aria-label="Notifications">
               <Bell className="h-[18px] w-[18px]" />
               {!!data?.unread && (
                 <span className="absolute top-1.5 right-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground ring-2 ring-background">
@@ -155,7 +160,7 @@ export function Topbar() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className="ml-1 flex items-center gap-1 rounded-full p-0.5 transition hover:ring-2 hover:ring-primary/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="ml-0.5 sm:ml-1 flex items-center gap-1 rounded-full p-0.5 transition hover:ring-2 hover:ring-primary/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 shrink-0"
               aria-label={t("topbar.accountMenu")}
             >
               <Avatar className="h-8 w-8 ring-1 ring-border/60">
