@@ -10,7 +10,7 @@
  * Visible only on mobile (lg:hidden). Respects iOS safe-area inset.
  */
 
-import { Home, Wallet, SendHorizontal, QrCode, LayoutGrid } from "lucide-react";
+import { Home, Wallet, SendHorizontal, MessageCircle, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp, type View } from "@/lib/store";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
@@ -29,7 +29,7 @@ const TABS: Tab[] = [
   { id: "dashboard", label: "Home", icon: Home },
   { id: "wallets", label: "Wallets", icon: Wallet },
   { id: "send", label: "Send", icon: SendHorizontal, center: true },
-  { id: "pay", label: "Pay", icon: QrCode },
+  { id: "gaex-chat", label: "Chat", icon: MessageCircle },
 ];
 
 /** Maps a current view to which bottom tab should be highlighted. */
@@ -46,11 +46,10 @@ function activeTabFor(view: View): View | "more" | null {
     case "unified-address":
     case "transactions":
       return "send";
+    case "gaex-chat":
+      return "gaex-chat";
     case "pay":
     case "scheduled":
-      return "pay";
-    case "gaex-chat":
-      // GaexChat is reachable from the "More" drawer
       return "more";
     default:
       // Everything else lives under "More"

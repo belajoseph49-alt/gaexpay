@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Bell, Search, Menu, Plus, Sparkles, Globe, LogOut, Settings, ShieldCheck, ChevronDown, Languages } from "lucide-react";
+import { Bell, Search, Menu, Plus, Sparkles, Coins, LogOut, Settings, ShieldCheck, ChevronDown, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeToggle } from "./theme-toggle";
@@ -133,7 +133,7 @@ export function Topbar() {
           aria-label="Switch currency"
           className="flex items-center gap-1 rounded-lg px-1.5 sm:px-2 py-1.5 text-[12px] sm:text-[13px] font-semibold transition hover:bg-muted shrink-0"
         >
-          <Globe className="h-[18px] w-[18px] text-muted-foreground" />
+          <Coins className="h-[18px] w-[18px] text-muted-foreground" />
           <span className="hidden sm:inline">{userCurrency}</span>
         </button>
 

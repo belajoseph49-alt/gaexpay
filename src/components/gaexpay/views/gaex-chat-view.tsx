@@ -41,7 +41,7 @@ import {
   Sparkles, Phone as PhoneIcon,
   Reply, Pencil, Trash2, Pin, PinOff, Forward, Copy, Play, Pause,
   MoreHorizontal, FileText, Download, StopCircle, Hash, UserPlus,
-  ChevronUp, CornerUpLeft,
+  ChevronUp, CornerUpLeft, ChevronDown, Flag,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -326,7 +326,7 @@ function useLongPress(onLongPress: () => void, ms = 450) {
 
 export function GaexChatView() {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<"chats" | "stories" | "calls">("chats");
+  const [tab, setTab] = useState<"chats" | "stories" | "calls" | "communities">("chats");
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
 
   return (
@@ -345,11 +345,12 @@ export function GaexChatView() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 rounded-xl bg-muted/60 p-1 w-full max-w-xs">
+      <div className="flex items-center gap-1 rounded-xl bg-muted/60 p-1 w-full max-w-md">
         {([
-          { id: "chats", label: "Chats" },
+          { id: "chats", label: "Messages" },
           { id: "stories", label: "Stories" },
           { id: "calls", label: "Calls" },
+          { id: "communities", label: "Communities" },
         ] as const).map((it) => (
           <button
             key={it.id}
@@ -372,6 +373,7 @@ export function GaexChatView() {
       )}
       {tab === "stories" && <StoriesTab />}
       {tab === "calls" && <CallsTab />}
+      {tab === "communities" && <CommunitiesTab />}
     </div>
   );
 }
@@ -390,12 +392,48 @@ function ChatsTab({
   const { data, loading, reload } = useFetch<ConversationsResponse>("/api/messaging/conversations");
   const conversations = data?.conversations ?? [];
   const [newGroupOpen, setNewGroupOpen] = useState(false);
+  const [filter, setFilter] = useState<"all" | "unread" | "groups" | "pending">("all");
+  const [summaryOpen, setSummaryOpen] = useState(true);
+
+  // Financial summary widget: wallet balance + pending payment requests
+  const { data: walletsData } = useFetch<{ wallets: { id: string; currency: string; balance: number; isDefault: boolean }[] }>("/api/wallets");
+  const ngnBalance = walletsData?.wallets.find((w) => w.currency === "NGN")?.balance ?? 0;
+  const pendingCount = conversations.filter((c) => {
+    const last = c.lastMessage;
+    if (!last) return false;
+    const meta = parseMeta(last.metadata);
+    return last.kind === "request" && meta.status === "pending" && meta.direction === "in";
+  }).length;
+
+  // Apply filter
+  const filteredConversations = conversations.filter((c) => {
+    switch (filter) {
+      case "unread":
+        return c.unreadCount > 0;
+      case "groups":
+        return c.isGroup;
+      case "pending":
+        // Conversations with a pending incoming payment request
+        if (!c.lastMessage) return false;
+        const meta = parseMeta(c.lastMessage.metadata);
+        return c.lastMessage.kind === "request" && meta.status === "pending" && meta.direction === "in";
+      default:
+        return true;
+    }
+  });
 
   // Poll for new conversations/messages
   useEffect(() => {
     const t = setInterval(reload, POLL_MS);
     return () => clearInterval(t);
   }, [reload]);
+
+  const FILTERS: Array<{ id: typeof filter; label: string; count?: number }> = [
+    { id: "all", label: "All" },
+    { id: "unread", label: "Unread", count: conversations.filter((c) => c.unreadCount > 0).length },
+    { id: "groups", label: "Groups", count: conversations.filter((c) => c.isGroup).length },
+    { id: "pending", label: "Pending payments", count: pendingCount },
+  ];
 
   return (
     <>
@@ -407,7 +445,7 @@ function ChatsTab({
             selectedConvId && "hidden lg:flex",
           )}
         >
-          <div className="border-b p-3 space-y-2">
+          <div className="border-b p-3 space-y-2.5">
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -427,16 +465,74 @@ function ChatsTab({
                 <UserPlus className="h-4 w-4" />
               </Button>
             </div>
+            {/* Quick filter pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              {FILTERS.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setFilter(f.id)}
+                  className={cn(
+                    "shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold transition flex items-center gap-1.5",
+                    filter === f.id
+                      ? "bg-primary text-primary-foreground shadow-premium-sm"
+                      : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  {f.label}
+                  {!!f.count && f.count > 0 && (
+                    <span className={cn(
+                      "grid h-4 min-w-4 place-items-center rounded-full px-1 text-[9px]",
+                      filter === f.id ? "bg-white/25" : "bg-emerald-500/15 text-emerald-600",
+                    )}>
+                      {f.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
+
+          {/* Collapsible financial summary widget */}
+          <button
+            onClick={() => setSummaryOpen((s) => !s)}
+            className="flex items-center justify-between gap-2 border-b bg-gradient-to-r from-emerald-500/8 to-teal-500/4 px-3 py-2 text-left transition hover:from-emerald-500/12 hover:to-teal-500/6"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-emerald-500/15 text-emerald-600">
+                <Wallet className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Wallet balance</p>
+                <p className="text-sm font-bold tabular-nums truncate">₦{ngnBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {pendingCount > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-600">
+                  <Clock className="h-3 w-3" /> {pendingCount} pending
+                </span>
+              )}
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", summaryOpen && "rotate-180")} />
+            </div>
+          </button>
+          {summaryOpen && (
+            <div className="border-b bg-muted/20 px-3 py-2 flex items-center gap-3 text-[11px] text-muted-foreground">
+              <span className="flex items-center gap-1"><ArrowDownRight className="h-3 w-3 text-emerald-500" /> Tap a chat to send money</span>
+              <span className="flex items-center gap-1"><ArrowUpRight className="h-3 w-3 text-rose-500" /> Request payment inline</span>
+            </div>
+          )}
+
           <div className="flex-1 overflow-y-auto no-scrollbar">
             {loading ? (
               <div className="space-y-2 p-3">
                 {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
               </div>
-            ) : conversations.length === 0 ? (
-              <EmptyConversations />
+            ) : filteredConversations.length === 0 ? (
+              <div className="grid place-items-center px-6 py-10 text-center">
+                <p className="text-sm text-muted-foreground">No conversations match this filter.</p>
+              </div>
             ) : (
-              conversations.map((c) => (
+              filteredConversations.map((c) => (
                 <ConversationRow
                   key={c.id}
                   conv={c}
@@ -1847,6 +1943,39 @@ function TickStatus({ status, light }: { status: string; light?: boolean }) {
 // ── Payment card (native transaction card) ────────────────────────────────
 function PaymentCard({ msg, meta, mine }: { msg: MessageItem; meta: any; mine: boolean }) {
   const incoming = meta.direction === "in";
+  const [disputeOpen, setDisputeOpen] = useState(false);
+  const [disputeReason, setDisputeReason] = useState("");
+  const [disputeDesc, setDisputeDesc] = useState("");
+  const [disputeLoading, setDisputeLoading] = useState(false);
+
+  async function submitDispute() {
+    if (!disputeReason) return toast.error("Select a reason");
+    if (!meta.txRef && !meta.transactionId) return toast.error("Missing transaction reference");
+    setDisputeLoading(true);
+    try {
+      const res = await fetch("/api/disputes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          transactionRef: meta.txRef || meta.transactionId,
+          reason: disputeReason,
+          description: disputeDesc || `Dispute filed from GaexChat — ${meta.txRef || ""}`,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to file dispute");
+      toast.success("Dispute filed. Our team will review it shortly.");
+      setDisputeOpen(false);
+      setDisputeReason("");
+      setDisputeDesc("");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to file dispute");
+    } finally {
+      setDisputeLoading(false);
+    }
+  }
+
   return (
     <div className="rounded-2xl overflow-hidden border border-border/60 shadow-premium-sm bg-card">
       {/* Header strip */}
@@ -1879,11 +2008,83 @@ function PaymentCard({ msg, meta, mine }: { msg: MessageItem; meta: any; mine: b
             <CheckCircle2 className="h-3.5 w-3.5" /> Completed
           </span>
         </div>
-        <div className="flex items-center gap-1 mt-1.5 text-[10px] text-muted-foreground">
-          <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-          {mine && <TickStatus status={msg.status} />}
+        <div className="flex items-center justify-between gap-2 mt-1.5">
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+            <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+            {mine && <TickStatus status={msg.status} />}
+          </div>
+          {/* Report a problem (dispute) — only for outgoing payments */}
+          {mine && !incoming && (
+            <button
+              onClick={() => setDisputeOpen(true)}
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground transition hover:bg-rose-500/10 hover:text-rose-600"
+              aria-label="Report a problem"
+            >
+              <Flag className="h-3 w-3" /> Report
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Dispute dialog */}
+      <Dialog open={disputeOpen} onOpenChange={(o) => !o && setDisputeOpen(false)}>
+        <DialogContent className="max-w-sm gap-0 p-0 sm:rounded-3xl shadow-premium-xl overflow-hidden [&>button]:top-3 [&>button]:right-3 [&>button]:z-30">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Report a payment problem</DialogTitle>
+            <DialogDescription>File a dispute for this transaction.</DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-2.5 bg-gradient-to-br from-rose-600 to-rose-700 px-5 py-4 text-white">
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-white/20 backdrop-blur">
+              <Flag className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold leading-tight">Report a problem</p>
+              <p className="text-[10px] text-white/80 leading-tight">Transaction {meta.txRef}</p>
+            </div>
+          </div>
+          <div className="p-5 space-y-4">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Amount</p>
+              <p className="text-lg font-bold tabular-nums">
+                {CURRENCY_SYMBOL[meta.currency] || ""}{Number(meta.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Reason</Label>
+              <select
+                value={disputeReason}
+                onChange={(e) => setDisputeReason(e.target.value)}
+                className="h-10 w-full rounded-xl border border-border/60 bg-background px-3 text-sm"
+              >
+                <option value="">Select a reason…</option>
+                <option value="unauthorized">Unauthorized transaction</option>
+                <option value="failed_not_received">Recipient didn't receive</option>
+                <option value="wrong_amount">Wrong amount</option>
+                <option value="duplicate">Duplicate charge</option>
+                <option value="merchant_issue">Merchant issue</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Description (optional)</Label>
+              <textarea
+                value={disputeDesc}
+                onChange={(e) => setDisputeDesc(e.target.value)}
+                placeholder="Tell us what happened…"
+                className="w-full rounded-xl border border-border/60 bg-background p-3 text-sm min-h-[72px] resize-none"
+                maxLength={500}
+              />
+            </div>
+            <Button className="w-full h-11 rounded-xl bg-rose-600 hover:bg-rose-700 shadow-premium-sm" onClick={submitDispute} disabled={disputeLoading || !disputeReason}>
+              {disputeLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Flag className="h-4 w-4 mr-1" />}
+              File dispute
+            </Button>
+            <p className="text-[10px] text-center text-muted-foreground">
+              Our support team will review your dispute and respond within 24 hours. You can track the status in Support.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -2780,6 +2981,107 @@ function SplitBillModal({
         </Button>
       </div>
     </ModalShell>
+  );
+}
+
+// ============================================================================
+// CommunitiesTab — browse + create communities (presentational)
+// ============================================================================
+
+function CommunitiesTab() {
+  const [showCreate, setShowCreate] = useState(false);
+  const [name, setName] = useState("");
+  const [desc, setDesc] = useState("");
+  const [visibility, setVisibility] = useState<"public" | "private">("public");
+
+  // Demo communities (presentational — no backend yet)
+  const demoCommunities = [
+    { id: "1", name: "Local Crypto Market", description: "P2P trading community for crypto enthusiasts across Africa.", members: 1284, category: "Finance", emoji: "₿", color: "from-amber-500 to-orange-600" },
+    { id: "2", name: "Lagos Foodies", description: "Share restaurant reviews, split bills, and discover new spots.", members: 856, category: "Local", emoji: "🍽️", color: "from-emerald-500 to-teal-600" },
+    { id: "3", name: "Freelancers Africa", description: "Network, share gigs, and manage client payments together.", members: 2103, category: "Finance", emoji: "💼", color: "from-violet-500 to-fuchsia-600" },
+    { id: "4", name: "Accra Tech Hub", description: "Developers, designers, and founders building the future.", members: 742, category: "Local", emoji: "💻", color: "from-sky-500 to-cyan-600" },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="font-semibold">Communities</h3>
+          <p className="text-xs text-muted-foreground">Join communities or create your own.</p>
+        </div>
+        <Button size="sm" className="rounded-xl shadow-premium-sm" onClick={() => setShowCreate((s) => !s)}>
+          <Plus className="h-4 w-4 mr-1" /> New
+        </Button>
+      </div>
+
+      {/* Create community (inline form) */}
+      {showCreate && (
+        <Card className="p-5 space-y-4">
+          <h4 className="font-semibold text-sm">Create a community</h4>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Name</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Marché Abidjan" className="h-10 rounded-xl" maxLength={60} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Description</Label>
+            <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="What's this community about?" className="h-10 rounded-xl" maxLength={280} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Visibility</Label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setVisibility("public")}
+                className={cn("flex-1 rounded-xl border p-3 text-left transition", visibility === "public" ? "border-primary ring-2 ring-primary/20 bg-primary/5" : "border-border/60 hover:bg-muted/40")}
+              >
+                <p className="text-sm font-semibold">🌍 Public</p>
+                <p className="text-[10px] text-muted-foreground">Discoverable in search</p>
+              </button>
+              <button
+                onClick={() => setVisibility("private")}
+                className={cn("flex-1 rounded-xl border p-3 text-left transition", visibility === "private" ? "border-primary ring-2 ring-primary/20 bg-primary/5" : "border-border/60 hover:bg-muted/40")}
+              >
+                <p className="text-sm font-semibold">🔒 Private</p>
+                <p className="text-[10px] text-muted-foreground">Invite link only</p>
+              </button>
+            </div>
+          </div>
+          <Button
+            className="w-full h-11 rounded-xl shadow-premium-sm"
+            disabled={!name.trim()}
+            onClick={() => { toast.success("Community creation coming soon!"); setShowCreate(false); setName(""); setDesc(""); }}
+          >
+            Create community
+          </Button>
+        </Card>
+      )}
+
+      {/* Discover communities */}
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Discover</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {demoCommunities.map((c) => (
+            <Card key={c.id} className="p-4 card-lift border-border/60 cursor-pointer" >
+              <div className="flex items-start gap-3">
+                <div className={cn("grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-white text-xl shadow-premium-sm", c.color)}>
+                  {c.emoji}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-sm truncate">{c.name}</p>
+                    <Badge variant="outline" className="h-4 px-1.5 text-[9px] uppercase shrink-0">{c.category}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{c.description}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1.5">{c.members.toLocaleString()} members</p>
+                </div>
+              </div>
+              <Button size="sm" variant="outline" className="w-full mt-3 rounded-xl text-xs" onClick={() => toast.info(`Joining "${c.name}" — coming soon!`)}>
+                Join community
+              </Button>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
