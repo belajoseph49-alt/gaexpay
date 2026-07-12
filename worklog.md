@@ -4504,3 +4504,62 @@ Stage Summary:
 - **Main wallet history**: every chat-initiated Transaction (type=transfer/bill, category=p2p/bills) appears in `/api/transactions` → main wallet history.
 - **Design**: emerald/amber/violet tonal cards consistent with the GaexPay premium theme. Dark-theme native. Responsive (list↔thread toggle on mobile, 2-pane on desktop). Polling every 5s for new messages.
 - Lint clean. Dev server stable. All 4 financial flows verified end-to-end in the browser.
+
+---
+Task ID: 22 (GaexChat Pro — WhatsApp-level messaging expansion)
+Agent: Main (Z.ai Code) + subagent 22-a
+
+Task: Expand GaexChat to reproduce ALL WhatsApp messaging features (reactions, reply, edit, delete, pin, forward, search, typing, markdown, voice messages, photo/video/document upload, groups with roles/mentions) on top of the existing fintech-integrated chat.
+
+Work Log:
+- Extended `prisma/schema.prisma`:
+  * `Conversation`: made participantAId/BId optional, added `groupId` (unique, optional) for group chats.
+  * `Message`: added `replyToId`, `editedAt`, `deletedFor` (null|"me"|"all"), `pinned`, `reactions` (JSON), `expiresAt`, `forwardedFromId`. Extended `kind` to include voice/image/video/document/location/contact/scheduled/invoice.
+  * New models: `ChatGroup` (name, description, avatar, createdBy, conversation) + `ChatGroupMember` (groupId, userId, role admin/member, @@unique pair).
+  * Added reverse relations on User (chatGroupsCreated, chatGroupMemberships). Bumped PRISMA_CACHE_VERSION to v7-gaexchat-pro-2026-07. db:push synced.
+- Created `src/lib/chat-helpers.ts` — shared `getConvForUser()` that handles both 1-to-1 (participantA/B) and group (ChatGroupMember) conversations, + `REACTION_EMOJIS` constant.
+- Created 8 new API routes:
+  * `POST .../messages/[msgId]/react` body `{emoji}` — toggles reaction (JSON array of {u,e}).
+  * `PATCH .../messages/[msgId]/edit` body `{content}` — edits own text message, sets editedAt.
+  * `POST .../messages/[msgId]/delete` body `{scope:"me"|"all"}` — soft-delete ("me" → metadata.hiddenFor array; "all" → content cleared).
+  * `POST .../messages/[msgId]/pin` — toggles pinned (max 3 per conversation).
+  * `POST .../messages/[msgId]/forward` body `{targetConversationIds:[]}` — forwards to other convs (financial messages excluded).
+  * `GET .../search?q=kw` — case-insensitive text search, 50 results.
+  * `GET/POST .../typing` — in-memory typing registry (5s TTL), returns typers list.
+  * `GET/POST /api/messaging/groups` — list user's groups / create group (name + memberIds, creator=admin).
+  * `GET/POST /api/messaging/groups/[id]/members` — list members / add members (admin only).
+  * `POST /api/messaging/upload` (FormData `file`) — saves to /public/uploads (15MB max, validates mime types for images/video/audio/pdf/office docs), returns {url,name,size,mimeType}.
+- Updated `POST .../messages` route — accepts `{content, replyToId, kind, metadata}` (was content-only). Validates replyToId belongs to the conversation. Mark-as-read uses `{ not: userId }` so it works for groups too.
+- Updated `GET /api/messaging/conversations` — now returns BOTH 1-to-1 AND group conversations. Each item has `isGroup`, `groupId`, `groupName`, `groupAvatar`, `memberCount`, `user` (null for groups). Merged + sorted by updatedAt.
+- Fixed the messages route to use the shared `getConvForUser` helper (was a local helper that didn't handle group conversations — returned 404 for groups).
+- Created `prisma/seed-chat-groups.ts` — seeds a demo "Lagos Family" group (4 members: demo + Chinedu + Fatima + Kwame) with 4 text messages + a group bill-split card (₦15,000 groceries, 4 shares of ₦3,750, demo paid, others pending). Idempotent.
+- Dispatched subagent 22-a to build the comprehensive view enhancement. The subagent extended `src/components/gaexpay/views/gaex-chat-view.tsx` from 1271 → 2876 lines adding:
+  * **Message reactions**: long-press/hover reaction bar (8 emojis), reaction pills below bubbles grouped by emoji with counts.
+  * **Reply/quote**: context-menu "Reply", quoted-preview bar above input, quoted box in bubble, `replyToId` sent in POST.
+  * **Edit**: context-menu "Edit" on own text messages, editing banner, PATCH call, "edited" indicator.
+  * **Delete**: context-menu "Delete" → dialog (for me / for everyone / cancel), soft-delete with hiddenFor filtering.
+  * **Pin**: context-menu "Pin/Unpin", pin icon badge on pinned messages.
+  * **Forward**: context-menu "Forward" → modal listing conversations (checkboxes) → forwards to selected.
+  * **Search**: search icon in header toggles search bar, debounced search, results dropdown, click to highlight.
+  * **Typing indicator**: polls typing endpoint every 3s, "typing…" animated subtitle, POST on compose.
+  * **Markdown light**: renders **bold**, *italic*, ~~strikethrough~~, `code` via regex.
+  * **Voice messages**: mic button, MediaRecorder API, recording indicator (red dot + timer), upload + send as kind:"voice", VoiceBubble with play/pause + waveform bars + duration.
+  * **Photo/video/document upload**: attach button opens file picker, upload + send as kind:"image"|"video"|"document", inline preview (img/video/file card with download).
+  * **Group chat support**: conversation list shows groups (avatar + name + member count + "Group" label), New Group modal (name + member multi-select + create), group header shows member count, sender names above bubbles (colored via id hash), @mentions highlighted.
+  * New components: BubbleWrapper (handles long-press/hover + context menu), QuotedPreview, SenderNameTag, groupReactions helper, VoiceBubble, ImageBubble, VideoBubble, DocumentBubble, DeleteMessageDialog, ForwardModal, NewGroupModal, useLongPress hook, renderMarkdown, hashColor.
+- Fixed a runtime error ("Cannot access 'visibleMessages' before initialization") by moving the `visibleMessages` useMemo above the search useEffect that referenced it (temporal dead zone).
+
+Verification (agent-browser + VLM, dark theme):
+- GaexChat conversation list shows BOTH groups ("Lagos Family 👨‍👩‍👧‍👦") AND 1-to-1 chats (Chinedu, Fatima, Kwame, Amina, Tunde, Grace) + "New Group" button.
+- Opened Lagos Family group: header "Lagos Family" + "4 members", message bubbles with sender names (Kwame Mensah), violet "Bill split — Shoprite haul" card with "Waiting for contact" status, "Just paid my share" message. Input bar with + button, mic, attach, send.
+- Opened 1-to-1 chat: message bubbles + green "Payment sent" card + input bar with all controls.
+- `bun run lint` → 0 errors, 0 warnings.
+- dev.log: no errors, all API routes returning 200 (conversations, messages, typing, search endpoints all hit).
+
+Stage Summary:
+- **Files created (11)**: `src/lib/chat-helpers.ts`, `prisma/seed-chat-groups.ts`, 8 new API routes (react, edit, delete, pin, forward, search, typing, groups, group members, upload).
+- **Files edited (5)**: `prisma/schema.prisma` (+2 models, +8 Message fields, Conversation group support, +User relations), `src/lib/db.ts` (cache bump), `src/app/api/messaging/conversations/route.ts` (group conversations), `src/app/api/messaging/conversations/[id]/messages/route.ts` (shared helper + replyToId/kind/metadata + group mark-as-read), `src/components/gaexpay/views/gaex-chat-view.tsx` (1271→2876 lines, full WhatsApp feature set).
+- **WhatsApp features delivered**: reactions (8 emojis, toggle, count pills), reply/quote, edit (with "edited"), delete (for me/everyone), pin (max 3), forward (multi-conversation), search (debounced), typing indicator (in-memory 5s TTL), markdown light (bold/italic/strikethrough/code), voice messages (MediaRecorder + waveform playback), photo/video/document upload (inline preview + download), groups (create/members/roles/sender names/mentions).
+- **Group fintech**: group bill-split card works (Lagos Family ₦15,000 groceries split 4 ways). 1-to-1 financial actions (send money, request, split) preserved.
+- **Database**: 2 new tables (ChatGroup, ChatGroupMember) + 8 new Message fields. Seed created demo group with 4 members + group bill-split.
+- Lint clean. Dev server stable. All messaging + financial flows verified in the browser.

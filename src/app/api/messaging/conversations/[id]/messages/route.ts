@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getAuthUserId, getClientIdentifier } from "@/lib/api-auth";
 import { rateLimitSensitive } from "@/lib/rate-limit";
 import { apiError, apiCatch, apiRateLimited } from "@/lib/api-error";
+import { getConvForUser } from "@/lib/chat-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -13,27 +14,10 @@ export const dynamic = "force-dynamic";
  *   Side-effect: marks unread messages from the other participant as "read".
  *
  * POST /api/messaging/conversations/[id]/messages
- * Body: { content }
+ * Body: { content, replyToId?, kind?, metadata? }
  *   Creates a new message authored by the authenticated user. Marks earlier
  *   unread messages from the other participant as "read" too (delivered+read).
  */
-async function getConversationForUser(conversationId: string, userId: string) {
-  const conv = await db.conversation.findUnique({
-    where: { id: conversationId },
-    select: {
-      id: true,
-      participantAId: true,
-      participantBId: true,
-    },
-  });
-  if (!conv) return null;
-  if (conv.participantAId !== userId && conv.participantBId !== userId) {
-    return null;
-  }
-  const otherId =
-    conv.participantAId === userId ? conv.participantBId : conv.participantAId;
-  return { conv, otherId };
-}
 
 export async function GET(
   req: Request,
@@ -44,7 +28,7 @@ export async function GET(
     if (!userId) return apiError("Unauthorized", 401);
 
     const { id } = await params;
-    const ctx = await getConversationForUser(id, userId);
+    const ctx = await getConvForUser(id, userId);
     if (!ctx) return apiError("Conversation not found", 404);
 
     const url = new URL(req.url);
@@ -63,12 +47,13 @@ export async function GET(
       take: 200,
     });
 
-    // Mark messages from the other participant as read
+    // Mark messages from other participants as read (1-to-1: just the other
+    // user; group: everyone except the auth user)
     await db.message
       .updateMany({
         where: {
           conversationId: id,
-          senderId: ctx.otherId,
+          senderId: { not: userId },
           status: { in: ["sent", "delivered"] },
         },
         data: { status: "read" },
@@ -94,7 +79,7 @@ export async function POST(
     if (!rl.success) return apiRateLimited(rl.retryAfterMs);
 
     const { id } = await params;
-    const ctx = await getConversationForUser(id, userId);
+    const ctx = await getConvForUser(id, userId);
     if (!ctx) return apiError("Conversation not found", 404);
 
     let body: unknown;
@@ -103,17 +88,28 @@ export async function POST(
     } catch {
       return apiError("Invalid JSON body", 400);
     }
-    const b = (body ?? {}) as { content?: string };
+    const b = (body ?? {}) as { content?: string; replyToId?: string; kind?: string; metadata?: any };
     const content = (b.content || "").trim();
-    if (!content) return apiError("Message cannot be empty", 400);
+    const kind = (b.kind || "text").toString();
+    const replyToId = b.replyToId ? String(b.replyToId) : null;
+    const metadata = b.metadata ? JSON.stringify(b.metadata) : null;
+
+    // Allow empty content for attachment messages (voice/image/etc.)
+    if (!content && kind === "text") return apiError("Message cannot be empty", 400);
     if (content.length > 4000) return apiError("Message too long (max 4000 chars)", 400);
 
-    // Mark earlier messages from the other side as "read" (we're replying → we've seen them)
+    // Validate replyToId belongs to this conversation
+    if (replyToId) {
+      const reply = await db.message.findUnique({ where: { id: replyToId }, select: { conversationId: true } });
+      if (!reply || reply.conversationId !== id) return apiError("Reply target not in this conversation", 400);
+    }
+
+    // Mark earlier messages from others as "read" (we're replying → we've seen them)
     await db.message
       .updateMany({
         where: {
           conversationId: id,
-          senderId: ctx.otherId,
+          senderId: { not: userId },
           status: { in: ["sent", "delivered"] },
         },
         data: { status: "read" },
@@ -125,7 +121,10 @@ export async function POST(
         data: {
           conversationId: id,
           senderId: userId,
-          content,
+          content: content || "",
+          kind,
+          metadata,
+          replyToId,
           status: "sent",
         },
       }),

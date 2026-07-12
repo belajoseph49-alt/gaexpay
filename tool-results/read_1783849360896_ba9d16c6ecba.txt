@@ -1,0 +1,702 @@
+     1→"use client";
+     2→
+     3→/**
+     4→ * src/components/gaexpay/views/gaex-chat-view.tsx — Task 21 (GaexChat)
+     5→ *
+     6→ * WhatsApp-style social chat with integrated fintech. Users can:
+     7→ *   - Browse conversations, send/receive text messages
+     8→ *   - Open a quick-action (+) menu inside any chat to:
+     9→ *       • Send money to the contact (native payment card in thread)
+    10→ *       • Request money from the contact (request card w/ Accept/Pay + Decline)
+    11→ *       • Pay a bill and share it (bill split card w/ Pay my share)
+    12→ *   - Every financial action creates a transaction card rendered inline as a
+    13→ *     native chat message (no popups, no redirects). Real-time wallet balance
+    14→ *     is checked inside the API's db.$transaction.
+    15→ *   - All chat-initiated transactions also appear in the main wallet history.
+    16→ *
+    17→ * Three-pane layout:
+    18→ *   - Desktop (lg+): conversation list | chat thread
+    19→ *   - Mobile: list ↔ thread toggle (selected conversation hides the list)
+    20→ *
+    21→ * Tabs: Chats | Stories | Calls (Stories/Calls are presentational for now).
+    22→ */
+    23→
+    24→import { useState, useEffect, useRef, useCallback } from "react";
+    25→import { motion, AnimatePresence } from "framer-motion";
+    26→import {
+    27→  Send, Search, MessageSquarePlus, ArrowLeft, Check, CheckCheck,
+    28→  BadgeCheck, Wallet, X, Loader2, Phone, Video, Plus, ArrowDownToLine,
+    29→  ArrowUpRight, ArrowDownRight, Receipt, Users, Clock, MoreVertical,
+    30→  Camera, Mic, Image as ImageIcon, Circle, CheckCircle2, XCircle,
+    31→  Sparkles, Phone as PhoneIcon,
+    32→} from "lucide-react";
+    33→import { Card } from "@/components/ui/card";
+    34→import { Button } from "@/components/ui/button";
+    35→import { Input } from "@/components/ui/input";
+    36→import { Label } from "@/components/ui/label";
+    37→import { Badge } from "@/components/ui/badge";
+    38→import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+    39→import {
+    40→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+    41→} from "@/components/ui/dialog";
+    42→import { Skeleton } from "@/components/ui/skeleton";
+    43→import {
+    44→  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+    45→} from "@/components/ui/dropdown-menu";
+    46→import { useApp } from "@/lib/store";
+    47→import { toast } from "sonner";
+    48→import { cn } from "@/lib/utils";
+    49→import { timeAgo, formatMoney, CURRENCY_SYMBOL } from "@/lib/gaexpay";
+    50→import { useFormatMoney } from "@/hooks/use-format-money";
+    51→import { useTranslation } from "@/hooks/use-translation";
+    52→import { useFetch } from "@/hooks/use-fetch";
+    53→
+    54→// ============================================================================
+    55→// Types
+    56→// ============================================================================
+    57→
+    58→interface Participant {
+    59→  id: string;
+    60→  firstName: string;
+    61→  lastName: string;
+    62→  username?: string | null;
+    63→  avatar?: string | null;
+    64→  kycStatus?: string | null;
+    65→  status?: string | null;
+    66→}
+    67→
+    68→interface ConversationListItem {
+    69→  id: string;
+    70→  user: Participant;
+    71→  lastMessage: {
+    72→    id: string;
+    73→    content: string;
+    74→    kind?: string;
+    75→    metadata?: string | null;
+    76→    senderId: string;
+    77→    status: string;
+    78→    createdAt: string;
+    79→  } | null;
+    80→  unreadCount: number;
+    81→  updatedAt: string;
+    82→}
+    83→
+    84→interface MessageItem {
+    85→  id: string;
+    86→  conversationId: string;
+    87→  senderId: string;
+    88→  content: string;
+    89→  kind: string;
+    90→  metadata?: string | null;
+    91→  status: string;
+    92→  createdAt: string;
+    93→}
+    94→
+    95→interface ConversationsResponse {
+    96→  conversations: ConversationListItem[];
+    97→}
+    98→interface MessagesResponse {
+    99→  messages: MessageItem[];
+   100→}
+   101→interface NewConversationResponse {
+   102→  conversation: { id: string; user: Participant };
+   103→}
+   104→interface WalletsResponse {
+   105→  wallets: { id: string; currency: string; balance: number; isDefault: boolean }[];
+   106→  totalNGN: number;
+   107→}
+   108→
+   109→// ============================================================================
+   110→// Helpers
+   111→// ============================================================================
+   112→
+   113→function initials(p: { firstName?: string; lastName?: string }) {
+   114→  const f = p?.firstName?.trim() ?? "";
+   115→  const l = p?.lastName?.trim() ?? "";
+   116→  return ((f[0] ?? "") + (l[0] ?? "")).toUpperCase() || "U";
+   117→}
+   118→function fullName(p: Participant) {
+   119→  return `${p.firstName} ${p.lastName}`.trim();
+   120→}
+   121→function parseMeta(m?: string | null): any {
+   122→  if (!m) return {};
+   123→  try { return JSON.parse(m); } catch { return {}; }
+   124→}
+   125→/** A short preview string for the conversation list, accounting for financial message kinds. */
+   126→function previewFor(last: ConversationListItem["lastMessage"], isMine: boolean): string {
+   127→  if (!last) return "";
+   128→  const meta = parseMeta(last.metadata);
+   129→  const prefix = isMine ? "You: " : "";
+   130→  switch (last.kind) {
+   131→    case "payment":
+   132→      return `${prefix}${meta.direction === "in" ? "Received" : "Paid"} ${CURRENCY_SYMBOL[meta.currency] || ""}${meta.amount?.toLocaleString() ?? ""}`;
+   133→    case "request":
+   134→      return `${prefix}Requested ${CURRENCY_SYMBOL[meta.currency] || ""}${meta.amount?.toLocaleString() ?? ""}`;
+   135→    case "split":
+   136→      return `${prefix}Split ${CURRENCY_SYMBOL[meta.currency] || ""}${meta.totalAmount?.toLocaleString() ?? ""} — ${meta.billerName}`;
+   137→    case "system":
+   138→      return `${prefix}${last.content}`;
+   139→    default:
+   140→      return `${prefix}${last.content}`;
+   141→  }
+   142→}
+   143→
+   144→const POLL_MS = 5000;
+   145→
+   146→// ============================================================================
+   147→// Main view
+   148→// ============================================================================
+   149→
+   150→export function GaexChatView() {
+   151→  const { t } = useTranslation();
+   152→  const [tab, setTab] = useState<"chats" | "stories" | "calls">("chats");
+   153→  const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
+   154→
+   155→  return (
+   156→    <div className="space-y-4">
+   157→      {/* Header */}
+   158→      <div className="flex items-center justify-between gap-3">
+   159→        <div>
+   160→          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl flex items-center gap-2">
+   161→            GaexChat
+   162→            <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-0 rounded-full">New</Badge>
+   163→          </h1>
+   164→          <p className="text-sm text-muted-foreground mt-0.5">
+   165→            Chat with contacts & send money without leaving the conversation.
+   166→          </p>
+   167→        </div>
+   168→      </div>
+   169→
+   170→      {/* Tabs */}
+   171→      <div className="flex items-center gap-1 rounded-xl bg-muted/60 p-1 w-full max-w-xs">
+   172→        {([
+   173→          { id: "chats", label: "Chats" },
+   174→          { id: "stories", label: "Stories" },
+   175→          { id: "calls", label: "Calls" },
+   176→        ] as const).map((it) => (
+   177→          <button
+   178→            key={it.id}
+   179→            onClick={() => setTab(it.id)}
+   180→            className={cn(
+   181→              "flex-1 rounded-lg px-3 py-1.5 text-[13px] font-semibold transition",
+   182→              tab === it.id
+   183→                ? "bg-background text-foreground shadow-premium-sm"
+   184→                : "text-muted-foreground hover:text-foreground",
+   185→            )}
+   186→          >
+   187→            {it.label}
+   188→          </button>
+   189→        ))}
+   190→      </div>
+   191→
+   192→      {/* Tab content */}
+   193→      {tab === "chats" && (
+   194→        <ChatsTab selectedConvId={selectedConvId} onSelect={setSelectedConvId} />
+   195→      )}
+   196→      {tab === "stories" && <StoriesTab />}
+   197→      {tab === "calls" && <CallsTab />}
+   198→    </div>
+   199→  );
+   200→}
+   201→
+   202→// ============================================================================
+   203→// ChatsTab — conversation list + chat thread
+   204→// ============================================================================
+   205→
+   206→function ChatsTab({
+   207→  selectedConvId,
+   208→  onSelect,
+   209→}: {
+   210→  selectedConvId: string | null;
+   211→  onSelect: (id: string | null) => void;
+   212→}) {
+   213→  const { data, loading, refetch } = useFetch<ConversationsResponse>("/api/messaging/conversations");
+   214→  const conversations = data?.conversations ?? [];
+   215→
+   216→  // Poll for new conversations/messages
+   217→  useEffect(() => {
+   218→    const t = setInterval(refetch, POLL_MS);
+   219→    return () => clearInterval(t);
+   220→  }, [refetch]);
+   221→
+   222→  return (
+   223→    <div className="grid lg:grid-cols-[340px_1fr] gap-4 lg:h-[calc(100vh-220px)]">
+   224→      {/* Conversation list */}
+   225→      <Card
+   226→        className={cn(
+   227→          "overflow-hidden p-0 flex flex-col",
+   228→          selectedConvId && "hidden lg:flex",
+   229→        )}
+   230→      >
+   231→        <div className="border-b p-3">
+   232→          <div className="relative">
+   233→            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+   234→            <Input
+   235→              placeholder="Search conversations…"
+   236→              className="h-9 rounded-xl pl-9 text-sm bg-muted/40 border-border/60"
+   237→            />
+   238→          </div>
+   239→        </div>
+   240→        <div className="flex-1 overflow-y-auto no-scrollbar">
+   241→          {loading ? (
+   242→            <div className="space-y-2 p-3">
+   243→              {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+   244→            </div>
+   245→          ) : conversations.length === 0 ? (
+   246→            <EmptyConversations />
+   247→          ) : (
+   248→            conversations.map((c) => (
+   249→              <ConversationRow
+   250→                key={c.id}
+   251→                conv={c}
+   252→                active={selectedConvId === c.id}
+   253→                onClick={() => onSelect(c.id)}
+   254→              />
+   255→            ))
+   256→          )}
+   257→        </div>
+   258→      </Card>
+   259→
+   260→      {/* Chat thread / empty state */}
+   261→      <Card className={cn("overflow-hidden p-0 flex flex-col", !selectedConvId && "hidden lg:flex")}>
+   262→        {selectedConvId ? (
+   263→          <ChatThread
+   264→            convId={selectedConvId}
+   265→            onBack={() => onSelect(null)}
+   266→          />
+   267→        ) : (
+   268→          <div className="grid flex-1 place-items-center p-8 text-center">
+   269→            <div>
+   270→              <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-500/10 text-emerald-600 mb-3">
+   271→                <MessageSquarePlus className="h-8 w-8" />
+   272→              </div>
+   273→              <p className="font-semibold">Select a conversation</p>
+   274→              <p className="text-sm text-muted-foreground mt-1 max-w-xs">
+   275→                Pick a contact on the left to start chatting — or send money, request payment, and split bills right inside the chat.
+   276→              </p>
+   277→            </div>
+   278→          </div>
+   279→        )}
+   280→      </Card>
+   281→    </div>
+   282→  );
+   283→}
+   284→
+   285→function EmptyConversations() {
+   286→  return (
+   287→    <div className="grid place-items-center px-6 py-12 text-center">
+   288→      <div className="grid h-14 w-14 place-items-center rounded-full bg-muted/60 text-muted-foreground mb-3">
+   289→        <MessageSquarePlus className="h-7 w-7" />
+   290→      </div>
+   291→      <p className="text-sm font-semibold">No conversations yet</p>
+   292→      <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+   293→        Start a new chat from a contact profile or invite a friend to GaexPay.
+   294→      </p>
+   295→    </div>
+   296→  );
+   297→}
+   298→
+   299→function ConversationRow({
+   300→  conv, active, onClick,
+   301→}: {
+   302→  conv: ConversationListItem; active: boolean; onClick: () => void;
+   303→}) {
+   304→  const u = conv.user;
+   305→  const last = conv.lastMessage;
+   306→  const isMine = last?.senderId === u.id ? false : !!last; // senderId is "me" if not the other user
+   307→  // Actually senderId is the author. We don't have "me" id here, so compare:
+   308→  // if last.senderId === u.id → the other user sent it; else → I sent it.
+   309→  const mine = last && last.senderId !== u.id;
+   310→  const preview = previewFor(last, !!mine);
+   311→
+   312→  return (
+   313→    <button
+   314→      onClick={onClick}
+   315→      className={cn(
+   316→        "flex w-full items-center gap-3 px-3 py-3 text-left transition border-b border-border/30 last:border-0",
+   317→        active ? "bg-primary/8" : "hover:bg-muted/40",
+   318→      )}
+   319→    >
+   320→      <div className="relative shrink-0">
+   321→        <Avatar className="h-12 w-12 ring-1 ring-border/60">
+   322→          <AvatarImage src={u.avatar || undefined} />
+   323→          <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-xs font-bold">
+   324→            {initials(u)}
+   325→          </AvatarFallback>
+   326→        </Avatar>
+   327→        {/* Online dot — presentational */}
+   328→        <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-background" />
+   329→      </div>
+   330→      <div className="flex-1 min-w-0">
+   331→        <div className="flex items-center justify-between gap-2">
+   332→          <p className="text-sm font-semibold truncate flex items-center gap-1">
+   333→            {fullName(u)}
+   334→            {u.kycStatus === "verified" && <BadgeCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
+   335→          </p>
+   336→          <span className="text-[10px] text-muted-foreground shrink-0">
+   337→            {last ? timeAgo(last.createdAt) : ""}
+   338→          </span>
+   339→        </div>
+   340→        <div className="flex items-center justify-between gap-2 mt-0.5">
+   341→          <p className="text-xs text-muted-foreground truncate">{preview}</p>
+   342→          {conv.unreadCount > 0 && (
+   343→            <span className="grid h-5 min-w-5 place-items-center rounded-full bg-emerald-500 px-1.5 text-[10px] font-bold text-white shrink-0">
+   344→              {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
+   345→            </span>
+   346→          )}
+   347→        </div>
+   348→      </div>
+   349→    </button>
+   350→  );
+   351→}
+   352→
+   353→// ============================================================================
+   354→// ChatThread — the conversation pane
+   355→// ============================================================================
+   356→
+   357→function ChatThread({ convId, onBack }: { convId: string; onBack: () => void }) {
+   358→  const { data: meData } = useFetch<{ user: { id: string; firstName: string; lastName: string } }>("/api/me");
+   359→  const { data: walletsData } = useFetch<WalletsResponse>("/api/wallets");
+   360→  const [messages, setMessages] = useState<MessageItem[]>([]);
+   361→  const [loading, setLoading] = useState(true);
+   362→  const [text, setText] = useState("");
+   363→  const [sending, setSending] = useState(false);
+   364→  const [other, setOther] = useState<Participant | null>(null);
+   365→  const [modal, setModal] = useState<null | "send" | "request" | "split">(null);
+   366→  const scrollRef = useRef<HTMLDivElement>(null);
+   367→
+   368→  // Real-time NGN wallet balance (for quick-action modals)
+   369→  const ngnWallet = walletsData?.wallets.find((w) => w.currency === "NGN");
+   370→  const ngnBalance = ngnWallet?.balance ?? 0;
+   371→
+   372→  const myId = meData?.user?.id;
+   373→
+   374→  // Fetch messages
+   375→  const loadMessages = useCallback(async () => {
+   376→    try {
+   377→      const res = await fetch(`/api/messaging/conversations/${convId}/messages`, { credentials: "include" });
+   378→      if (!res.ok) return;
+   379→      const data: MessagesResponse = await res.json();
+   380→      setMessages(data.messages);
+   381→      // Derive the "other" participant from the first non-mine message's sender,
+   382→      // or from the conversation endpoint. Simpler: fetch conversation detail.
+   383→      if (data.messages.length > 0 && myId) {
+   384→        const otherMsg = data.messages.find((m) => m.senderId !== myId) || data.messages[0];
+   385→        // We need the other user's profile — fetch conversation list to find it.
+   386→      }
+   387→    } catch { /* ignore */ } finally {
+   388→      setLoading(false);
+   389→    }
+   390→  }, [convId, myId]);
+   391→
+   392→  // Fetch conversation detail to get the other participant
+   393→  useEffect(() => {
+   394→    let cancelled = false;
+   395→    (async () => {
+   396→      try {
+   397→        const res = await fetch("/api/messaging/conversations", { credentials: "include" });
+   398→        if (!res.ok) return;
+   399→        const data: ConversationsResponse = await res.json();
+   400→        const conv = data.conversations.find((c) => c.id === convId);
+   401→        if (conv && !cancelled) setOther(conv.user);
+   402→      } catch { /* ignore */ }
+   403→    })();
+   404→    return () => { cancelled = true; };
+   405→  }, [convId]);
+   406→
+   407→  useEffect(() => {
+   408→    setLoading(true);
+   409→    loadMessages();
+   410→  }, [loadMessages]);
+   411→
+   412→  // Poll for new messages
+   413→  useEffect(() => {
+   414→    const t = setInterval(loadMessages, POLL_MS);
+   415→    return () => clearInterval(t);
+   416→  }, [loadMessages]);
+   417→
+   418→  // Auto-scroll to bottom on new messages
+   419→  useEffect(() => {
+   420→    if (scrollRef.current) {
+   421→      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+   422→    }
+   423→  }, [messages]);
+   424→
+   425→  async function sendText() {
+   426→    const content = text.trim();
+   427→    if (!content || sending) return;
+   428→    setSending(true);
+   429→    setText("");
+   430→    try {
+   431→      const res = await fetch(`/api/messaging/conversations/${convId}/messages`, {
+   432→        method: "POST",
+   433→        headers: { "Content-Type": "application/json" },
+   434→        credentials: "include",
+   435→        body: JSON.stringify({ content }),
+   436→      });
+   437→      if (!res.ok) {
+   438→        const e = await res.json().catch(() => ({}));
+   439→        throw new Error(e.error || "Failed to send");
+   440→      }
+   441→      await loadMessages();
+   442→    } catch (e: any) {
+   443→      toast.error(e.message || "Failed to send message");
+   444→      setText(content); // restore
+   445→    } finally {
+   446→      setSending(false);
+   447→    }
+   448→  }
+   449→
+   450→  // After any financial action, reload messages + show toast
+   451→  async function onFinancialActionSuccess(msg?: string) {
+   452→    await loadMessages();
+   453→    if (msg) toast.success(msg);
+   454→  }
+   455→
+   456→  return (
+   457→    <>
+   458→      {/* Chat header */}
+   459→      <div className="flex items-center gap-2 border-b p-3">
+   460→        <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9 rounded-xl" onClick={onBack}>
+   461→          <ArrowLeft className="h-5 w-5" />
+   462→        </Button>
+   463→        <Avatar className="h-10 w-10 ring-1 ring-border/60">
+   464→          <AvatarImage src={other?.avatar || undefined} />
+   465→          <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-xs font-bold">
+   466→            {other ? initials(other) : "?"}
+   467→          </AvatarFallback>
+   468→        </Avatar>
+   469→        <div className="flex-1 min-w-0">
+   470→          <p className="text-sm font-semibold truncate flex items-center gap-1">
+   471→            {other ? fullName(other) : "Loading…"}
+   472→            {other?.kycStatus === "verified" && <BadgeCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
+   473→          </p>
+   474→          <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+   475→            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> online
+   476→          </p>
+   477→        </div>
+   478→        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" aria-label="Voice call">
+   479→          <PhoneIcon className="h-[18px] w-[18px]" />
+   480→        </Button>
+   481→        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" aria-label="Video call">
+   482→          <Video className="h-[18px] w-[18px]" />
+   483→        </Button>
+   484→      </div>
+   485→
+   486→      {/* Messages */}
+   487→      <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 bg-muted/10">
+   488→        {loading ? (
+   489→          <div className="space-y-2">
+   490→            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className={cn("h-12 rounded-2xl", i % 2 ? "ml-auto w-2/3" : "w-2/3")} />)}
+   491→          </div>
+   492→        ) : (
+   493→          messages.map((m) => (
+   494→            <MessageBubble key={m.id} msg={m} mine={myId ? m.senderId === myId : false} other={other} onActionDone={onFinancialActionSuccess} />
+   495→          ))
+   496→        )}
+   497→      </div>
+   498→
+   499→      {/* Input bar with quick-action (+) button */}
+   500→      <div className="border-t p-2.5 sm:p-3">
+   501→        <div className="flex items-end gap-2">
+   502→          {/* Quick-action menu trigger */}
+   503→          <DropdownMenu>
+   504→            <DropdownMenuTrigger asChild>
+   505→              <Button
+   506→                variant="ghost"
+   507→                size="icon"
+   508→                className="h-10 w-10 rounded-full shrink-0 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
+   509→                aria-label="Quick actions"
+   510→              >
+   511→                <Plus className="h-5 w-5" />
+   512→              </Button>
+   513→            </DropdownMenuTrigger>
+   514→            <DropdownMenuContent side="top" align="start" className="w-56 rounded-xl">
+   515→              <DropdownMenuItem className="cursor-pointer rounded-lg" onSelect={() => setModal("send")}>
+   516→                <div className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-500/15 text-emerald-600 mr-2">
+   517→                  <ArrowUpRight className="h-4 w-4" />
+   518→                </div>
+   519→                <div>
+   520→                  <p className="text-sm font-medium">Send money</p>
+   521→                  <p className="text-[10px] text-muted-foreground">Pay your contact instantly</p>
+   522→                </div>
+   523→              </DropdownMenuItem>
+   524→              <DropdownMenuItem className="cursor-pointer rounded-lg" onSelect={() => setModal("request")}>
+   525→                <div className="grid h-8 w-8 place-items-center rounded-lg bg-amber-500/15 text-amber-600 mr-2">
+   526→                  <ArrowDownToLine className="h-4 w-4" />
+   527→                </div>
+   528→                <div>
+   529→                  <p className="text-sm font-medium">Request payment</p>
+   530→                  <p className="text-[10px] text-muted-foreground">Ask your contact for money</p>
+   531→                </div>
+   532→              </DropdownMenuItem>
+   533→              <DropdownMenuItem className="cursor-pointer rounded-lg" onSelect={() => setModal("split")}>
+   534→                <div className="grid h-8 w-8 place-items-center rounded-lg bg-violet-500/15 text-violet-600 mr-2">
+   535→                  <Receipt className="h-4 w-4" />
+   536→                </div>
+   537→                <div>
+   538→                  <p className="text-sm font-medium">Split a bill</p>
+   539→                  <p className="text-[10px] text-muted-foreground">Share a bill 50/50</p>
+   540→                </div>
+   541→              </DropdownMenuItem>
+   542→            </DropdownMenuContent>
+   543→          </DropdownMenu>
+   544→
+   545→          {/* Text input */}
+   546→          <div className="flex-1 relative">
+   547→            <Input
+   548→              value={text}
+   549→              onChange={(e) => setText(e.target.value)}
+   550→              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendText(); } }}
+   551→              placeholder="Type a message…"
+   552→              className="h-10 rounded-2xl pr-10 text-sm border-border/60 bg-muted/40"
+   553→            />
+   554→            <button
+   555→              type="button"
+   556→              className="absolute right-2 top-1/2 -translate-y-1/2 grid h-7 w-7 place-items-center rounded-full text-muted-foreground hover:text-foreground transition"
+   557→              aria-label="Attach"
+   558→              onClick={() => toast.info("Attachments coming soon")}
+   559→            >
+   560→              <ImageIcon className="h-4 w-4" />
+   561→            </button>
+   562→          </div>
+   563→
+   564→          {/* Send / mic */}
+   565→          <Button
+   566→            size="icon"
+   567→            className="h-10 w-10 rounded-full shrink-0 bg-gradient-to-br from-emerald-500 to-teal-600 shadow-premium-sm"
+   568→            onClick={sendText}
+   569→            disabled={sending || !text.trim()}
+   570→            aria-label="Send"
+   571→          >
+   572→            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+   573→          </Button>
+   574→        </div>
+   575→      </div>
+   576→
+   577→      {/* Financial action modals */}
+   578→      <SendMoneyModal
+   579→        open={modal === "send"}
+   580→        onClose={() => setModal(null)}
+   581→        convId={convId}
+   582→        otherName={other ? fullName(other) : ""}
+   583→        balance={ngnBalance}
+   584→        onSuccess={(msg) => { setModal(null); onFinancialActionSuccess(msg); }}
+   585→      />
+   586→      <RequestMoneyModal
+   587→        open={modal === "request"}
+   588→        onClose={() => setModal(null)}
+   589→        convId={convId}
+   590→        otherName={other ? fullName(other) : ""}
+   591→        onSuccess={(msg) => { setModal(null); onFinancialActionSuccess(msg); }}
+   592→      />
+   593→      <SplitBillModal
+   594→        open={modal === "split"}
+   595→        onClose={() => setModal(null)}
+   596→        convId={convId}
+   597→        otherName={other ? fullName(other) : ""}
+   598→        balance={ngnBalance}
+   599→        onSuccess={(msg) => { setModal(null); onFinancialActionSuccess(msg); }}
+   600→      />
+   601→    </>
+   602→  );
+   603→}
+   604→
+   605→// ============================================================================
+   606→// MessageBubble — renders text + financial cards natively
+   607→// ============================================================================
+   608→
+   609→function MessageBubble({
+   610→  msg, mine, other, onActionDone,
+   611→}: {
+   612→  msg: MessageItem; mine: boolean; other: Participant | null; onActionDone: (msg?: string) => void;
+   613→}) {
+   614→  const meta = parseMeta(msg.metadata);
+   615→
+   616→  // Financial / system cards
+   617→  if (msg.kind === "payment") {
+   618→    return <PaymentCard msg={msg} meta={meta} mine={mine} />;
+   619→  }
+   620→  if (msg.kind === "request") {
+   621→    return <RequestCard msg={msg} meta={meta} mine={mine} onActionDone={onActionDone} />;
+   622→  }
+   623→  if (msg.kind === "split") {
+   624→    return <SplitCard msg={msg} meta={meta} mine={mine} onActionDone={onActionDone} />;
+   625→  }
+   626→  if (msg.kind === "system") {
+   627→    return <SystemBubble msg={msg} meta={meta} />;
+   628→  }
+   629→
+   630→  // Plain text bubble
+   631→  return (
+   632→    <div className={cn("flex", mine ? "justify-end" : "justify-start")}>
+   633→      <div
+   634→        className={cn(
+   635→          "max-w-[78%] sm:max-w-[68%] rounded-2xl px-3.5 py-2 text-sm shadow-premium-xs",
+   636→          mine
+   637→            ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-br-md"
+   638→            : "bg-card border border-border/60 rounded-bl-md",
+   639→        )}
+   640→      >
+   641→        <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
+   642→        <div className={cn("flex items-center gap-1 mt-1 text-[10px]", mine ? "text-white/70 justify-end" : "text-muted-foreground")}>
+   643→          <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+   644→          {mine && <TickStatus status={msg.status} light />}
+   645→        </div>
+   646→      </div>
+   647→    </div>
+   648→  );
+   649→}
+   650→
+   651→function TickStatus({ status, light }: { status: string; light?: boolean }) {
+   652→  if (status === "read") return <CheckCheck className={cn("h-3 w-3", light ? "text-sky-200" : "text-sky-500")} />;
+   653→  if (status === "delivered") return <CheckCheck className={cn("h-3 w-3", light ? "text-white/70" : "text-muted-foreground")} />;
+   654→  return <Check className={cn("h-3 w-3", light ? "text-white/70" : "text-muted-foreground")} />;
+   655→}
+   656→
+   657→// ── Payment card (native transaction card) ────────────────────────────────
+   658→function PaymentCard({ msg, meta, mine }: { msg: MessageItem; meta: any; mine: boolean }) {
+   659→  const incoming = meta.direction === "in";
+   660→  return (
+   661→    <div className={cn("flex", mine ? "justify-end" : "justify-start")}>
+   662→      <div className="max-w-[85%] sm:max-w-[75%]">
+   663→        <div className="rounded-2xl overflow-hidden border border-border/60 shadow-premium-sm bg-card">
+   664→          {/* Header strip */}
+   665→          <div className={cn(
+   666→            "flex items-center gap-2 px-3.5 py-2 text-white",
+   667→            incoming ? "bg-gradient-to-r from-emerald-500 to-teal-600" : "bg-gradient-to-r from-emerald-600 to-emerald-700",
+   668→          )}>
+   669→            <div className="grid h-8 w-8 place-items-center rounded-full bg-white/20 backdrop-blur">
+   670→              {incoming ? <ArrowDownRight className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
+   671→            </div>
+   672→            <div className="flex-1 min-w-0">
+   673→              <p className="text-xs font-semibold leading-tight">{incoming ? "Payment received" : "Payment sent"}</p>
+   674→              <p className="text-[10px] text-white/80 leading-tight truncate">
+   675→                {incoming ? meta.recipientName ? `from ${meta.recipientName}` : "" : `to ${meta.recipientName || ""}`}
+   676→              </p>
+   677→            </div>
+   678→            {meta.requestPaid && <Badge className="bg-white/20 text-white border-0 text-[9px]">Request paid</Badge>}
+   679→            {meta.splitPaid && <Badge className="bg-white/20 text-white border-0 text-[9px]">Split share</Badge>}
+   680→          </div>
+   681→          {/* Body */}
+   682→          <div className="px-3.5 py-3">
+   683→            <p className="text-2xl font-bold tabular-nums text-foreground">
+   684→              {CURRENCY_SYMBOL[meta.currency] || ""}{Number(meta.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+   685→            </p>
+   686→            <p className="text-[11px] text-muted-foreground mt-0.5">{meta.currency}</p>
+   687→            {meta.note && <p className="text-sm text-foreground mt-2 italic">“{meta.note}”</p>}
+   688→            <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-border/40">
+   689→              <span className="text-[10px] text-muted-foreground font-mono truncate">{meta.txRef}</span>
+   690→              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600">
+   691→                <CheckCircle2 className="h-3.5 w-3.5" /> Completed
+   692→              </span>
+   693→            </div>
+   694→            <div className="flex items-center gap-1 mt-1.5 text-[10px] text-muted-foreground">
+   695→              <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+   696→              {mine && <TickStatus status={msg.status} />}
+   697→            </div>
+   698→          </div>
+   699→        </div>
+   700→      </div>
+
+[showing lines 1-700 of 1272; use offset=701 with limit to continue reading]

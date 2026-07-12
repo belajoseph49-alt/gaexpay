@@ -8,54 +8,67 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/messaging/conversations
  *
- * Returns the auth user's conversations ordered by most recent message.
- * Each conversation includes the other participant's profile, the last
- * message preview, and an unread count.
+ * Returns the auth user's conversations (1-to-1 + group) ordered by most
+ * recent message. Each conversation includes the other participant's profile
+ * (for 1-to-1) OR the group info (for group), the last message preview, and
+ * an unread count.
  */
 export async function GET(req: Request) {
   try {
     const userId = getAuthUserId(req);
     if (!userId) return apiError("Unauthorized", 401);
 
-    const conversations = await db.conversation.findMany({
+    // 1-to-1 conversations
+    const directConvs = await db.conversation.findMany({
       where: {
         OR: [{ participantAId: userId }, { participantBId: userId }],
+        groupId: null,
       },
       include: {
         participantA: {
-          select: {
-            id: true, firstName: true, lastName: true, username: true,
-            avatar: true, kycStatus: true, status: true,
-          },
+          select: { id: true, firstName: true, lastName: true, username: true, avatar: true, kycStatus: true, status: true },
         },
         participantB: {
-          select: {
-            id: true, firstName: true, lastName: true, username: true,
-            avatar: true, kycStatus: true, status: true,
-          },
+          select: { id: true, firstName: true, lastName: true, username: true, avatar: true, kycStatus: true, status: true },
         },
         messages: {
           orderBy: { createdAt: "desc" },
           take: 1,
-          select: {
-            id: true,
-            content: true,
-            kind: true,
-            metadata: true,
-            senderId: true,
-            status: true,
-            createdAt: true,
-          },
+          select: { id: true, content: true, kind: true, metadata: true, senderId: true, status: true, createdAt: true },
         },
       },
       orderBy: { updatedAt: "desc" },
     });
 
-    // Compute unread counts separately (cheap to do inline)
-    const convIds = conversations.map((c) => c.id);
+    // Group conversations (via ChatGroupMember)
+    const groupMemberships = await db.chatGroupMember.findMany({
+      where: { userId },
+      include: {
+        group: {
+          include: {
+            conversation: {
+              include: {
+                messages: {
+                  orderBy: { createdAt: "desc" },
+                  take: 1,
+                  select: { id: true, content: true, kind: true, metadata: true, senderId: true, status: true, createdAt: true },
+                },
+              },
+            },
+            members: { select: { userId: true } },
+          },
+        },
+      },
+    });
+
+    const allConvIds = [
+      ...directConvs.map((c) => c.id),
+      ...groupMemberships.map((m) => m.group.conversation?.id).filter(Boolean) as string[],
+    ];
+
     const unreadMessages = await db.message.findMany({
       where: {
-        conversationId: { in: convIds },
+        conversationId: { in: allConvIds },
         senderId: { not: userId },
         status: { in: ["sent", "delivered"] },
       },
@@ -66,27 +79,49 @@ export async function GET(req: Request) {
       unreadMap[m.conversationId] = (unreadMap[m.conversationId] ?? 0) + 1;
     }
 
-    const result = conversations.map((c) => {
+    const direct = directConvs.map((c) => {
       const isA = c.participantAId === userId;
       const other = isA ? c.participantB : c.participantA;
       const last = c.messages[0] ?? null;
       return {
         id: c.id,
+        isGroup: false,
+        groupId: null,
+        groupName: null,
+        groupAvatar: null,
+        memberCount: 2,
         user: other,
         lastMessage: last
-          ? {
-              id: last.id,
-              content: last.content,
-              senderId: last.senderId,
-              isMine: last.senderId === userId,
-              status: last.status,
-              createdAt: last.createdAt,
-            }
+          ? { id: last.id, content: last.content, kind: last.kind, metadata: last.metadata, senderId: last.senderId, isMine: last.senderId === userId, status: last.status, createdAt: last.createdAt }
           : null,
         unreadCount: unreadMap[c.id] ?? 0,
         updatedAt: c.updatedAt,
       };
     });
+
+    const groups = groupMemberships.map((m) => {
+      const conv = m.group.conversation;
+      const last = conv?.messages[0] ?? null;
+      return {
+        id: conv?.id ?? m.group.id, // fall back to group id if conversation missing
+        isGroup: true,
+        groupId: m.group.id,
+        groupName: m.group.name,
+        groupAvatar: m.group.avatar,
+        memberCount: m.group.members.length,
+        user: null,
+        lastMessage: last
+          ? { id: last.id, content: last.content, kind: last.kind, metadata: last.metadata, senderId: last.senderId, isMine: last.senderId === userId, status: last.status, createdAt: last.createdAt }
+          : null,
+        unreadCount: conv ? (unreadMap[conv.id] ?? 0) : 0,
+        updatedAt: m.group.updatedAt,
+      };
+    });
+
+    // Merge + sort by updatedAt desc
+    const result = [...direct, ...groups]
+      .filter((c) => c.id)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
     return NextResponse.json({ conversations: result });
   } catch (e) {
