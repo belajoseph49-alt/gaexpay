@@ -46,6 +46,7 @@ import { DeveloperPortalView } from "./views/developer-portal-view";
 import { ReferralView } from "./views/referral-view";
 import { MarketplaceView } from "./views/marketplace-view";
 import { SavingsChallengesView } from "./views/savings-challenges-view";
+import { GaexChatView } from "./views/gaex-chat-view";
 import { WalletDetailView } from "./views/wallet-detail-view";
 import { MerchantView } from "./views/merchant-view";
 import { BusinessProView } from "./views/business-pro-view";
@@ -131,6 +132,7 @@ export function AppShell() {
     referral: <ReferralView />,
     marketplace: <MarketplaceView />,
     "savings-challenges": <SavingsChallengesView />,
+    "gaex-chat": <GaexChatView />,
     social: <SocialView />,
     messaging: <MessagingView />,
     live: <LiveView />,

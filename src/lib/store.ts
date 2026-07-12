@@ -47,7 +47,8 @@ export type View =
   | "developer"
   | "referral"
   | "marketplace"
-  | "savings-challenges";
+  | "savings-challenges"
+  | "gaex-chat";
 
 interface AppState {
   view: View;

@@ -40,6 +40,8 @@ export async function GET(req: Request) {
           select: {
             id: true,
             content: true,
+            kind: true,
+            metadata: true,
             senderId: true,
             status: true,
             createdAt: true,

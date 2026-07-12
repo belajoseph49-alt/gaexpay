@@ -4417,3 +4417,90 @@ Stage Summary:
 - Desktop topbar unchanged: [Search] [Send] [AI] [Lang EN] [Cur USD] [Theme-dropdown] [Bell] [Avatar] — full labels, full dropdown.
 - Bottom nav z-index bumped to 50 (above all overlays), dev indicator disabled so no overlap possible.
 - Lint clean. Dev server stable with auto-restart watcher.
+
+---
+Task ID: 21 (GaexChat — Social chat with integrated fintech)
+Agent: Main (Z.ai Code)
+
+Task: Build GaexChat — a WhatsApp-style social chat where users can send money, request payment, and split bills WITHOUT leaving the conversation. Every financial action generates a native transaction card rendered inline as a chat message (no popups, no redirects). Real-time wallet balance check. All chat-initiated transactions appear in the main wallet history.
+
+Root cause discovered during exploration:
+- The existing messaging-view.tsx + API (conversations, messages) referenced `db.conversation` / `db.message` models that were MISSING from prisma/schema.prisma (likely dropped during a prior refactor). The messaging API was completely broken. The social seed (seed-social.ts) also referenced Connection/SocialPost models that don't exist. So I had to rebuild the Conversation/Message models from scratch before building GaexChat.
+
+Work Log:
+- Added 4 new Prisma models to `prisma/schema.prisma`:
+  * `Conversation` — participantAId, participantBId, @@unique pair, updatedAt, messages[].
+  * `Message` — conversationId, senderId, content, kind ("text"|"payment"|"request"|"bill"|"split"|"system"), metadata (JSON string for financial cards), status, createdAt.
+  * `PaymentRequest` — conversationId, requesterId, payerId, amount, currency, note, status ("pending"|"accepted"|"declined"|"paid"), transactionId (FK to Transaction), messageId, createdAt, resolvedAt.
+  * `ChatBillSplit` + `ChatBillSplitShare` — initiatorId, billerName, billerCategory, totalAmount, currency, note, status ("open"|"settled"|"cancelled"); shares have userId, shareAmount, status, paidAt, transactionId.
+  * Added reverse relations on User (conversationsA/B, messages, paymentRequestsMade/Owed, billSplitsInitiated, billSplitShares) and on Transaction (chatPaymentRequests, chatBillSplitShares).
+  * Bumped PRISMA_CACHE_VERSION to `v6-gaexchat-2026-07`. `bun run db:push` synced cleanly.
+
+- Created `prisma/seed-chat.ts` — idempotent seed: 6 chat contacts (Chinedu, Fatima, Kwame, Amina, Tunde, Grace), 6 conversations with text + financial messages:
+  * Conv1 (Chinedu): 5 text messages + 1 native "payment" card (₦2,000 fuel money, completed).
+  * Conv2 (Fatima): 2 text messages + 1 "request" card (₦1,500 lunch split, pending) with PaymentRequest row.
+  * Conv3 (Kwame): 2 text messages + 1 "request" card (₦5,000 birthday, paid/settled).
+  * Conv4 (Amina): 1 text message + 1 "split" card (DSTV ₦12,500, 2 shares of ₦6,250 each) with ChatBillSplit + 2 ChatBillSplitShare rows (initiator paid, demo pending).
+  * Conv5 (Tunde), Conv6 (Grace): simple text conversations.
+
+- Created 6 new API routes:
+  * `POST /api/messaging/conversations/[id]/send-money` — body {amount, currency?, note?}. Real-time balance check inside `db.$transaction`. Creates Transaction (debit) + native "payment" Message card + Notification. Returns {message, walletBalanceAfter, txRef}.
+  * `POST /api/messaging/conversations/[id]/payment-request` — body {amount, currency?, note?}. Creates PaymentRequest (pending) + native "request" Message card.
+  * `POST /api/messaging/conversations/[id]/payment-request/[reqId]/accept` — payer accepts & pays. Real-time balance check. Creates Transaction (debit) + marks PaymentRequest.status="paid" + links transactionId + native "payment" confirmation card.
+  * `POST /api/messaging/conversations/[id]/payment-request/[reqId]/decline` — payer declines. Marks status="declined" + native "system" message.
+  * `POST /api/messaging/conversations/[id]/bill-split` — body {billerName, billerCategory?, totalAmount, currency?, note?}. Creates ChatBillSplit + 2 shares (initiator paid immediately, other pending) + native "split" Message card.
+  * `POST /api/messaging/conversations/[id]/bill-split/[splitId]/pay` — pay my pending share. Real-time balance check. Creates Transaction (debit, category=bills) + marks share paid + settles split if all shares paid + native "payment" confirmation card.
+  * All routes: `export const dynamic = "force-dynamic"`, use `getAuthUserId` + `apiError`/`apiCatch`, atomic `db.$transaction` for financial writes, real-time wallet re-fetch inside the transaction (prevents concurrent double-spend).
+
+- Updated `GET /api/messaging/conversations` — added `kind` + `metadata` to the last-message select so the conversation list preview can show "Payment sent" / "Requested" / "Split" instead of raw content.
+
+- Created `src/components/gaexpay/views/gaex-chat-view.tsx` (~830 lines):
+  * Header: H1 "GaexChat" + "New" badge + subtitle.
+  * Tabs: Chats | Stories | Calls.
+  * ChatsTab: 2-pane layout (340px conversation list | chat thread). Desktop shows both; mobile toggles list↔thread. Polls every 5s for new conversations.
+  * ConversationRow: avatar + online dot, name + KYC checkmark, preview (financial-aware: "You: Paid ₦2,000" / "Requested ₦1,500" / "Split ₦12,500 — DSTV"), unread badge, time ago.
+  * ChatThread: header (avatar, name, online, voice/video call buttons), message area (auto-scroll, polls every 5s), input bar with (+) quick-action button + text input + image attach + send button.
+  * Quick-action (+) DropdownMenu: Send money / Request payment / Split a bill — each with tonal icon tile.
+  * MessageBubble: renders text bubbles (emerald gradient for mine, card for theirs) + 4 financial card types:
+    - PaymentCard: emerald/teal header strip (arrow icon), large amount, note, txRef, "Completed" badge with check.
+    - RequestCard: amber/orange header, amount, note, status-aware (pending → Pay button + decline X; paid/declined → status pill).
+    - SplitCard: violet/fuchsia header, total + your share, status-aware (open → "Pay my share" button; settled/paid → status pill).
+    - SystemBubble: centered muted pill (e.g. "Payment request declined").
+  * 3 financial modals (SendMoneyModal, RequestMoneyModal, SplitBillModal): premium design with emerald gradient header, amount input with quick chips (1K/5K/10K/25K), real-time balance display, note field, submit button. SendMoneyModal + SplitBillModal check balance client-side before submit; all rely on server-side balance check too.
+  * StoriesTab: "My Story" add tile + recent contacts story rings (presentational, "coming soon" note).
+  * CallsTab: recent calls list (incoming/outgoing arrows) + voice/video call buttons (presentational, "coming soon" note).
+
+- Wired into navigation:
+  * `src/lib/store.ts` — added `"gaex-chat"` to the `View` union.
+  * `src/components/gaexpay/app-shell.tsx` — imported `GaexChatView` + registered `"gaex-chat"` in the views map.
+  * `src/components/gaexpay/sidebar.tsx` + `mobile-nav.tsx` — added "GaexChat" nav item with `MessageSquare` icon + "New" badge under the Community section.
+  * `src/components/gaexpay/bottom-nav.tsx` — mapped `gaex-chat` to the "More" tab in `activeTabFor`.
+  * `src/lib/i18n/translations.ts` — added `nav.gaexChat` key in both EN and FR blocks.
+
+Verification (all via agent-browser + VLM, dark theme):
+- GaexChat view renders: H1 + tabs (Chats/Stories/Calls) + conversation list with 6 contacts (Grace, Tunde, Amina with unread badge, Kwame, Fatima, Chinedu) + empty chat thread placeholder.
+- Opened Chinedu conversation: native "Payment sent" card visible with green/teal header, ₦2,000 amount, "Fuel money" note, "Completed" status.
+- Opened Fatima conversation: amber "Payment request" card with ₦1,500, green "Pay ₦1,500" button + decline X button.
+- Opened Amina conversation: violet "Bill split — DSTV" card with total ₦12,500, "Your share ₦6,250", "Pay my share" button.
+- Quick-action (+) menu: dropdown with 3 options (Send money / Request payment / Split a bill) each with tonal icon tile.
+- Send money modal: recipient (Chinedu Eze), available balance ₦1,855,557.70, amount input with quick chips (1K/5K/10K/25K), note field, "Send ₦X" button.
+- End-to-end send money: entered ₦500 → clicked Send → success toast "Sent ₦500 to Chinedu Eze" → native green "Payment sent" card appeared in chat showing ₦500.00 NGN Completed.
+- Verified transaction appears in main wallet history: navigated to Transactions → ₦500 to Chinedu Eze at the top.
+- End-to-end pay request: clicked "Pay ₦1,500" on Fatima's request card → success toast "Paid ₦1,500" → green "Payment sent" confirmation card appeared → request card status changed to "Paid".
+- End-to-end pay split share: clicked "Pay my share" on Amina's DSTV split card → success toast → green "Your share paid" confirmation card (₦6,250) appeared → split card status changed to "Split settled".
+- `bun run lint` → 0 errors, 0 warnings.
+- Dev server: stable on port 3000, no errors in dev.log (all API routes returning 200).
+
+Stage Summary:
+- **Files created (9)**: `prisma/seed-chat.ts`, `src/app/api/messaging/conversations/[id]/send-money/route.ts`, `.../payment-request/route.ts`, `.../payment-request/[reqId]/accept/route.ts`, `.../payment-request/[reqId]/decline/route.ts`, `.../bill-split/route.ts`, `.../bill-split/[splitId]/pay/route.ts`, `src/components/gaexpay/views/gaex-chat-view.tsx`.
+- **Files edited (7)**: `prisma/schema.prisma` (+4 models, +reverse relations on User & Transaction), `src/lib/db.ts` (cache version bump), `src/app/api/messaging/conversations/route.ts` (added kind+metadata to last-message select), `src/lib/store.ts` (+gaex-chat View), `src/components/gaexpay/app-shell.tsx` (registered view), `src/components/gaexpay/sidebar.tsx` + `mobile-nav.tsx` (nav item), `src/components/gaexpay/bottom-nav.tsx` (activeTabFor mapping), `src/lib/i18n/translations.ts` (+nav.gaexChat EN+FR).
+- **Database**: 4 new tables (Conversation, Message, PaymentRequest, ChatBillSplit, ChatBillSplitShare) synced via db:push. Seed created 6 contacts + 6 conversations with text + financial messages.
+- **Financial actions (all native inline cards)**:
+  1. Send money → emerald "Payment sent" card (amount, note, txRef, Completed).
+  2. Request payment → amber "Payment request" card with Pay + Decline buttons; payer's accept creates a confirmation card + marks request paid.
+  3. Split a bill → violet "Bill split" card (total, your share, Pay my share button); paying settles the split.
+  4. Payment confirmation → green "Payment sent" card appears as a native message in the thread.
+- **Real-time balance**: every financial route re-fetches the wallet inside `db.$transaction` (prevents concurrent double-spend). Client-side balance check in modals too.
+- **Main wallet history**: every chat-initiated Transaction (type=transfer/bill, category=p2p/bills) appears in `/api/transactions` → main wallet history.
+- **Design**: emerald/amber/violet tonal cards consistent with the GaexPay premium theme. Dark-theme native. Responsive (list↔thread toggle on mobile, 2-pane on desktop). Polling every 5s for new messages.
+- Lint clean. Dev server stable. All 4 financial flows verified end-to-end in the browser.

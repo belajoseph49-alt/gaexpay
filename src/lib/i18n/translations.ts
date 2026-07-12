@@ -2261,6 +2261,7 @@ const en: Record<string, string> = {
 
   // Savings Challenges
   "nav.savingsChallenges": "Savings Challenges",
+  "nav.gaexChat": "GaexChat",
   "savingsChallenges.title": "Savings Challenges",
   "savingsChallenges.subtitle": "Save smarter, build streaks, unlock badges.",
   "savingsChallenges.activeChallenges": "Active Challenges",
@@ -3845,6 +3846,7 @@ const fr = build({
 
   // Savings Challenges (FR)
   "nav.savingsChallenges": "Défis Épargne",
+  "nav.gaexChat": "GaexChat",
   "savingsChallenges.title": "Défis Épargne",
   "savingsChallenges.subtitle": "Épargnez plus malin, bâtissez des séries, débloquez des badges.",
   "savingsChallenges.activeChallenges": "Défis actifs",

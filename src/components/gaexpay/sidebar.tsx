@@ -112,6 +112,7 @@ const NAV: NavGroup[] = [
     items: [
       { id: "social", label: "Social", labelKey: "nav.social", icon: Users, featureFlag: "social" },
       { id: "messaging", label: "Messages", labelKey: "nav.messages", icon: MessageSquare, featureFlag: "messaging" },
+      { id: "gaex-chat", label: "GaexChat", labelKey: "nav.gaexChat", icon: MessageSquare, badge: "New" },
       { id: "live", label: "Live", labelKey: "nav.live", icon: Radio, featureFlag: "live_streaming" },
     ],
   },

@@ -49,6 +49,9 @@ function activeTabFor(view: View): View | "more" | null {
     case "pay":
     case "scheduled":
       return "pay";
+    case "gaex-chat":
+      // GaexChat is reachable from the "More" drawer
+      return "more";
     default:
       // Everything else lives under "More"
       return "more";
