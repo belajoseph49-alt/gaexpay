@@ -59,7 +59,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     if (!claimantId) return apiError("Unauthorized", 401);
 
     const identifier = getClientIdentifier(req, claimantId);
-    const rl = rateLimitSensitive(identifier);
+    const rl = await rateLimitSensitive(identifier);
     if (!rl.success) {
       return NextResponse.json(
         { error: "Too many requests. Please slow down." },

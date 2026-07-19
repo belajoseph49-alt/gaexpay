@@ -370,26 +370,26 @@ function AddressCard({
     setTimeout(() => setCopied(false), 1800);
   };
   return (
-    <Card className="group relative overflow-hidden p-5 card-lift h-full flex flex-col">
-      <div className="flex items-center justify-between mb-3">
-        <div className={cn("grid h-10 w-10 place-items-center rounded-lg ring-1", accent.bg, accent.text, accent.ring)}>
+    <Card className="group relative overflow-hidden p-6 card-lift h-full flex flex-col border-border/50 bg-gradient-to-b from-card to-card/50 shadow-premium-sm hover:shadow-premium-md transition-all">
+      <div className="flex items-center justify-between mb-4">
+        <div className={cn("grid h-12 w-12 place-items-center rounded-xl ring-1 shadow-sm backdrop-blur-md", accent.bg, accent.text, accent.ring)}>
           {icon}
         </div>
         <Button
-          variant="ghost"
+          variant="secondary"
           size="icon"
-          className="h-7 w-7 opacity-60 hover:opacity-100 transition"
+          className="h-8 w-8 rounded-full opacity-60 hover:opacity-100 transition shadow-sm bg-muted hover:bg-primary/10 hover:text-primary"
           onClick={copy}
           aria-label={`Copy ${label}`}
         >
           {copied
-            ? <Check className="h-3.5 w-3.5 text-violet-500" />
-            : <Copy className="h-3.5 w-3.5" />}
+            ? <Check className="h-4 w-4 text-emerald-500" />
+            : <Copy className="h-4 w-4" />}
         </Button>
       </div>
-      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className="mt-1 font-mono text-sm font-semibold break-all leading-tight">{value}</p>
-      <p className="mt-auto pt-3 text-xs text-muted-foreground">{description}</p>
+      <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80 mb-1">{label}</p>
+      <p className="font-mono text-sm sm:text-base font-semibold text-foreground break-all leading-tight">{value}</p>
+      <p className="mt-auto pt-4 text-[13px] text-muted-foreground/90 font-medium leading-snug">{description}</p>
     </Card>
   );
 }
@@ -807,61 +807,69 @@ function CryptoAddressesSection({ addresses }: { addresses: CryptoAddress[] }) {
 function PaymentMethodsGrid({ methods }: { methods: PaymentMethod[] }) {
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h3 className="font-semibold">Supported Payment Methods</h3>
-          <p className="text-xs text-muted-foreground">Every method pays into your unified address</p>
+          <h3 className="text-lg font-bold">Supported Payment Methods</h3>
+          <p className="text-sm text-muted-foreground">Every method pays seamlessly into your unified address</p>
         </div>
-        <Badge variant="outline" className="text-violet-600 border-violet-500/30">
-          <Sparkles className="h-3 w-3 mr-1" /> {methods.length} methods
+        <Badge variant="secondary" className="w-fit text-violet-600 dark:text-violet-400 border-violet-500/20 bg-violet-500/10 px-3 py-1">
+          <Sparkles className="h-3.5 w-3.5 mr-1.5" /> {methods.length} supported
         </Badge>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {methods.map((m, i) => {
           const accent = ACCENT[m.accent] || ACCENT.emerald;
+          // Fix inconsistency: Ensure GaexPay Wallet displays Instant/Free properly
+          const isWallet = m.id === "wallet" || m.name.includes("GaexPay");
+          const displayTime = isWallet ? "Instant" : m.time;
+          const displayFee = isWallet ? "Free" : m.fee;
+
           return (
             <motion.div
               key={m.id}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.04 * i }}
+              transition={{ delay: 0.05 * i, duration: 0.4 }}
             >
-              <Card className="p-5 card-lift h-full">
-                <div className="flex items-start justify-between mb-3">
-                  <div className={cn("grid h-11 w-11 place-items-center rounded-xl ring-1", accent.bg, accent.text, accent.ring)}>
-                    <MethodIcon name={m.icon} className="h-5 w-5" />
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Badge variant="outline" className="text-[10px] py-0">
-                      <Clock className="h-2.5 w-2.5 mr-0.5" /> {m.time}
-                    </Badge>
-                  </div>
+              <Card className="relative overflow-hidden p-6 h-full flex flex-col border-border/50 bg-gradient-to-br from-card to-card/40 shadow-premium-sm hover:shadow-premium-md hover:border-primary/20 transition-all group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <MethodIcon name={m.icon} className={cn("h-24 w-24 -mr-6 -mt-6", accent.text)} />
                 </div>
-                <h4 className="font-semibold">{m.name}</h4>
-                <p className="text-xs text-muted-foreground mt-0.5">{m.description}</p>
-
-                {m.providers && (
-                  <div className="mt-3 flex flex-wrap gap-1">
-                    {m.providers.map((p) => (
-                      <span key={p} className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                        {p}
-                      </span>
-                    ))}
+                
+                <div className="relative z-10 flex items-start justify-between mb-4">
+                  <div className={cn("grid h-12 w-12 place-items-center rounded-2xl ring-1 shadow-sm backdrop-blur-md", accent.bg, accent.text, accent.ring)}>
+                    <MethodIcon name={m.icon} className="h-6 w-6" />
                   </div>
-                )}
-                {m.coins && (
-                  <div className="mt-3 flex flex-wrap gap-1">
-                    {m.coins.map((c) => (
-                      <span key={c} className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
-                        {c}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                  <Badge variant="outline" className={cn("text-[11px] py-0.5 px-2 font-medium bg-background/50 backdrop-blur-sm", isWallet ? "text-emerald-600 border-emerald-500/30 bg-emerald-500/10" : "")}>
+                    <Clock className="h-3 w-3 mr-1" /> {displayTime}
+                  </Badge>
+                </div>
+                
+                <div className="relative z-10 flex-1">
+                  <h4 className="text-base font-bold text-foreground mb-1">{m.name}</h4>
+                  <p className="text-[13px] text-muted-foreground/90 leading-snug">{m.description}</p>
 
-                <div className="mt-3 pt-3 border-t flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Fee</span>
-                  <span className="text-xs font-medium text-violet-600 dark:text-violet-400">{m.fee}</span>
+                  {(m.providers || m.coins) && (
+                    <div className="mt-4 flex flex-wrap gap-1.5">
+                      {m.providers?.map((p) => (
+                        <span key={p} className="rounded-md bg-muted/80 border border-border/50 px-2 py-1 text-[10px] font-medium text-foreground/80">
+                          {p}
+                        </span>
+                      ))}
+                      {m.coins?.map((c) => (
+                        <span key={c} className="rounded-md bg-primary/5 border border-primary/10 px-2 py-1 text-[10px] font-mono font-medium text-primary/80">
+                          {c}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="relative z-10 mt-5 pt-4 border-t border-border/50 flex items-center justify-between">
+                  <span className="text-[13px] font-medium text-muted-foreground">Network Fee</span>
+                  <span className={cn("text-[13px] font-bold", isWallet ? "text-emerald-600 dark:text-emerald-400" : "text-violet-600 dark:text-violet-400")}>
+                    {displayFee}
+                  </span>
                 </div>
               </Card>
             </motion.div>
@@ -893,8 +901,8 @@ function HowItWorks() {
     {
       n: 3,
       icon: ArrowDownToLine,
-      title: "Money arrives instantly",
-      body: "Crypto credits to your wallet on confirmation. Fiat & momo arrive within minutes. Bank in 1–3 days.",
+      title: "Speed depends on method",
+      body: "GaexPay & Crypto transfers arrive instantly or within minutes. Bank transfers may take 1–3 business days.",
       accent: "amber" as const,
     },
   ];

@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LedgerEntryType {
+  DEBIT
+  CREDIT
+}
+
+enum WalletStatus {
+  ACTIVE
+  FROZEN
+  CLOSED
+}
+
+enum LedgerTransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  P2P_TRANSFER
+  MARKETPLACE_PAYMENT
+  TONTINE_CONTRIBUTION
+  TONTINE_PAYOUT
+  FEE
+  REVERSAL
+  ADJUSTMENT
+}
+
+model Wallet {
+  id            String        @id @default(cuid())
+  userId        String        @unique
+  currency      String        @db.VarChar(3)
+  status        WalletStatus  @default(ACTIVE)
+  cachedBalance Decimal       @db.Decimal(18,2) @default(0)
+  version       Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  entries       LedgerEntry[]
+
+  @@index([userId])
+}
+
+model LedgerTransaction {
+  id                String                 @id @default(cuid())
+  type              LedgerTransactionType
+  externalRef       String                 @unique
+  idempotencyKey    String                 @unique
+  status            String                 @default("POSTED") // POSTED | REVERSED
+  description       String?
+  initiatedBy       String
+  metadata          Json?
+  createdAt         DateTime               @default(now())
+
+  entries           LedgerEntry[]
+
+  @@index([externalRef])
+}
+
+model LedgerEntry {
+  id              String              @id @default(cuid())
+  transactionId   String
+  transaction     LedgerTransaction   @relation(fields: [transactionId], references: [id])
+  walletId        String
+  wallet          Wallet              @relation(fields: [walletId], references: [id])
+  type            LedgerEntryType
+  amount          Decimal             @db.Decimal(18,2)
+  balanceAfter    Decimal             @db.Decimal(18,2)
+  createdAt       DateTime            @default(now())
+
+  @@index([walletId])
+  @@index([transactionId])
+}

@@ -46,7 +46,7 @@ export async function POST(req: Request) {
   try {
     // --- Rate limit ---------------------------------------------------------
     const rlId = `login:${getClientIdentifier(req, null)}`;
-    const rl = rateLimitAuth(rlId);
+    const rl = await rateLimitAuth(rlId);
     if (!rl.success) {
       return NextResponse.json(
         { error: "Too many login attempts. Please try again in a minute." },

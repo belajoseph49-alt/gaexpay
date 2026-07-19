@@ -97,16 +97,15 @@ export function LogoMark({
       }}
       aria-hidden="true"
     >
-      {/* Subtle top sheen for depth — gives the mark a glassy premium feel */}
       <span
         className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-[28%]"
         style={{
           background:
-            "linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0))",
+            "linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0))",
         }}
       />
 
-      {/* The G + arrow mark, vector so it scales perfectly */}
+      {/* Modern, premium abstract G & Forward Arrow SVG */}
       <svg
         viewBox="0 0 40 40"
         width={size}
@@ -116,43 +115,38 @@ export function LogoMark({
         style={{ display: "block" }}
       >
         <defs>
-          <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id={`${gradId}-1`} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="100%" stopColor="#ecfeff" />
+            <stop offset="100%" stopColor="#d8b4fe" stopOpacity="0.8" />
+          </linearGradient>
+          <linearGradient id={`${gradId}-2`} x1="100%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="100%" stopColor="#c4b5fd" stopOpacity="0.4" />
           </linearGradient>
         </defs>
 
-        {/* G arc — 270° from top sweeping CCW to the right edge */}
+        {/* Outer continuous ribbon for 'G' */}
         <path
-          d="M 21 11 A 10 10 0 1 0 29 20"
-          stroke={`url(#${gradId})`}
-          strokeWidth="2.9"
+          d="M 28.5 14.5 C 28.5 10 24 8 20 8 C 13.373 8 8 13.373 8 20 C 8 26.627 13.373 32 20 32 C 25.5 32 29 28.5 30 23.5"
+          stroke={`url(#${gradId}-1)`}
+          strokeWidth="3.2"
           strokeLinecap="round"
           fill="none"
+          className="drop-shadow-sm"
         />
 
-        {/* G horizontal bar — the inner spine of the G */}
+        {/* Inner intersecting 'Forward/Transfer' arrow */}
         <path
-          d="M 29 20 L 21 20"
-          stroke={`url(#${gradId})`}
-          strokeWidth="2.9"
-          strokeLinecap="round"
-          fill="none"
-        />
-
-        {/* Arrow chevron — sits at the right edge, pointing right,
-            representing payment / money-flow direction */}
-        <path
-          d="M 26.5 16.5 L 30 20 L 26.5 23.5"
-          stroke={`url(#${gradId})`}
-          strokeWidth="2.9"
+          d="M 14 20 L 22 20 L 27 14"
+          stroke={`url(#${gradId}-2)`}
+          strokeWidth="3.2"
           strokeLinecap="round"
           strokeLinejoin="round"
           fill="none"
         />
-
-        {/* Center dot — closure, "settled" feeling */}
-        <circle cx="20" cy="20" r="1.35" fill="#ffffff" />
+        
+        {/* Central accent dot */}
+        <circle cx="27" cy="23.5" r="1.8" fill="#ffffff" className="drop-shadow-sm" />
       </svg>
 
       {/* Shimmer sweep — light highlight crossing the mark every 3.5s */}

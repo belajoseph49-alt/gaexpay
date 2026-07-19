@@ -1,7 +1,7 @@
 /**
  * src/middleware.ts
  *
- * Security-headers middleware for GaexPay.
+ * Security-headers middleware for GaexPay + next-intl routing.
  *
  * Runs on EVERY response (page, API, static) and attaches the standard
  * browser-security headers. We do NOT do auth here — auth is enforced inside
@@ -14,6 +14,10 @@
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import createMiddleware from 'next-intl/middleware';
+import {routing} from './i18n/routing';
+
+const intlMiddleware = createMiddleware(routing);
 
 /**
  * Content-Security-Policy:
@@ -23,11 +27,6 @@ import type { NextRequest } from "next/server";
  *  - img-src    'self' data: https:        — avatar URLs + chart data URIs
  *  - font-src   'self' data:               — self-hosted fonts
  *  - connect-src 'self' https://api.coingecko.com — backend + live crypto prices
- *
- * Note: 'unsafe-inline'/'unsafe-eval' for scripts are needed because Next.js
- * 16 inlines hydration data and (in dev) uses eval for HMR. For a hardened
- * production deploy you'd ship nonces; that's outside this hardening sprint's
- * scope.
  */
 const CSP = [
   "default-src 'self'",
@@ -48,25 +47,32 @@ const SECURITY_HEADERS: Record<string, string> = {
   "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "X-XSS-Protection": "1; mode=block",
-  // Allow camera + geolocation on self-origin so the KYC selfie capture and
-  // the GPS address auto-detect features work in-browser. Mic stays disabled
-  // (we have no voice features). interest-cohort stays disabled (no FLoC).
   "Permissions-Policy": "camera=(self), microphone=(), geolocation=(self), interest-cohort=()",
 };
 
-export function middleware(_req: NextRequest) {
-  // Forward to the route handler / static file as normal.
-  const res = NextResponse.next();
+export function middleware(req: NextRequest) {
+  // 1. Run the i18n middleware to handle locale detection and redirection
+  const res = intlMiddleware(req) || NextResponse.next();
+
+  // 2. Add security headers to the response
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
     res.headers.set(key, value);
   }
+
   return res;
 }
 
 export const config = {
-  // Run on everything except Next.js internals that we don't want to slow
-  // down (static asset fingerprinting + image optimizer).
+  // Match only internationalized pathnames
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|icon.svg|icon-192.png|icon-512.png|apple-touch-icon.png|favicon-32.png|manifest.json|browserconfig.xml|robots.txt|screenshot-).*)",
-  ],
+    // Enable a redirect to a matching locale at the root
+    '/',
+    
+    // Set a cookie to remember the previous locale for all requests that have a locale prefix
+    '/(en|fr|ru|zh|ar|es|de|ew|ff|sw|ln|ha|ja|pcm|dua)/:path*',
+    
+    // Run on everything except Next.js internals that we don't want to slow
+    // down (static asset fingerprinting + image optimizer).
+    '/((?!api|_next/static|_next/image|favicon.ico|icon.svg|icon-192.png|icon-512.png|apple-touch-icon.png|favicon-32.png|manifest.json|browserconfig.xml|robots.txt|screenshot-).*)'
+  ]
 };

@@ -18,6 +18,7 @@ import { Check, Globe, X, Search, Languages } from "lucide-react";
 import { LANGUAGES, LANGUAGE_BY_CODE, type LanguageCode } from "@/lib/i18n/translations";
 import { useApp } from "@/lib/store";
 import { useTranslation } from "@/hooks/use-translation";
+import { useRouter, usePathname } from "@/i18n/routing";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,9 @@ export function LanguagePicker() {
   const { language, setLanguage, languagePickerOpen, setLanguagePickerOpen } = useApp();
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
+
+  const router = useRouter();
+  const pathname = usePathname();
 
   const filtered = useMemo(() => {
     if (!query.trim()) return LANGUAGES;
@@ -39,23 +43,15 @@ export function LanguagePicker() {
 
   async function handleSelect(code: LanguageCode) {
     const meta = LANGUAGE_BY_CODE[code];
-    // 1. Optimistically update local state — instant switch.
+    // Optimistically update local state for UI responsiveness
     setLanguage(code);
     setLanguagePickerOpen(false);
     setQuery("");
+    
+    // Navigate via next-intl to change the locale
+    router.replace(pathname, { locale: code });
+    
     toast.success(t("misc.languageSwitched", { name: meta.nativeName }));
-    // 2. Persist server-side (best-effort — never blocks UI).
-    try {
-      await fetch("/api/settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ language: code }),
-      });
-    } catch {
-      // Network errors are non-fatal; the preference is already applied
-      // locally and will sync the next time the user opens the app.
-    }
   }
 
   if (!languagePickerOpen) return null;

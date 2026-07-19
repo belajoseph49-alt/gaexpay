@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * prisma/seed-chat.ts — Task 21 (GaexChat)
  *

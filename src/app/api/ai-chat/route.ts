@@ -45,7 +45,7 @@ Today's date: ${new Date().toDateString()}.`;
     const completion = await zai.chat.completions.create({
       messages: [
         { role: "system", content: systemPrompt },
-        ...(messages || []).map((m) => ({ role: m.role, content: m.content })),
+        ...(messages || []).map((m) => ({ role: m.role as "user" | "system" | "assistant", content: m.content })),
       ],
     });
 

@@ -1,74 +1,48 @@
-# syntax=docker/dockerfile:1.7
-# ============================================================
-# GaexPay — Multi-stage Dockerfile
-#   Stage 1 (builder): uses Bun to install deps & build the
-#                       Next.js standalone output.
-#   Stage 2 (runner):  slim Node image running `server.js`
-#                       with Prisma engines pre-copied.
-# ============================================================
-
-# -------------------- Stage 1: Build ------------------------
-FROM oven/bun:1 AS builder
-
+FROM node:20-slim AS base
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
-# Install OS deps needed by sharp / prisma engines (rare on bun image
-# but harmless). Keep it lean — skip if the bun image already ships them.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        ca-certificates \
-        openssl \
-    && rm -rf /var/lib/apt/lists/*
+# Install dependencies only when needed
+FROM base AS deps
+COPY package.json ./
+# Make npm highly resilient to temporary network/WSL drops
+RUN npm config set fetch-retries 10 && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm install --legacy-peer-deps --no-audit --no-fund
 
-# Cache deps first
-COPY package.json bun.lockb ./
-RUN bun install --frozen-lockfile
-
-# Copy the rest of the source (respect .dockerignore)
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN npx prisma generate
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+RUN npm run build
 
-# Generate the Prisma client (writes to node_modules/.prisma + @prisma)
-RUN bunx prisma generate
-
-# Build Next.js (produces .next/standalone + .next/static)
-RUN bun run build
-
-# -------------------- Stage 2: Runner -----------------------
-FROM node:20-slim AS runner
-
+# Production image, copy all the files and run next
+FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV=production \
-    PORT=3000 \
-    HOSTNAME=0.0.0.0 \
-    NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Minimal OS deps for the Prisma query engine + sharp
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        openssl \
-        ca-certificates \
-        tini \
-    && rm -rf /var/lib/apt/lists/* \
-    && addgroup --system --gid 1001 nodejs \
-    && adduser  --system --uid 1001 --ingroup nodejs nextjs
+RUN groupadd --system --gid 1001 nodejs
+RUN useradd --system --uid 1001 nextjs
+RUN mkdir -p /home/nextjs && chown nextjs:nodejs /home/nextjs
 
-# Standalone server (already includes node_modules it needs)
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
 
-# Prisma schema + generated client (engines are fetched/genned at build time)
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
-
+RUN chmod +x ./scripts/docker-entrypoint.sh
 USER nextjs
 
 EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-
-ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["node", "server.js"]
+ENTRYPOINT ["./scripts/docker-entrypoint.sh"]

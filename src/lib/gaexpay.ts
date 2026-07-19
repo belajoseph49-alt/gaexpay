@@ -276,3 +276,51 @@ export type { LanguageCode, LanguageMeta } from "@/lib/i18n/translations";
 
 // Demo user id is stable for this app
 export const DEMO_USER_ID = "cmqk4on7w0000l54pde5vpp0q";
+
+// --- Region & Country Based Payment Configurations ---
+
+export const REGIONS = {
+  WEST_AFRICA: ["NG", "GH", "SN", "CI", "ML", "BF", "TG", "BJ", "NE", "GW", "GM", "LR", "SL", "CV"],
+  CEMAC: ["CM", "GA", "CG", "TD", "GQ", "CF"],
+  EAST_AFRICA: ["KE", "UG", "TZ", "RW", "BI", "SS"],
+  SOUTHERN_AFRICA: ["ZA", "ZM", "ZW", "MZ", "BW", "NA", "LS", "SZ", "MW", "AO"],
+  NORTH_AFRICA: ["EG", "MA", "DZ", "TN", "LY", "SD"],
+  EU: ["FR", "DE", "IT", "ES", "PT", "BE", "NL", "LU", "IE", "AT", "FI", "EE", "LV", "LT", "SK", "SI", "GR", "MT", "CY"],
+  USA: ["US"]
+};
+
+/**
+ * Returns standard payment methods available in a country
+ */
+export function getSupportedPaymentMethods(countryCode: string | undefined): string[] {
+  const code = (countryCode || "US").toUpperCase();
+  // 'wallet' and 'crypto' are globally available on GaexPay
+  const methods = ["wallet", "crypto"]; 
+  
+  if (REGIONS.USA.includes(code)) {
+    methods.push("bank", "card"); // Wire/ACH + Cards
+  } else if (REGIONS.EU.includes(code)) {
+    methods.push("bank", "card"); // SEPA + Cards
+  } else if (
+    REGIONS.WEST_AFRICA.includes(code) || 
+    REGIONS.CEMAC.includes(code) || 
+    REGIONS.EAST_AFRICA.includes(code) ||
+    REGIONS.SOUTHERN_AFRICA.includes(code) ||
+    REGIONS.NORTH_AFRICA.includes(code)
+  ) {
+    methods.push("momo", "bank", "card"); // Mobile Money + Local Bank + Cards
+  } else {
+    // Default fallback for rest of the world
+    methods.push("card", "bank");
+  }
+  
+  return methods;
+}
+
+/**
+ * Returns available mobile money providers for a specific country
+ */
+export function getAvailableMobileMoneyProviders(countryCode: string | undefined) {
+  const code = (countryCode || "CM").toUpperCase();
+  return MOBILE_MONEY_PROVIDERS.filter(p => p.countries.includes(code));
+}

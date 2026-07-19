@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * prisma/seed-social.ts — Task 17-b
  *

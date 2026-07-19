@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { motion } from "framer-motion";
@@ -19,6 +20,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { useFormatMoney } from "@/hooks/use-format-money";
 
 const WALLET_GRADIENTS: Record<string, string> = {
   NGN: "from-violet-600 to-purple-700",

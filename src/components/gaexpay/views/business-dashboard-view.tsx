@@ -240,9 +240,9 @@ export function BusinessDashboardView() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(120,120,120,0.15)" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={5} stroke="rgba(120,120,120,0.5)" />
-                <YAxis tick={{ fontSize: 10 }} stroke="rgba(120,120,120,0.5)" tickFormatter={(v) => formatCompact(v, "NGN")} />
+                <YAxis tick={{ fontSize: 10 }} stroke="rgba(120,120,120,0.5)" tickFormatter={(v) => fmtCompact(v)} />
                 <Tooltip
-                  formatter={(value: number) => formatMoney(value, "NGN")}
+                  formatter={(value: number) => fmt(value)}
                   contentStyle={{
                     background: "rgba(20,20,20,0.95)",
                     border: "1px solid rgba(120,120,120,0.2)",
@@ -284,7 +284,7 @@ export function BusinessDashboardView() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number) => formatMoney(value, "NGN")}
+                      formatter={(value: number) => fmt(value)}
                       contentStyle={{
                         background: "rgba(20,20,20,0.95)",
                         border: "1px solid rgba(120,120,120,0.2)",

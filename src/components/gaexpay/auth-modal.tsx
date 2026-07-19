@@ -423,17 +423,27 @@ export function AuthModal({ open, mode, onClose, onSuccess }: AuthModalProps) {
                   </Button>
                 </>
               ) : (
-                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm">
-                  <div className="flex items-start gap-2">
-                    <Mail className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                    <div>
-                      <p className="font-medium text-foreground">Check your inbox</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        If an account exists for <span className="font-medium">{forgotEmail}</span>, a reset link has been sent.
-                        The link expires in 1 hour.
-                      </p>
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm">
+                    <div className="flex items-start gap-2">
+                      <Mail className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                      <div>
+                        <p className="font-medium text-foreground">Check your inbox</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          If an account exists for <span className="font-medium">{forgotEmail}</span>, a reset link has been sent.
+                          The link expires in 1 hour.
+                        </p>
+                      </div>
                     </div>
                   </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setFlow("reset")}
+                    className="h-11 w-full rounded-xl"
+                  >
+                    Enter Reset Token
+                  </Button>
                 </div>
               )}
               <button
@@ -626,7 +636,7 @@ export function AuthModal({ open, mode, onClose, onSuccess }: AuthModalProps) {
                         <Field
                           label="Company name"
                           icon={Building2}
-                          placeholder="Acme Inc."
+                          placeholder="Your Company Inc."
                           value={companyName}
                           onChange={(e) => setCompanyName(e.target.value)}
                           required

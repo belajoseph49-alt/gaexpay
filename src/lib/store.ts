@@ -3,52 +3,7 @@
 import { create } from "zustand";
 import { DEFAULT_LANGUAGE, type LanguageCode } from "@/lib/i18n/translations";
 
-export type View =
-  | "dashboard"
-  | "wallets"
-  | "wallet-detail"
-  | "send"
-  | "international"
-  | "unified-address"
-  | "transactions"
-  | "cards"
-  | "pay"
-  | "savings"
-  | "budgets"
-  | "scheduled"
-  | "calendar"
-  | "analytics"
-  | "spending-map"
-  | "exchange"
-  | "crypto"
-  | "crypto-swap"
-  | "crypto-trade"
-  | "crypto-cashout"
-  | "statement"
-  | "achievements"
-  | "merchant"
-  | "merchant-qr"
-  | "business-pro"
-  | "business-dashboard"
-  | "team"
-  | "invoices"
-  | "payroll"
-  | "kyc"
-  | "kyb"
-  | "security"
-  | "settings"
-  | "support"
-  | "admin"
-  | "admin-panel"
-  | "api-management"
-  | "enterprise-admin"
-  | "compliance"
-  | "treasury"
-  | "developer"
-  | "referral"
-  | "marketplace"
-  | "savings-challenges"
-  | "gaex-chat";
+export type View = string;
 
 interface AppState {
   view: View;

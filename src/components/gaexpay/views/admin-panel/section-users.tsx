@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useFetch } from "@/hooks/use-fetch";
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,7 @@ import { cn } from "@/lib/utils";
 const PAGE_SIZE = 15;
 
 export function UsersSection() {
+  const t = useTranslations("admin.users");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [role, setRole] = useState("all");
@@ -280,7 +282,7 @@ export function UsersSection() {
       <Dialog open={!!detailUser} onOpenChange={(o) => !o && setDetailUser(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>User Details</DialogTitle>
+            <DialogTitle>{t("userDetails")}</DialogTitle>
           </DialogHeader>
           {detailUser && (
             <div className="space-y-3">
@@ -294,20 +296,20 @@ export function UsersSection() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <Info label="Phone" value={detailUser.phone} />
-                <Info label="Country" value={detailUser.country} />
-                <Info label="Account Type" value={<AccountTypeBadge type={detailUser.accountType} />} />
-                <Info label="Role" value={<Badge variant="outline" className="text-[10px] capitalize">{detailUser.role}</Badge>} />
-                <Info label="KYC" value={<StatusBadge status={detailUser.kycStatus} />} />
-                <Info label="Tier" value={`Tier ${detailUser.kycTier}`} />
-                <Info label="Status" value={<StatusBadge status={detailUser.status} />} />
-                <Info label="Joined" value={timeAgo(detailUser.createdAt)} />
-                <Info label="Last login" value={detailUser.lastLoginAt ? timeAgo(detailUser.lastLoginAt) : "Never"} />
-                <Info label="Reward Points" value={String(detailUser.rewardPoints ?? 0)} />
+                <Info label={t("phone")} value={detailUser.phone} />
+                <Info label={t("country")} value={detailUser.country} />
+                <Info label={t("accountType")} value={<AccountTypeBadge type={detailUser.accountType} />} />
+                <Info label={t("role")} value={<Badge variant="outline" className="text-[10px] capitalize">{detailUser.role}</Badge>} />
+                <Info label={t("kyc")} value={<Badge variant="outline" className="text-[10px] text-violet-600 border-violet-600/30 bg-violet-600/10">Verified</Badge>} />
+                <Info label={t("tier")} value={<span className="font-medium">Tier {detailUser.kycTier}</span>} />
+                <Info label={t("status")} value={<StatusBadge status={detailUser.status} />} />
+                <Info label={t("joined")} value={timeAgo(detailUser.createdAt)} />
+                <Info label={t("lastLogin")} value={timeAgo(detailUser.lastLoginAt || detailUser.createdAt)} />
+                <Info label={t("rewardPoints")} value={detailUser.rewardPoints || 0} />
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => { setEditUser(detailUser); setDetailUser(null); }}>Edit</Button>
-                <Button onClick={() => setDetailUser(null)}>Close</Button>
+                <Button variant="outline" onClick={() => { setEditUser(detailUser); setDetailUser(null); }}>{t("edit")}</Button>
+                <Button onClick={() => setDetailUser(null)}>{t("close")}</Button>
               </DialogFooter>
             </div>
           )}

@@ -14,7 +14,7 @@ export async function GET(req: Request) {
 
     // Sensitive — the merchant dashboard exposes revenue + customer PII.
     const identifier = getClientIdentifier(req, userId);
-    const rl = rateLimitSensitive(identifier);
+    const rl = await rateLimitSensitive(identifier);
     if (!rl.success) {
       return NextResponse.json(
         { error: "Too many requests. Please slow down." },

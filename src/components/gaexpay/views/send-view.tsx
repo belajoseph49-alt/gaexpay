@@ -6,17 +6,17 @@ import {
   SendHorizontal, ArrowDownToLine, ArrowUpFromLine, QrCode, Search, UserPlus,
   Smartphone, Landmark, Wallet as WalletIcon, Check, ShieldCheck, ChevronRight,
   ChevronLeft, Loader2, Copy, Share2, Repeat, Contact as ContactIcon,
-  Users, UserCheck, Phone, Mail, Plus, Info, MessageSquare, Bitcoin,
+  Users, UserCheck, Phone, Mail, Plus, Info, MessageSquare, Bitcoin, Globe, CreditCard,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useFetch } from "@/hooks/use-fetch";
-import { formatMoney, CURRENCIES, MOBILE_MONEY_PROVIDERS } from "@/lib/gaexpay";
+import { formatMoney, CURRENCIES, MOBILE_MONEY_PROVIDERS, getSupportedPaymentMethods } from "@/lib/gaexpay";
 import { useApp } from "@/lib/store";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -39,45 +39,117 @@ const METHODS = [
 
 export function SendView() {
   const { t } = useTranslation();
+  const [activeFlow, setActiveFlow] = useState<string | null>(null);
+
+  if (activeFlow) {
+    return (
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setActiveFlow(null)}>
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+            {activeFlow === "send" && t("send.actions.send", { defaultValue: "Send Money" })}
+            {activeFlow === "request" && t("send.actions.request", { defaultValue: "Request Money" })}
+            {activeFlow === "topup" && t("send.actions.topup", { defaultValue: "Top Up Wallet" })}
+            {activeFlow === "withdraw" && t("send.actions.withdraw", { defaultValue: "Withdraw Funds" })}
+          </h1>
+        </div>
+        <div className="animate-in slide-in-from-right-4 fade-in duration-300">
+          {activeFlow === "send" && <SendFlow />}
+          {activeFlow === "request" && <RequestFlow />}
+          {activeFlow === "topup" && <TopUpFlow />}
+          {activeFlow === "withdraw" && <WithdrawFlow />}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t("send.title")}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t("send.title", { defaultValue: "Action Hub" })}</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          Transfer money instantly, request payments, top up or withdraw
+          {t("send.subtitle", { defaultValue: "All your quick actions in one centralized space" })}
         </p>
       </div>
-      <Tabs defaultValue="send">
-        <TabsList className="grid w-full grid-cols-4 h-10 rounded-xl">
-          <TabsTrigger value="send" className="text-xs sm:text-sm rounded-lg">
-            <SendHorizontal className="h-3.5 w-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Send</span>
-          </TabsTrigger>
-          <TabsTrigger value="request" className="text-xs sm:text-sm rounded-lg">
-            <ArrowDownToLine className="h-3.5 w-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Request</span>
-          </TabsTrigger>
-          <TabsTrigger value="topup" className="text-xs sm:text-sm rounded-lg">
-            <ArrowDownToLine className="h-3.5 w-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Top Up</span>
-          </TabsTrigger>
-          <TabsTrigger value="withdraw" className="text-xs sm:text-sm rounded-lg">
-            <ArrowUpFromLine className="h-3.5 w-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Withdraw</span>
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="send" className="mt-3 sm:mt-4"><SendFlow /></TabsContent>
-        <TabsContent value="request" className="mt-3 sm:mt-4"><RequestFlow /></TabsContent>
-        <TabsContent value="topup" className="mt-3 sm:mt-4"><TopUpFlow /></TabsContent>
-        <TabsContent value="withdraw" className="mt-3 sm:mt-4"><WithdrawFlow /></TabsContent>
-      </Tabs>
+      <div className="grid w-full grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+        <button onClick={() => setActiveFlow("send")} className="relative flex flex-col items-center justify-center p-4 sm:p-5 border border-border/40 bg-card rounded-2xl hover:border-blue-500/50 hover:bg-blue-500/10 hover:shadow-sm transition-all overflow-hidden group text-left w-full">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 p-[1px] mb-3 shadow-sm">
+            <div className="h-full w-full bg-card rounded-full flex items-center justify-center group-hover:bg-transparent transition-colors">
+              <SendHorizontal className="h-5 w-5 text-blue-500 group-hover:text-white transition-colors" />
+            </div>
+          </div>
+          <span className="font-semibold text-foreground text-sm">{t("send.actions.send", { defaultValue: "Envoyer" })}</span>
+          <span className="text-[10px] sm:text-xs text-muted-foreground mt-1.5 bg-muted/50 px-2.5 py-0.5 rounded-full border border-border/50">{t("send.fees.send", { defaultValue: "Frais : 0% - 1%" })}</span>
+        </button>
+        
+        <button onClick={() => setActiveFlow("request")} className="relative flex flex-col items-center justify-center p-4 sm:p-5 border border-border/40 bg-card rounded-2xl hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:shadow-sm transition-all overflow-hidden group text-left w-full">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-400/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 p-[1px] mb-3 shadow-sm">
+            <div className="h-full w-full bg-card rounded-full flex items-center justify-center group-hover:bg-transparent transition-colors">
+              <ArrowDownToLine className="h-5 w-5 text-emerald-500 group-hover:text-white transition-colors" />
+            </div>
+          </div>
+          <span className="font-semibold text-foreground text-sm">{t("send.actions.request", { defaultValue: "Demander" })}</span>
+          <span className="text-[10px] sm:text-xs text-muted-foreground mt-1.5 bg-muted/50 px-2.5 py-0.5 rounded-full border border-border/50">{t("send.fees.request", { defaultValue: "Gratuit" })}</span>
+        </button>
+
+        <button onClick={() => setActiveFlow("topup")} className="relative flex flex-col items-center justify-center p-4 sm:p-5 border border-border/40 bg-card rounded-2xl hover:border-amber-500/50 hover:bg-amber-500/10 hover:shadow-sm transition-all overflow-hidden group text-left w-full">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-400/5 to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 p-[1px] mb-3 shadow-sm">
+            <div className="h-full w-full bg-card rounded-full flex items-center justify-center group-hover:bg-transparent transition-colors">
+              <ArrowDownToLine className="h-5 w-5 text-amber-500 group-hover:text-white transition-colors" />
+            </div>
+          </div>
+          <span className="font-semibold text-foreground text-sm">{t("send.actions.topup", { defaultValue: "Recharger" })}</span>
+          <span className="text-[10px] sm:text-xs text-muted-foreground mt-1.5 bg-muted/50 px-2.5 py-0.5 rounded-full border border-border/50">{t("send.fees.topup", { defaultValue: "Frais : 0% - 1.5%" })}</span>
+        </button>
+
+        <button onClick={() => setActiveFlow("withdraw")} className="relative flex flex-col items-center justify-center p-4 sm:p-5 border border-border/40 bg-card rounded-2xl hover:border-rose-500/50 hover:bg-rose-500/10 hover:shadow-sm transition-all overflow-hidden group text-left w-full">
+          <div className="absolute inset-0 bg-gradient-to-br from-rose-400/5 to-red-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-rose-400 to-red-500 p-[1px] mb-3 shadow-sm">
+            <div className="h-full w-full bg-card rounded-full flex items-center justify-center group-hover:bg-transparent transition-colors">
+              <ArrowUpFromLine className="h-5 w-5 text-rose-500 group-hover:text-white transition-colors" />
+            </div>
+          </div>
+          <span className="font-semibold text-foreground text-sm">{t("send.actions.withdraw", { defaultValue: "Retirer" })}</span>
+          <span className="text-[10px] sm:text-xs text-muted-foreground mt-1.5 bg-muted/50 px-2.5 py-0.5 rounded-full border border-border/50">{t("send.fees.withdraw", { defaultValue: "Frais : 1% - 2%" })}</span>
+        </button>
+
+        <button onClick={() => useApp.getState().setView("pay")} className="relative flex flex-col items-center justify-center p-4 sm:p-5 border border-border/40 bg-card rounded-2xl hover:border-fuchsia-500/50 hover:bg-fuchsia-500/10 hover:shadow-sm transition-all overflow-hidden group text-left w-full">
+          <div className="absolute inset-0 bg-gradient-to-br from-fuchsia-400/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-fuchsia-400 to-purple-500 p-[1px] mb-3 shadow-sm">
+            <div className="h-full w-full bg-card rounded-full flex items-center justify-center group-hover:bg-transparent transition-colors">
+              <QrCode className="h-5 w-5 text-fuchsia-500 group-hover:text-white transition-colors" />
+            </div>
+          </div>
+          <span className="font-semibold text-foreground text-sm">{t("send.actions.scan", { defaultValue: "Scanner" })}</span>
+          <span className="text-[10px] sm:text-xs text-muted-foreground mt-1.5 bg-muted/50 px-2.5 py-0.5 rounded-full border border-border/50">{t("send.fees.scan", { defaultValue: "Rapide & Sûr" })}</span>
+        </button>
+
+        <button onClick={() => useApp.getState().setView("cards")} className="relative flex flex-col items-center justify-center p-4 sm:p-5 border border-border/40 bg-card rounded-2xl hover:border-indigo-500/50 hover:bg-indigo-500/10 hover:shadow-sm transition-all overflow-hidden group text-left w-full">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-400/5 to-violet-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 p-[1px] mb-3 shadow-sm">
+            <div className="h-full w-full bg-card rounded-full flex items-center justify-center group-hover:bg-transparent transition-colors">
+              <CreditCard className="h-5 w-5 text-indigo-500 group-hover:text-white transition-colors" />
+            </div>
+          </div>
+          <span className="font-semibold text-foreground text-sm">{t("send.actions.cards", { defaultValue: "Cartes" })}</span>
+          <span className="text-[10px] sm:text-xs text-muted-foreground mt-1.5 bg-muted/50 px-2.5 py-0.5 rounded-full border border-border/50">{t("send.fees.cards", { defaultValue: "Virtuelle & Physique" })}</span>
+        </button>
+      </div>
     </div>
   );
 }
 
 function SendFlow() {
+  const { t } = useTranslation();
   const { data: contactsData } = useFetch<any>("/api/contacts");
   const { data: wData } = useFetch<{ wallets: any[] }>("/api/wallets");
+  const { data: meData } = useFetch<any>("/api/auth/me");
+  
   const {
     deviceContacts, loading: contactsLoading, supported: contactsSupported,
     pickContacts, checkMembership, addManualContact,
@@ -95,6 +167,16 @@ function SendFlow() {
   const [done, setDone] = useState<any>(null);
   const [search, setSearch] = useState("");
   const [showManualAdd, setShowManualAdd] = useState(false);
+  
+  // Specific fields for different methods
+  const [bankName, setBankName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [routingCode, setRoutingCode] = useState("");
+  
+  const [cryptoNetwork, setCryptoNetwork] = useState("");
+  const [cryptoAddress, setCryptoAddress] = useState("");
+  
+  const [momoCountryCode, setMomoCountryCode] = useState("+225");
   const [manualName, setManualName] = useState("");
   const [manualPhone, setManualPhone] = useState("");
   const [manualEmail, setManualEmail] = useState("");
@@ -183,7 +265,17 @@ function SendFlow() {
       const res = await fetch("/api/transfer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: Number(amount), currency, recipient, method, provider, note }),
+        body: JSON.stringify({ 
+          amount: Number(amount), 
+          currency, 
+          recipient, 
+          method, 
+          provider, 
+          note,
+          bankDetails: method === "bank" ? { bankName, accountNumber, routingCode } : undefined,
+          cryptoDetails: method === "crypto" ? { network: cryptoNetwork, address: cryptoAddress } : undefined,
+          momoDetails: method === "momo" ? { countryCode: momoCountryCode } : undefined
+        }),
       });
       const data = await res.json();
       if (data.success) {
@@ -209,12 +301,19 @@ function SendFlow() {
     setStep(1);
   };
 
-  const quickAmounts = [
-    { label: "1K", value: 1000 },
-    { label: "5K", value: 5000 },
-    { label: "10K", value: 10000 },
-    { label: "25K", value: 25000 },
-  ];
+  const quickAmounts = ["USD", "EUR", "GBP", "CAD"].includes(currency)
+    ? [
+        { label: "10", value: 10 },
+        { label: "50", value: 50 },
+        { label: "100", value: 100 },
+        { label: "250", value: 250 },
+      ]
+    : [
+        { label: "1K", value: 1000 },
+        { label: "5K", value: 5000 },
+        { label: "10K", value: 10000 },
+        { label: "25K", value: 25000 },
+      ];
   const availableBalance = wallets.find((w) => w.currency === currency)?.balance ?? 0;
 
   const fee =
@@ -224,40 +323,27 @@ function SendFlow() {
   const total = Number(amount || 0) + fee;
 
   return (
-    <Card className="mx-auto max-w-2xl p-4 sm:p-6 border-border/60 shadow-premium-sm">
-      {/* Steps indicator */}
-      <div className="mb-6 flex items-center justify-between">
-        {["Recipient", "Amount", "Review", "Verify"].map((s, i) => (
-          <div key={s} className="flex flex-1 items-center">
-            <div className={cn(
-              "grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-semibold transition",
-              i < step ? "bg-primary text-primary-foreground" :
-              i === step ? "bg-primary text-primary-foreground ring-4 ring-primary/20" :
-              "bg-muted text-muted-foreground",
-            )}>
-              {i < step ? <Check className="h-4 w-4" /> : i + 1}
-            </div>
-            <span className={cn(
-              "ml-2 hidden sm:inline text-xs font-medium",
-              i === step ? "text-foreground" : "text-muted-foreground",
-            )}>{s}</span>
-            {i < 3 && (
-              <div className={cn(
-                "mx-2 h-0.5 flex-1 rounded-full",
-                i < step ? "bg-primary" : "bg-muted",
-              )} />
-            )}
+    <Card className="mx-auto max-w-2xl p-4 sm:p-6 border-border/60 shadow-premium-sm flex flex-col min-h-[600px] relative">
+      {/* Balance Indicator at top */}
+      <div className="mb-4 rounded-xl bg-muted/40 p-4 border border-border/60 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <WalletIcon className="h-5 w-5 text-primary" />
           </div>
-        ))}
+          <div>
+            <p className="text-xs text-muted-foreground">{t("savings.currentBalance", { defaultValue: "Current Balance" })}</p>
+            <p className="font-semibold">{formatMoney(availableBalance, currency)}</p>
+          </div>
+        </div>
       </div>
 
       <AnimatePresence mode="wait">
         {/* Step 0: Recipient */}
         {step === 0 && (
           <motion.div key="s0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-            <h3 className="font-semibold mb-1">Who are you sending to?</h3>
+            <h3 className="font-semibold mb-1">{t("send.recipient")}</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Pick from contacts, GaexPay members, or enter new details
+              {t("send.selectContact")}
             </p>
 
             {/* Recent recipients horizontal scroll */}
@@ -295,88 +381,85 @@ function SendFlow() {
               </div>
             )}
 
-            {/* Action buttons row */}
-            <div className="mb-4 grid grid-cols-2 gap-2">
-              <Button
-                variant="outline"
-                className="h-12 rounded-xl"
-                onClick={handlePickContacts}
-                disabled={contactsLoading}
-                suppressHydrationWarning
-              >
-                <span className="flex items-center justify-center" suppressHydrationWarning>
-                  <Loader2 className={cn("h-4 w-4 mr-2", contactsLoading ? "animate-spin" : "hidden")} />
-                  <ContactIcon className={cn("h-4 w-4 mr-2", contactsLoading ? "hidden" : "")} />
-                  Contacts
-                </span>
-              </Button>
-              <Button
-                variant="outline"
-                className="h-12 rounded-xl"
-                onClick={() => setShowManualAdd(!showManualAdd)}
-                suppressHydrationWarning
-              >
-                <span className="flex items-center justify-center" suppressHydrationWarning>
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  New Recipient
-                </span>
-              </Button>
-            </div>
-
-            {/* Manual add form */}
-            {showManualAdd && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mb-4 rounded-xl border border-border/60 bg-muted/30 p-4 space-y-3"
-              >
-                <p className="text-xs font-medium text-muted-foreground">Enter recipient details manually</p>
-                <Input
-                  placeholder="Full name"
-                  value={manualName}
-                  onChange={(e) => setManualName(e.target.value)}
-                  className="rounded-xl"
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Phone"
-                      className="pl-9 rounded-xl"
-                      value={manualPhone}
-                      onChange={(e) => setManualPhone(e.target.value)}
-                    />
-                  </div>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Email"
-                      className="pl-9 rounded-xl"
-                      value={manualEmail}
-                      onChange={(e) => setManualEmail(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="ghost" className="rounded-xl" onClick={() => setShowManualAdd(false)}>Cancel</Button>
-                  <Button size="sm" className="rounded-xl" onClick={handleManualAdd}>
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Add Contact
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Search bar */}
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            {/* Smart Search Field */}
+            <div className="relative mb-4 group">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <Search className="h-4 w-4 text-muted-foreground" />
+              </div>
               <Input
-                placeholder="Search name, phone, email, account..."
-                className="pl-9 rounded-xl h-10"
+                placeholder="Search @username, phone, or email..."
+                className="pl-10 pr-24 rounded-xl h-12 bg-muted/30 border-border/60 focus-visible:ring-primary/20"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
+              <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-9 w-9 rounded-lg hover:bg-primary/10 hover:text-primary"
+                  onClick={handlePickContacts}
+                  disabled={contactsLoading}
+                  title="Import Contacts"
+                >
+                  {contactsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ContactIcon className="h-4 w-4" />}
+                </Button>
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-9 w-9 rounded-lg hover:bg-primary/10 hover:text-primary"
+                  onClick={() => setShowManualAdd(!showManualAdd)}
+                  title="Add New Beneficiary"
+                >
+                  <UserPlus className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
+
+            {/* Manual add form */}
+            <AnimatePresence>
+              {showManualAdd && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, y: -10 }}
+                  animate={{ opacity: 1, height: "auto", y: 0 }}
+                  exit={{ opacity: 0, height: 0, y: -10 }}
+                  className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3 overflow-hidden"
+                >
+                  <p className="text-xs font-medium text-primary">Add New Beneficiary</p>
+                  <Input
+                    placeholder="Full name"
+                    value={manualName}
+                    onChange={(e) => setManualName(e.target.value)}
+                    className="rounded-xl bg-background"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Phone"
+                        className="pl-9 rounded-xl bg-background"
+                        value={manualPhone}
+                        onChange={(e) => setManualPhone(e.target.value)}
+                      />
+                    </div>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Email"
+                        className="pl-9 rounded-xl bg-background"
+                        value={manualEmail}
+                        onChange={(e) => setManualEmail(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 justify-end pt-1">
+                    <Button size="sm" variant="ghost" className="rounded-xl" onClick={() => setShowManualAdd(false)}>Cancel</Button>
+                    <Button size="sm" className="rounded-xl" onClick={handleManualAdd}>
+                      <Plus className="h-3.5 w-3.5 mr-1" /> Save & Use
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Source tabs */}
             <div className="mb-3 flex gap-1.5 flex-wrap">
@@ -666,35 +749,12 @@ function SendFlow() {
 
         {/* Step 1: Amount */}
         {step === 1 && (
-          <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-            {/* Recipient summary card */}
-            <div className="mb-5 flex items-center justify-between rounded-2xl border border-border/60 bg-muted/30 p-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <Avatar className="h-10 w-10 shrink-0">
-                  <AvatarFallback className="bg-emerald-500/15 text-emerald-600 text-xs font-semibold">
-                    {recipient?.name?.split(" ").map((n: string) => n[0]).slice(0, 2).join("") || "?"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{recipient?.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {recipient?.account || recipient?.bank}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setStep(0)}
-                className="text-xs font-medium text-primary hover:underline shrink-0"
-              >
-                Change
-              </button>
-            </div>
-
+          <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col h-full">
             {/* Method selector — horizontal scroll */}
             <div className="mb-5">
               <p className="text-xs font-medium text-muted-foreground mb-2">Method</p>
               <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                {METHODS.map((m) => {
+                {METHODS.filter(m => getSupportedPaymentMethods(meData?.user?.country).includes(m.id)).map((m) => {
                   const Icon = m.icon;
                   const isActive = method === m.id;
                   return (
@@ -717,8 +777,14 @@ function SendFlow() {
                         <Icon className="h-4 w-4" />
                       </div>
                       <div>
-                        <p className="text-xs font-semibold">{m.label}</p>
-                        <p className="text-[10px] text-muted-foreground">{m.fee}</p>
+                        <p className="text-xs font-semibold">{t(`send.methods.${m.id}`, { defaultValue: m.label })}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {m.id === "bank" ? t("send.feeValue.bank", { defaultValue: `0.5% · max ${symbol}5K`, symbol: symbol }) :
+                           m.id === "momo" ? t("send.feeValue.momo", { defaultValue: "1.0% · instant" }) :
+                           m.id === "wallet" ? t("send.feeValue.wallet", { defaultValue: "Free · Instant" }) :
+                           m.id === "crypto" ? t("send.feeValue.crypto", { defaultValue: "On-chain" }) :
+                           m.fee}
+                        </p>
                       </div>
                     </button>
                   );
@@ -728,46 +794,122 @@ function SendFlow() {
 
             {/* Provider picker for MoMo */}
             {method === "momo" && (
-              <div className="mb-5">
-                <Label className="text-xs">Provider</Label>
-                <div className="mt-1.5 grid grid-cols-3 gap-2">
-                  {MOBILE_MONEY_PROVIDERS.map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => setProvider(p.id)}
-                      className={cn(
-                        "rounded-xl border p-2 text-center text-xs transition",
-                        provider === p.id ? "border-primary ring-2 ring-primary/20 bg-primary/5" : "border-border/60 hover:bg-muted",
-                      )}
-                    >
-                      <div className="h-6 w-full rounded mb-1" style={{ background: p.color }} />
-                      {p.name}
-                    </button>
-                  ))}
+              <div className="mb-5 space-y-4">
+                <div>
+                  <Label className="text-xs">Country</Label>
+                  <Select value={momoCountryCode} onValueChange={setMomoCountryCode}>
+                    <SelectTrigger className="rounded-xl bg-background mt-1.5 h-10 border-border/60">
+                      <SelectValue placeholder="Select Country" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="+225">🇨🇮 Côte d'Ivoire (+225)</SelectItem>
+                      <SelectItem value="+237">🇨🇲 Cameroon (+237)</SelectItem>
+                      <SelectItem value="+228">🇹🇬 Togo (+228)</SelectItem>
+                      <SelectItem value="+221">🇸🇳 Senegal (+221)</SelectItem>
+                      <SelectItem value="+234">🇳🇬 Nigeria (+234)</SelectItem>
+                      <SelectItem value="+233">🇬🇭 Ghana (+233)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Provider</Label>
+                  <div className="mt-1.5 grid grid-cols-3 gap-2">
+                    {MOBILE_MONEY_PROVIDERS.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => setProvider(p.id)}
+                        className={cn(
+                          "relative flex flex-col items-center justify-center gap-2 rounded-xl border p-3 transition overflow-hidden group",
+                          provider === p.id 
+                            ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-sm" 
+                            : "border-border/60 bg-card hover:border-primary/40 hover:bg-muted/30"
+                        )}
+                      >
+                        {/* Subtle background glow from provider color */}
+                        <div 
+                          className="absolute inset-0 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-300" 
+                          style={{ backgroundColor: p.color }} 
+                        />
+                        
+                        <Avatar className="h-10 w-10 shrink-0 shadow-sm border border-border/40">
+                          <AvatarImage src={`/logos/${p.id}.png`} alt={p.name} className="object-cover bg-white" />
+                          <AvatarFallback style={{ backgroundColor: p.color, color: p.textColor }} className="text-xs font-bold tracking-wider">
+                            {p.name.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        
+                        <span className="text-[10px] font-semibold text-center leading-tight z-10">{p.name}</span>
+                        
+                        {provider === p.id && (
+                          <div className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Additional details for Bank */}
+            {method === "bank" && (
+              <div className="mb-5 space-y-3">
+                <Label className="text-xs font-semibold">Bank Details</Label>
+                <Input placeholder="Bank Name" className="rounded-xl bg-background h-10 border-border/60" value={bankName} onChange={(e) => setBankName(e.target.value)} />
+                <Input placeholder="Account Number (IBAN/RIB)" className="rounded-xl bg-background h-10 border-border/60" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} />
+                <Input placeholder="Routing / Sort Code" className="rounded-xl bg-background h-10 border-border/60" value={routingCode} onChange={(e) => setRoutingCode(e.target.value)} />
+              </div>
+            )}
+
+            {/* Additional details for Crypto */}
+            {method === "crypto" && (
+              <div className="mb-5 space-y-3">
+                <Label className="text-xs font-semibold">Blockchain Network</Label>
+                <Select value={cryptoNetwork} onValueChange={setCryptoNetwork}>
+                  <SelectTrigger className="rounded-xl bg-background h-10 border-border/60">
+                    <SelectValue placeholder="Select Network" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="erc20">Ethereum (ERC20)</SelectItem>
+                    <SelectItem value="trc20">Tron (TRC20)</SelectItem>
+                    <SelectItem value="bep20">BNB Smart Chain (BEP20)</SelectItem>
+                    <SelectItem value="solana">Solana</SelectItem>
+                    <SelectItem value="polygon">Polygon</SelectItem>
+                    <SelectItem value="pi-network">Pi Network</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Label className="text-xs font-semibold mt-2 block">Wallet Address</Label>
+                <div className="flex gap-2">
+                  <Input placeholder="0x... or Address" className="rounded-xl bg-background flex-1 h-10 border-border/60" value={cryptoAddress} onChange={(e) => setCryptoAddress(e.target.value)} />
+                  <Button variant="outline" size="icon" className="rounded-xl shrink-0 h-10 w-10 border-border/60 text-primary">
+                    <QrCode className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             )}
 
             {/* Large amount display */}
-            <div className="rounded-2xl border border-border/60 bg-muted/30 p-6 text-center">
-              <div className="flex items-center justify-center gap-2">
+            <div className="mb-4">
+              <div className="flex items-center rounded-2xl border border-border/80 bg-background p-2 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
                 <Select value={currency} onValueChange={setCurrency}>
-                  <SelectTrigger className="w-24 h-10 rounded-xl"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {CURRENCIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>)}
+                  <SelectTrigger className="w-[100px] sm:w-[120px] h-12 border-0 bg-transparent shadow-none hover:bg-muted/50 rounded-xl font-medium focus:ring-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {CURRENCIES.map((c) => <SelectItem key={c.code} value={c.code} className="rounded-lg">{c.flag} {c.code}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                
+                <div className="h-8 w-px bg-border/80 mx-1 shrink-0" />
+                
                 <Input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
-                  className="flex-1 border-0 bg-transparent text-3xl sm:text-4xl font-bold tabular-nums text-center focus-visible:ring-0 h-12"
+                  className="flex-1 border-0 bg-transparent text-2xl sm:text-3xl font-bold tabular-nums text-right shadow-none focus-visible:ring-0 h-14 pr-4"
                 />
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Available: {formatMoney(availableBalance, currency)}
-              </p>
             </div>
 
             {/* Quick amount chips */}
@@ -789,85 +931,120 @@ function SendFlow() {
               </button>
             </div>
 
-            {/* Note field */}
-            <div className="mt-5 space-y-2">
-              <Label className="text-xs">Note (optional)</Label>
-              <div className="relative">
-                <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="What's this for?"
-                  className="pl-9 rounded-xl h-10"
-                />
+            {/* Pushed to bottom */}
+            <div className="mt-auto pt-6 space-y-4">
+              {/* Note field */}
+              <div className="space-y-2">
+                <Label className="text-xs">Note (optional)</Label>
+                <div className="relative">
+                  <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="What's this for?"
+                    className="pl-9 rounded-xl h-10"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="mt-6 flex gap-2">
-              <Button variant="outline" className="flex-1 rounded-xl h-12" onClick={() => setStep(0)}>
-                <ChevronLeft className="h-4 w-4 mr-1" /> Back
-              </Button>
-              <Button
-                onClick={() => setStep(2)}
-                disabled={!amount || Number(amount) <= 0}
-                className="flex-1 rounded-xl h-12 shadow-premium-sm"
-              >
-                Continue <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
+              {/* Recipient summary card (moved to bottom) */}
+              <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-muted/30 p-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Avatar className="h-10 w-10 shrink-0">
+                    <AvatarFallback className="bg-emerald-500/15 text-emerald-600 text-xs font-semibold">
+                      {recipient?.name?.split(" ").map((n: string) => n[0]).slice(0, 2).join("") || "?"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{recipient?.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {recipient?.account || recipient?.bank}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setStep(0)}
+                  className="text-xs font-medium text-primary hover:underline shrink-0"
+                >
+                  Change
+                </button>
+              </div>
+
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1 rounded-xl h-12" onClick={() => setStep(0)}>
+                  <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                </Button>
+                <Button
+                  onClick={() => setStep(2)}
+                  disabled={!amount || Number(amount) <= 0}
+                  className="flex-1 rounded-xl h-12 shadow-premium-sm"
+                >
+                  Continue <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
             </div>
           </motion.div>
         )}
 
         {/* Step 2: Review */}
         {step === 2 && (
-          <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+          <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col h-full">
             <h3 className="font-semibold mb-1">Review transfer</h3>
             <p className="text-sm text-muted-foreground mb-4">Please confirm the details below</p>
 
-            {/* Recipient summary card */}
-            <div className="mb-4 flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3">
-              <Avatar className="h-10 w-10 shrink-0">
-                <AvatarFallback className="bg-emerald-500/15 text-emerald-600 text-xs font-semibold">
-                  {recipient?.name?.split(" ").map((n: string) => n[0]).slice(0, 2).join("") || "?"}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium truncate">{recipient?.name}</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {recipient?.account || recipient?.bank}
-                </p>
+            {/* Amount Summary */}
+            <div className="flex flex-col items-center justify-center py-6">
+              <p className="text-xs text-muted-foreground mb-1">Sending</p>
+              <p className="text-4xl font-bold tabular-nums">{formatMoney(Number(amount), currency)}</p>
+            </div>
+
+            {/* Push details to bottom */}
+            <div className="mt-auto space-y-4 pt-6">
+              {/* Recipient summary card */}
+              <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3">
+                <Avatar className="h-10 w-10 shrink-0">
+                  <AvatarFallback className="bg-emerald-500/15 text-emerald-600 text-xs font-semibold">
+                    {recipient?.name?.split(" ").map((n: string) => n[0]).slice(0, 2).join("") || "?"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate">{recipient?.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {recipient?.account || recipient?.bank}
+                  </p>
+                </div>
+                <Badge variant="outline" className="capitalize text-[10px] shrink-0">
+                  {method === "momo" ? "Mobile Money" : method === "bank" ? "Bank" : method === "crypto" ? "Crypto" : "GaexPay"}
+                </Badge>
               </div>
-              <Badge variant="outline" className="capitalize text-[10px] shrink-0">
-                {method === "momo" ? "Mobile Money" : method === "bank" ? "Bank" : method === "crypto" ? "Crypto" : "GaexPay"}
-              </Badge>
-            </div>
 
-            {/* Fee breakdown */}
-            <div className="space-y-3 rounded-2xl border border-border/60 bg-card p-4">
-              <BreakdownRow label="Amount" value={formatMoney(Number(amount), currency)} />
-              <BreakdownRow
-                label="Fee"
-                value={fee === 0 ? "Free" : formatMoney(fee, currency)}
-                hint={method === "wallet" ? "GaexPay member" : method === "bank" ? "0.5% · capped" : method === "momo" ? "1.0%" : "On-chain"}
-              />
-              <div className="border-t border-border/60 pt-3">
-                <BreakdownRow label="Total" value={formatMoney(total, currency)} bold />
+              {/* Fee breakdown */}
+              <div className="space-y-3 rounded-2xl border border-border/60 bg-card p-4">
+                <BreakdownRow label="Amount" value={formatMoney(Number(amount), currency)} />
+                <BreakdownRow
+                  label="Fee"
+                  value={fee === 0 ? "Free" : formatMoney(fee, currency)}
+                  hint={method === "wallet" ? "GaexPay member" : method === "bank" ? "0.5% · capped" : method === "momo" ? "1.0%" : "On-chain"}
+                />
+                <div className="border-t border-border/60 pt-3">
+                  <BreakdownRow label="Total" value={formatMoney(total, currency)} bold />
+                </div>
               </div>
-            </div>
 
-            {/* Security note */}
-            <div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-400">
-              <ShieldCheck className="h-4 w-4 shrink-0" />
-              Protected by GaexPay Buyer Protection & end-to-end encryption.
-            </div>
+              {/* Security note */}
+              <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-400">
+                <ShieldCheck className="h-4 w-4 shrink-0" />
+                Protected by GaexPay Buyer Protection & end-to-end encryption.
+              </div>
 
-            <div className="mt-6 flex gap-2">
-              <Button variant="outline" className="flex-1 rounded-xl h-12" onClick={() => setStep(1)}>
-                <ChevronLeft className="h-4 w-4 mr-1" /> Back
-              </Button>
-              <Button className="flex-1 rounded-xl h-12 shadow-premium-sm" onClick={() => setStep(3)}>
-                Confirm & Continue
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1 rounded-xl h-12" onClick={() => setStep(1)} disabled={loading}>
+                  <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                </Button>
+                <Button className="flex-1 rounded-xl h-12 shadow-premium-sm" onClick={() => setStep(3)}>
+                  Confirm & Continue
+                </Button>
+              </div>
             </div>
           </motion.div>
         )}
@@ -985,6 +1162,7 @@ function BreakdownRow({ label, value, hint, bold }: { label: string; value?: str
 }
 
 function RequestFlow() {
+  const { t } = useTranslation();
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("NGN");
   const [note, setNote] = useState("");
@@ -1059,34 +1237,224 @@ function RequestFlow() {
 }
 
 function TopUpFlow() {
+  const [amount, setAmount] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
+  const [phone, setPhone] = useState("");
+  const [provider, setProvider] = useState("");
+  const [cryptoCoin, setCryptoCoin] = useState("USDT");
+  const [cryptoNetwork, setCryptoNetwork] = useState("trc20");
+  const { data: meData } = useFetch<any>("/api/auth/me");
+  const { symbol, currency } = useFormatMoney();
+
+  const generatedAddress = cryptoCoin === "USDT" && cryptoNetwork === "trc20" ? "TFEj9kP7..." : 
+                           cryptoCoin === "USDT" && cryptoNetwork === "erc20" ? "0x892a..." :
+                           cryptoCoin === "BTC" ? "1A1zP1..." : "0x...";
+
+  const supportedMethods = getSupportedPaymentMethods(meData?.user?.country);
+
+  const handleTopUp = async () => {
+    if (!selectedMethod) return;
+
+    if (!amount || Number(amount) <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+    
+    if (selectedMethod === "momo" && (!phone || !provider)) {
+      toast.error("Please enter phone and select provider");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const res = await fetch("/api/wallets/topup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: Number(amount), method: selectedMethod, currency, phone, provider }),
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.error || "Failed to initialize top-up");
+      
+      if (data.authorizationUrl) {
+        window.location.href = data.authorizationUrl;
+      } else {
+        toast.success(data.message || "Top-up initiated");
+        setSelectedMethod(null);
+        setAmount("");
+        setPhone("");
+        setProvider("");
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Card className="mx-auto max-w-2xl p-4 sm:p-6 border-border/60 shadow-premium-sm">
       <h3 className="font-semibold text-base sm:text-lg">Top Up Wallet</h3>
-      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 mb-4">
+      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 mb-6">
         Add funds from card, bank or mobile money
       </p>
+
       <div className="grid gap-2.5 sm:gap-3 sm:grid-cols-2">
         {[
-          { icon: Landmark, title: "Bank Transfer", desc: "Free · Instant", color: "bg-emerald-500/15 text-emerald-600" },
-          { icon: Smartphone, title: "Mobile Money", desc: "MTN, Orange, Airtel", color: "bg-amber-500/15 text-amber-600" },
-          { icon: WalletIcon, title: "Debit Card", desc: "Visa, Mastercard", color: "bg-teal-500/15 text-teal-600" },
-          { icon: QrCode, title: "Voucher / Code", desc: "Redeem a code", color: "bg-fuchsia-500/15 text-fuchsia-600" },
-        ].map((m) => {
+          { icon: Landmark, title: "Bank Transfer", desc: "Free · Instant", color: "bg-emerald-500/15 text-emerald-600", method: "bank" },
+          { icon: Smartphone, title: "Mobile Money", desc: "MTN, Orange, Airtel", color: "bg-amber-500/15 text-amber-600", method: "momo" },
+          { icon: WalletIcon, title: "Debit Card", desc: "Visa, Mastercard", color: "bg-teal-500/15 text-teal-600", method: "card" },
+          { icon: Bitcoin, title: "Crypto Deposit", desc: "USDT, BTC, ETH", color: "bg-orange-500/15 text-orange-600", method: "crypto" },
+          { icon: Globe, title: "Account Sync (EU/US)", desc: "Global Cards & Bank Sync", color: "bg-blue-500/15 text-blue-600", method: "paypal" },
+          { icon: QrCode, title: "Voucher / Code", desc: "Redeem a code", color: "bg-fuchsia-500/15 text-fuchsia-600", method: "voucher" },
+        ].filter((m) => supportedMethods.includes(m.method) || m.method === "voucher" || m.method === "paypal").map((m) => {
           const Icon = m.icon;
+          const isSelected = selectedMethod === m.method;
           return (
-            <button
-              key={m.title}
-              className="group flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-3 sm:p-4 text-left transition hover:border-primary/40 hover:bg-muted/30 card-lift shadow-premium-xs hover:shadow-premium-sm"
-            >
-              <div className={cn("grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-xl shrink-0", m.color)}>
-                <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">{m.title}</p>
-                <p className="text-[11px] sm:text-xs text-muted-foreground">{m.desc}</p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 transition group-hover:translate-x-0.5" />
-            </button>
+            <div key={m.title} className={cn("flex flex-col gap-2 transition-all", isSelected ? "col-span-full" : "")}>
+              <button
+                onClick={() => setSelectedMethod(isSelected ? null : m.method)}
+                disabled={loading && !isSelected}
+                className={cn(
+                  "group flex items-center gap-3 rounded-2xl border bg-card p-3 sm:p-4 text-left transition shadow-premium-xs",
+                  isSelected ? "border-primary bg-primary/5 shadow-premium-sm" : "border-border/60 hover:border-primary/40 hover:bg-muted/30 hover:shadow-premium-sm"
+                )}
+              >
+                <div className={cn("grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-xl shrink-0", m.color)}>
+                  <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">{m.title}</p>
+                  <p className="text-[11px] sm:text-xs text-muted-foreground">{m.desc}</p>
+                </div>
+                <ChevronRight className={cn("h-4 w-4 text-muted-foreground shrink-0 transition", isSelected ? "rotate-90" : "group-hover:translate-x-0.5")} />
+              </button>
+              
+              {isSelected && (
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:p-5 space-y-5 animate-in fade-in zoom-in-95 mt-1">
+                  
+                  <div className="space-y-2 text-center">
+                    <Label className="text-xs font-semibold text-primary">Amount to Top Up</Label>
+                    <div className="flex items-center justify-center gap-1 mx-auto max-w-[200px] border-b-2 border-primary/20 focus-within:border-primary transition-colors pb-1">
+                      <span className="text-2xl sm:text-3xl font-bold text-muted-foreground">{symbol}</span>
+                      <Input
+                        type="number"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="border-0 bg-transparent text-3xl sm:text-4xl font-bold tabular-nums text-center focus-visible:ring-0 h-12 px-0 w-full"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  {m.method === "momo" && (
+                    <div className="space-y-4 pt-2 border-t border-primary/10">
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-primary">Mobile Money Provider</Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {["mtn", "orange", "airtel"].map(p => (
+                            <button
+                              key={p}
+                              onClick={() => setProvider(p)}
+                              className={cn(
+                                "capitalize text-xs font-medium h-10 rounded-xl border transition-colors",
+                                provider === p ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border/60 hover:bg-muted text-muted-foreground"
+                              )}
+                            >
+                              {p}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-primary">Phone Number</Label>
+                        <Input 
+                          placeholder="e.g. 0541234567" 
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          className="bg-background border-border/60 focus-visible:ring-primary/30 rounded-xl h-11"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {m.method === "crypto" && (
+                    <div className="space-y-4 pt-2 border-t border-primary/10">
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-primary">Coin</Label>
+                        <Select value={cryptoCoin} onValueChange={setCryptoCoin}>
+                          <SelectTrigger className="rounded-xl h-11 bg-background border-border/60">
+                            <SelectValue placeholder="Select coin" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                            <SelectItem value="USDT">USDT (Tether)</SelectItem>
+                            <SelectItem value="USDC">USDC (USD Coin)</SelectItem>
+                            <SelectItem value="BTC">BTC (Bitcoin)</SelectItem>
+                            <SelectItem value="ETH">ETH (Ethereum)</SelectItem>
+                            <SelectItem value="PI">PI (Pi Network)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-primary">Network</Label>
+                        <Select value={cryptoNetwork} onValueChange={setCryptoNetwork}>
+                          <SelectTrigger className="rounded-xl h-11 bg-background border-border/60">
+                            <SelectValue placeholder="Select network" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                            <SelectItem value="trc20">TRC20 (Tron)</SelectItem>
+                            <SelectItem value="erc20">ERC20 (Ethereum)</SelectItem>
+                            <SelectItem value="bep20">BEP20 (Binance Smart Chain)</SelectItem>
+                            <SelectItem value="polygon">Polygon</SelectItem>
+                            <SelectItem value="solana">Solana</SelectItem>
+                            <SelectItem value="pi-network">Pi Network</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="p-4 bg-muted/50 rounded-xl border border-border/60 text-center">
+                        <QrCode className="h-24 w-24 mx-auto mb-3 text-primary opacity-80" />
+                        <p className="text-xs text-muted-foreground mb-1">Your deposit address</p>
+                        <p className="text-[11px] font-mono bg-background p-2 rounded-lg border border-border/40 break-all select-all">
+                          {cryptoCoin === "USDT" && cryptoNetwork === "trc20" ? "TFEj9kP7N2PcxH1V7mRtye11P1xHwN9jX4" : 
+                           (cryptoCoin === "USDT" || cryptoCoin === "USDC" || cryptoCoin === "ETH") && (cryptoNetwork === "erc20" || cryptoNetwork === "bep20" || cryptoNetwork === "polygon") ? "0x892a061801E852DfbCda4E553531FfA386D48Ffc" :
+                           cryptoCoin === "BTC" ? "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh" :
+                           cryptoCoin === "PI" || cryptoNetwork === "pi-network" ? "GAEXPiWalletAddress123ABCxyz987" :
+                           cryptoNetwork === "solana" ? "5PzTq3v1P2a2p3GkZ6sJgL4m5fR8a9dFhBcNpWxYyZ" :
+                           "0x..." + Math.random().toString(36).slice(2)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {m.method === "paypal" && (
+                    <div className="space-y-4 pt-2 border-t border-primary/10">
+                      <div className="p-4 bg-blue-500/10 rounded-xl border border-blue-500/20 text-center">
+                        <Globe className="h-12 w-12 mx-auto mb-3 text-blue-500" />
+                        <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-1">Sync your EU/US Account</p>
+                        <p className="text-xs text-muted-foreground mb-4">Link your international account to seamlessly deposit funds.</p>
+                        <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl">
+                          Connect Account
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <Button 
+                    className="w-full h-12 rounded-xl shadow-premium-sm font-semibold" 
+                    onClick={handleTopUp}
+                    disabled={loading || !amount || (m.method === "momo" && (!phone || !provider))}
+                  >
+                    {loading ? "Processing..." : `Top Up ${symbol}${Number(amount || 0).toLocaleString()}`}
+                  </Button>
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
@@ -1098,8 +1466,11 @@ function WithdrawFlow() {
   const { fmt, symbol, currency: userCur } = useFormatMoney();
   const { data: walletData } = useFetch<{ wallets: any[]; totalNGN: number }>("/api/wallets");
   const { data: benData } = useFetch<{ beneficiaries: any[] }>("/api/beneficiaries");
+  const { data: meData } = useFetch<any>("/api/auth/me");
   const [amount, setAmount] = useState("");
   const [destination, setDestination] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState<any>(null);
 
   const wallets = walletData?.wallets ?? [];
   const beneficiaries = benData?.beneficiaries ?? [];
@@ -1108,7 +1479,11 @@ function WithdrawFlow() {
   const dailyLimit = 5000000;
   const dailyLimitLeft = Math.max(0, dailyLimit - availableBalance * 0.1);
 
-  const withdrawalDestinations = beneficiaries.filter((b) => b.type === "bank" || b.type === "momo");
+  const supportedMethods = getSupportedPaymentMethods(meData?.user?.country);
+
+  const withdrawalDestinations = beneficiaries.filter((b) => 
+    (b.type === "bank" || b.type === "momo") && supportedMethods.includes(b.type)
+  );
 
   const handleWithdraw = async () => {
     if (!amount || Number(amount) <= 0) {
@@ -1119,9 +1494,80 @@ function WithdrawFlow() {
       toast.error("Insufficient balance");
       return;
     }
-    toast.success(`Withdrawing ${symbol}${Number(amount).toLocaleString()} to your account`);
-    setAmount("");
+    
+    setLoading(true);
+    try {
+      const res = await fetch("/api/wallets/withdraw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: Number(amount),
+          destinationId: destination
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDone(data.transaction);
+        toast.success(`Withdrawal of ${symbol}${Number(amount).toLocaleString()} initiated`);
+      } else {
+        toast.error(data.error || "Withdrawal failed");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const reset = () => {
+    setDone(null);
+    setAmount("");
+    setDestination("");
+  };
+
+  if (done) {
+    return (
+      <Card className="mx-auto max-w-2xl p-4 sm:p-6 border-border/60 shadow-premium-sm">
+        <Confetti trigger={true} />
+        <div className="text-center">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", delay: 0.1 }}
+            className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white pulse-glow"
+          >
+            <Check className="h-8 w-8" strokeWidth={3} />
+          </motion.div>
+          <h3 className="text-xl font-bold">Withdrawal Successful!</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {fmt(Number(amount))} sent to your {done.method} account
+          </p>
+        </div>
+
+        <div className="my-5 space-y-2 rounded-2xl border border-border/60 bg-muted/30 p-4 text-sm">
+          <BreakdownRow label="Reference" value={done.reference} />
+          <BreakdownRow label="Destination" value={done.counterpartyName} />
+          <BreakdownRow label="Amount" value={fmt(Number(amount))} />
+          <BreakdownRow label="Fee" value={fmt(done.fee)} />
+          <BreakdownRow label="Date" value={new Date(done.completedAt).toLocaleString()} />
+          <BreakdownRow label="Status" value="Processing" />
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="flex-1 rounded-xl h-11"
+            onClick={() => { navigator.clipboard?.writeText(done.reference); toast.success("Reference copied"); }}
+          >
+            <Copy className="h-4 w-4 mr-1.5" /> Copy Ref
+          </Button>
+          <Button className="flex-1 rounded-xl h-11 shadow-premium-sm" onClick={reset}>
+            <Repeat className="h-4 w-4 mr-1.5" /> New Withdrawal
+          </Button>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="mx-auto max-w-2xl p-4 sm:p-6 border-border/60 shadow-premium-sm">
@@ -1172,7 +1618,8 @@ function WithdrawFlow() {
             className="h-11 rounded-xl text-base sm:text-lg font-semibold"
           />
         </div>
-        <Button className="w-full h-12 rounded-xl shadow-premium-sm" onClick={handleWithdraw} disabled={!amount || !destination}>
+        <Button className="w-full h-12 rounded-xl shadow-premium-sm" onClick={handleWithdraw} disabled={!amount || !destination || loading}>
+          {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
           Continue
         </Button>
       </div>

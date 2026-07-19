@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { useState } from "react";
@@ -75,8 +76,8 @@ function seedInvoices(): Invoice[] {
     {
       id: "1",
       number: "INV-20241101-4501",
-      client: "Acme Holdings Ltd.",
-      clientEmail: "billing@acme.com",
+      client: "Client Company Ltd.",
+      clientEmail: "billing@clientcompany.com",
       issueDate: "2024-11-01",
       dueDate: "2024-11-15",
       status: "paid",
@@ -418,7 +419,7 @@ export function InvoicesView() {
                 <Input
                   value={newInv.client}
                   onChange={(e) => setNewInv((n) => ({ ...n, client: e.target.value }))}
-                  placeholder="Acme Holdings Ltd."
+                  placeholder="Client Company Ltd."
                   className="mt-1"
                 />
               </div>

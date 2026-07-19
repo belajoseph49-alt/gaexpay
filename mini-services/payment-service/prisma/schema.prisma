@@ -1,0 +1,95 @@
+// prisma/schema.prisma for payment-service
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PaymentDirection {
+  PAYIN
+  PAYOUT
+}
+
+enum PaymentStatus {
+  INITIATED
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+  CANCELLED
+  EXPIRED
+  REVERSED
+}
+
+enum PaymentChannel {
+  MOBILE_MONEY
+  CARD
+  BANK_TRANSFER
+}
+
+model PaymentTransaction {
+  id                  String            @id @default(cuid())
+  transactionRef      String            @unique // ex: GAEX-20260716-XXXXXXXX, jamas de #,/,$,_,&
+  direction           PaymentDirection
+  status              PaymentStatus     @default(INITIATED)
+  channel             PaymentChannel
+  amount              Decimal           @db.Decimal(18,2) // Montants exacts
+  currency            String            @db.VarChar(3)
+  userId              String
+  walletId            String
+  provider            String            @default("CINETPAY")
+  providerPaymentToken String?        // payment_token retourné par CinetPay
+  providerRawResponse String?           // réponse brute chiffrée stockée pour audit
+  idempotencyKey      String            @unique // clé fournie par le client appelant
+  failureReason       String?
+  metadata            String?           // métadonnées chiffrées si sensibles
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  confirmedAt         DateTime?
+  expiresAt           DateTime?
+
+  auditLogs           PaymentAuditLog[]
+  webhookEvents       WebhookEvent[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([transactionRef])
+}
+
+model PaymentAuditLog {
+  id             String             @id @default(cuid())
+  transactionId  String
+  transaction    PaymentTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  previousStatus PaymentStatus?
+  newStatus      PaymentStatus
+  actor          String             // "SYSTEM", "WEBHOOK", "RECONCILIATION_JOB", userId admin
+  ipAddress      String?
+  note           String?
+  createdAt      DateTime           @default(now())
+}
+
+// Table d'idempotence dédiée pour toute requête entrante (webhook ou API)
+model IdempotencyRecord {
+  id               String   @id @default(cuid())
+  key              String   @unique
+  requestHash      String   // hash du payload pour détecter une réutilisation frauduleuse de la clé
+  responseSnapshot String?  // snapshot de la réponse (JSON stringifié)
+  createdAt        DateTime @default(now())
+  expiresAt        DateTime
+}
+
+model WebhookEvent {
+  id             String              @id @default(cuid())
+  transactionId  String?
+  transaction    PaymentTransaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  provider       String
+  signatureValid Boolean
+  sourceIp       String
+  rawPayload     String              // payload brut chiffré stocké pour audit
+  processed      Boolean             @default(false)
+  receivedAt     DateTime            @default(now())
+}

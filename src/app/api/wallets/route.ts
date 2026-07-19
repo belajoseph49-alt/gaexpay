@@ -37,7 +37,7 @@ export async function POST(req: Request) {
 
     // Sensitive rate limit — wallet creation is a privileged action.
     const identifier = getClientIdentifier(req, userId);
-    const rl = rateLimitSensitive(identifier);
+    const rl = await rateLimitSensitive(identifier);
     if (!rl.success) {
       return NextResponse.json(
         { error: "Too many requests. Please slow down." },

@@ -714,7 +714,7 @@ function InvoicesTab({ data }: { data: BusinessProData }) {
               <div className="space-y-3 py-2">
                 <div>
                   <Label htmlFor="cust">Customer name</Label>
-                  <Input id="cust" placeholder="Acme Corp" value={form.customer}
+                  <Input id="cust" placeholder="Business Corp" value={form.customer}
                     onChange={(e) => setForm({ ...form, customer: e.target.value })} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">

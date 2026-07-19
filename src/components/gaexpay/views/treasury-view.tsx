@@ -950,7 +950,7 @@ function FxExposureTab({ data }: { data: TreasuryData }) {
               </defs>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
               <XAxis dataKey="code" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => fmtUSD(v, true)} />
+              <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => fmtUSD(v)} />
               <Tooltip
                 contentStyle={{ borderRadius: 12, fontSize: 12, background: "#0f172a", border: "1px solid #1e293b", color: "#fff" }}
                 formatter={(v: any, _n: any, props: any) => [`${fmtUSD(v)} · ${props.payload.direction}`, "Net Position"]}
@@ -1206,7 +1206,7 @@ function CashFlowTab({ data }: { data: TreasuryData }) {
             </defs>
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
             <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} interval={2} />
-            <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => fmtUSD(v, true)} />
+            <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => fmtUSD(v)} />
             <Tooltip
               contentStyle={{ borderRadius: 12, fontSize: 12, background: "#0f172a", border: "1px solid #1e293b", color: "#fff" }}
               formatter={(v: any, name: any) => [fmtUSD(v), name === "inflow" ? "Inflow" : "Outflow"]}
@@ -1230,7 +1230,7 @@ function CashFlowTab({ data }: { data: TreasuryData }) {
           <BarChart data={cf.series}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
             <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} interval={2} />
-            <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => fmtUSD(v, true)} />
+            <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => fmtUSD(v)} />
             <Tooltip
               contentStyle={{ borderRadius: 12, fontSize: 12, background: "#0f172a", border: "1px solid #1e293b", color: "#fff" }}
               formatter={(v: any) => [fmtUSD(v), "Net"]}

@@ -1,0 +1,31 @@
+{
+  "Index": {
+    "title": "GaexPay - Borderless Digital Wallet",
+    "description": "Send and receive money globally"
+  },
+  "nav": {
+    "wallets": "Portefeuilles",
+    "pay": "Payer",
+    "send": "Envoyer",
+    "gaextalk": "GaexTalk",
+    "apps": "Apps",
+    "community": "Communauté"
+  },
+  "admin": {
+    "users": {
+      "userDetails": "Détails de l'utilisateur",
+      "phone": "Téléphone",
+      "country": "Pays",
+      "accountType": "Type de compte",
+      "role": "Rôle",
+      "kyc": "KYC",
+      "tier": "Niveau",
+      "status": "Statut",
+      "joined": "Inscrit",
+      "lastLogin": "Dernière connexion",
+      "rewardPoints": "Points de récompense",
+      "edit": "Modifier",
+      "close": "Fermer"
+    }
+  }
+}

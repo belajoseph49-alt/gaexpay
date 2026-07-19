@@ -29,7 +29,7 @@ export async function DELETE(req: Request) {
     if (!userId) return apiError("Unauthorized", 401);
 
     const identifier = getClientIdentifier(req, userId);
-    const rl = rateLimitSensitive(identifier);
+    const rl = await rateLimitSensitive(identifier);
     if (!rl.success) {
       return NextResponse.json(
         { error: "Too many requests. Please slow down." },
@@ -43,6 +43,24 @@ export async function DELETE(req: Request) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     if (!id) return apiError("id required", 400);
+
+    if (id === "all") {
+      await db.device.deleteMany({ where: { userId } });
+      await db.auditLog.create({
+        data: {
+          userId,
+          actor: "user",
+          action: "device.revoke_all",
+          entity: "device",
+          entityId: "all",
+          ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || null,
+          userAgent: req.headers.get("user-agent") || null,
+          details: JSON.stringify({ deviceName: "All Devices", deviceType: "all" }),
+          severity: "warning",
+        },
+      });
+      return NextResponse.json({ success: true });
+    }
 
     // Ensure the device belongs to the user before revoking.
     const existing = await db.device.findFirst({ where: { id, userId } });

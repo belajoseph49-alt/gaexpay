@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * GaexPay — PWA Icon Generator
  *

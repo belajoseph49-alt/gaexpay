@@ -99,7 +99,7 @@ export function WalletsView() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t("wallets.title")}</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Manage your multi-currency balances
+            {t("wallets.subtitle")}
           </p>
         </div>
         <div className="flex gap-2">
@@ -109,12 +109,12 @@ export function WalletsView() {
             className="h-9 rounded-xl"
             onClick={() => setView("analytics")}
           >
-            <ArrowRightLeft className="h-4 w-4 mr-1.5" /> Exchange
+            <ArrowRightLeft className="h-4 w-4 mr-1.5" /> {t("nav.exchange")}
           </Button>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="h-9 rounded-xl shadow-premium-sm">
-                <Plus className="h-4 w-4 mr-1.5" /> Add Wallet
+                <Plus className="h-4 w-4 mr-1.5" /> {t("common.add")}
               </Button>
             </DialogTrigger>
             <AddWalletDialog onSubmit={addWallet} />
@@ -124,16 +124,16 @@ export function WalletsView() {
 
       {/* Total balance hero */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 p-5 sm:p-7 text-white shadow-premium-lg">
+        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-violet-500 via-violet-600 to-purple-800 p-5 sm:p-7 text-white shadow-premium-lg">
           <div className="absolute inset-0 opacity-30 mesh-bg" />
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
           <div className="absolute -right-6 top-10 h-24 w-24 rounded-full bg-white/10 blur-xl" />
           <div className="relative flex flex-wrap items-center justify-between gap-5">
             <div className="min-w-0 flex-1">
-              <p className="text-xs sm:text-sm text-white/80">Total Portfolio Value (NGN)</p>
+              <p className="text-xs sm:text-sm text-white/80">{t("dashboard.totalBalance")} ({userCur})</p>
               <div className="mt-1 flex items-center gap-2">
                 <h2 className="text-3xl sm:text-4xl font-bold tracking-tight tabular-nums truncate">
-                  {hidden ? "₦ • • • •" : fmt(totalNGN)}
+                  {hidden ? `${symbol} • • • •` : fmt(totalNGN)}
                 </h2>
                 <button
                   onClick={() => setHidden(!hidden)}
@@ -147,7 +147,7 @@ export function WalletsView() {
                 <Badge className="bg-white/20 text-white border-0 backdrop-blur text-[10px]">
                   <TrendingUp className="h-3 w-3 mr-0.5" /> +12.4%
                 </Badge>
-                <span className="text-xs text-white/70">this month · across {wallets.length} wallets</span>
+                <span className="text-xs text-white/70">{t("dashboard.thisMonth")} · {t("dashboard.acrossWallets", { count: wallets.length })}</span>
               </div>
             </div>
             {/* Mini sparkline */}
@@ -160,14 +160,14 @@ export function WalletsView() {
                 className="bg-white/20 text-white border-0 backdrop-blur hover:bg-white/30 rounded-xl"
                 onClick={() => setView("send")}
               >
-                <Download className="h-4 w-4 mr-1.5" /> Top Up
+                <Download className="h-4 w-4 mr-1.5" /> {t("common.topUp")}
               </Button>
               <Button
                 variant="secondary"
                 className="bg-white/20 text-white border-0 backdrop-blur hover:bg-white/30 rounded-xl"
                 onClick={() => setView("send")}
               >
-                <ArrowUpDown className="h-4 w-4 mr-1.5" /> Transfer
+                <ArrowUpDown className="h-4 w-4 mr-1.5" /> {t("common.send")}
               </Button>
             </div>
           </div>
@@ -187,12 +187,12 @@ export function WalletsView() {
             <div className="grid h-16 w-16 place-items-center rounded-full bg-primary/10 text-primary mb-4">
               <WalletIcon className="h-7 w-7" />
             </div>
-            <p className="text-base font-semibold">No wallets yet</p>
+            <p className="text-base font-semibold">{t("savings.title")}</p>
             <p className="mt-1 text-sm text-muted-foreground max-w-xs">
-              Create your first wallet to start sending, receiving and exchanging money.
+              {t("savings.createGoal")}
             </p>
             <Button className="mt-5 h-10 rounded-xl shadow-premium-sm" onClick={() => setOpen(true)}>
-              <Plus className="h-4 w-4 mr-1.5" /> Create Wallet
+              <Plus className="h-4 w-4 mr-1.5" /> {t("common.add")}
             </Button>
           </div>
         </Card>
@@ -215,11 +215,11 @@ export function WalletsView() {
       <Card className="p-5 border-border/60 shadow-premium-sm">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h3 className="font-semibold">Live Exchange Rates</h3>
-            <p className="text-xs text-muted-foreground">Updated in real time</p>
+            <h3 className="font-semibold">{t("analytics.realTimeRates")}</h3>
+            <p className="text-xs text-muted-foreground">{t("analytics.rateUpdatedLive")}</p>
           </div>
           <Badge variant="outline" className="text-emerald-600 border-emerald-500/30">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse mr-1.5" /> Live
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse mr-1.5" /> {t("dashboard.instant")}
           </Badge>
         </div>
         <div className="overflow-x-auto">
@@ -227,8 +227,8 @@ export function WalletsView() {
             <thead>
               <tr className="border-b border-border/60 text-left text-xs text-muted-foreground">
                 <th className="pb-2 font-medium">Pair</th>
-                <th className="pb-2 font-medium text-right">Buy</th>
-                <th className="pb-2 font-medium text-right">Sell</th>
+                <th className="pb-2 font-medium text-right">{t("nav.buySellCrypto")}</th>
+                <th className="pb-2 font-medium text-right">{t("nav.buySellCrypto")}</th>
                 <th className="pb-2 font-medium text-right">Rate</th>
                 <th className="pb-2"></th>
               </tr>
@@ -247,7 +247,7 @@ export function WalletsView() {
                       className="h-7 text-xs"
                       onClick={() => setView("analytics")}
                     >
-                      Convert <ChevronRight className="h-3 w-3" />
+                      {t("analytics.convert")} <ChevronRight className="h-3 w-3" />
                     </Button>
                   </td>
                 </tr>
@@ -282,6 +282,8 @@ function WalletCard({
   onSend: () => void;
   onExchange: () => void;
 }) {
+  const { t } = useTranslation();
+  const { fmt, currency: userCur } = useFormatMoney();
   const isCrypto = CRYPTO_CODES.has(wallet.currency);
   const currencyMeta = CURRENCIES.find((c) => c.code === wallet.currency);
   const flag = currencyMeta?.flag || (isCrypto ? "🪙" : "🌍");
@@ -297,7 +299,7 @@ function WalletCard({
   // Accent: crypto = violet/amber tonal; fiat = emerald/teal tonal
   const accentTile = isCrypto
     ? "bg-violet-500/15 text-violet-600 dark:text-violet-400"
-    : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400";
+    : "bg-violet-500/15 text-violet-600 dark:text-violet-400";
   const sparkColor = isCrypto ? "#8b5cf6" : "#10b981";
 
   return (
@@ -339,9 +341,9 @@ function WalletCard({
           <p className="mt-0.5 text-2xl font-bold tabular-nums truncate">
             {formatMoney(wallet.balance, wallet.currency)}
           </p>
-          {wallet.currency !== "NGN" && (
+          {wallet.currency !== userCur && (
             <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">
-              ≈ {formatMoney(ngnEquivalent, "NGN")}
+              ≈ {fmt(ngnEquivalent)}
             </p>
           )}
         </div>
@@ -356,17 +358,17 @@ function WalletCard({
           <div className="flex items-center gap-1.5">
             <QuickAction
               icon={SendHorizontal}
-              label="Send"
+              label={t("common.send")}
               onClick={(e) => { e.stopPropagation(); onSend(); }}
             />
             <QuickAction
               icon={ArrowDownToLine}
-              label="Receive"
+              label={t("common.receive")}
               onClick={(e) => { e.stopPropagation(); onOpen(); }}
             />
             <QuickAction
               icon={RefreshCw}
-              label="Exchange"
+              label={t("nav.exchange")}
               onClick={(e) => { e.stopPropagation(); onExchange(); }}
             />
           </div>
@@ -451,13 +453,14 @@ function Sparkline({
 }
 
 function AddWalletDialog({ onSubmit }: { onSubmit: (form: any) => void }) {
+  const { t } = useTranslation();
   const [currency, setCurrency] = useState("USD");
   const [label, setLabel] = useState("USD Wallet");
   const [type, setType] = useState("primary");
   return (
     <DialogContent className="rounded-2xl">
       <DialogHeader>
-        <DialogTitle>Create New Wallet</DialogTitle>
+        <DialogTitle>{t("common.add")}</DialogTitle>
       </DialogHeader>
       <div className="space-y-4 py-2">
         <div className="space-y-2">
@@ -468,6 +471,11 @@ function AddWalletDialog({ onSubmit }: { onSubmit: (form: any) => void }) {
               {CURRENCIES.map((c) => (
                 <SelectItem key={c.code} value={c.code}>
                   {c.flag} {c.code} — {c.name}
+                </SelectItem>
+              ))}
+              {CRYPTOCURRENCIES.map((c) => (
+                <SelectItem key={c.code} value={c.code}>
+                  {c.icon} {c.code} — {c.name}
                 </SelectItem>
               ))}
             </SelectContent>

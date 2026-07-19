@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFormatMoney } from "@/hooks/use-format-money";
 import { useTranslation } from "@/hooks/use-translation";
+import { getSupportedPaymentMethods, getAvailableMobileMoneyProviders } from "@/lib/gaexpay";
 import { QrCode as QrCodeImage } from "@/components/gaexpay/qr-code";
 
 const BILLER_ICONS: Record<string, any> = {
@@ -70,6 +71,17 @@ const QUICK_ACTIONS = [
 export function PayView() {
   const { t } = useTranslation();
   const [tab, setTab] = useState("qr");
+  const { data: meData } = useFetch<any>("/api/auth/me");
+  
+  const country = meData?.user?.country;
+  const methods = getSupportedPaymentMethods(country);
+  const showMobileFeatures = methods.includes("momo");
+
+  // Filter actions based on region
+  const filteredActions = QUICK_ACTIONS.filter(a => {
+    if ((a.id === "airtime" || a.id === "data") && !showMobileFeatures) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -96,14 +108,14 @@ export function PayView() {
                 <QrCode className="h-7 w-7 sm:h-8 sm:w-8" />
               </div>
               <div className="min-w-0">
-                <h3 className="text-lg sm:text-xl font-bold">Scan to Pay</h3>
+                <h3 className="text-lg sm:text-xl font-bold">{t("pay.scanPay")}</h3>
                 <p className="text-xs sm:text-sm text-white/80 truncate">
                   Pay any GaexPay merchant instantly by scanning their QR code
                 </p>
               </div>
             </div>
             <div className="hidden sm:flex items-center gap-1 rounded-full bg-white/20 backdrop-blur px-3 py-1.5 text-xs font-medium ring-1 ring-white/30 group-hover:translate-x-1 transition">
-              <ScanLine className="h-3.5 w-3.5" /> Open
+              <ScanLine className="h-3.5 w-3.5" /> {t("common.open", { defaultValue: "Open" })}
             </div>
           </div>
         </Card>
@@ -111,7 +123,7 @@ export function PayView() {
 
       {/* Quick actions grid */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3 sm:grid-cols-6">
-        {QUICK_ACTIONS.map((a, i) => {
+        {filteredActions.map((a, i) => {
           const Icon = a.icon;
           return (
             <button
@@ -125,7 +137,7 @@ export function PayView() {
               )}>
                 <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
-              <span className="text-[11px] sm:text-xs font-medium">{a.label}</span>
+              <span className="text-[11px] sm:text-xs font-medium">{t(`pay.quickActions.${a.label}`, { defaultValue: a.label })}</span>
             </button>
           );
         })}
@@ -137,13 +149,13 @@ export function PayView() {
           <TabsTrigger value="qr" className="rounded-xl py-2"><QrCode className="h-4 w-4 mr-1.5" /> {t("pay.scanPay")}</TabsTrigger>
           <TabsTrigger value="merchants" className="rounded-xl py-2"><Store className="h-4 w-4 mr-1.5" /> {t("pay.merchants")}</TabsTrigger>
           <TabsTrigger value="bills" className="rounded-xl py-2"><Receipt className="h-4 w-4 mr-1.5" /> {t("pay.bills")}</TabsTrigger>
-          <TabsTrigger value="airtime" className="rounded-xl py-2"><Smartphone className="h-4 w-4 mr-1.5" /> {t("pay.airtime")}</TabsTrigger>
+          {showMobileFeatures && <TabsTrigger value="airtime" className="rounded-xl py-2"><Smartphone className="h-4 w-4 mr-1.5" /> {t("pay.airtime")}</TabsTrigger>}
           <TabsTrigger value="esim" className="rounded-xl py-2"><Wifi className="h-4 w-4 mr-1.5" /> eSim</TabsTrigger>
         </TabsList>
         <TabsContent value="qr" className="mt-4"><QrPay /></TabsContent>
         <TabsContent value="merchants" className="mt-4"><MerchantsPay /></TabsContent>
         <TabsContent value="bills" className="mt-4"><BillsPay /></TabsContent>
-        <TabsContent value="airtime" className="mt-4"><AirtimePay /></TabsContent>
+        {showMobileFeatures && <TabsContent value="airtime" className="mt-4"><AirtimePay country={country} /></TabsContent>}
         <TabsContent value="esim" className="mt-4"><ESimPay /></TabsContent>
       </Tabs>
     </div>
@@ -156,6 +168,7 @@ export function PayView() {
 // expose `BarcodeDetector` (e.g. Firefox / iOS Safari).
 // ============================================================
 function QrPay() {
+  const { t } = useTranslation();
   const { fmt, symbol, currency: userCur } = useFormatMoney();
   const [scanning, setScanning] = useState(false);
   const [found, setFound] = useState<any>(null);
@@ -417,7 +430,7 @@ function QrPay() {
                 <div className="text-center px-4">
                   <ScanLine className="mx-auto h-12 w-12 text-muted-foreground/40" />
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Point your camera at a GaexPay QR code
+                    {t("pay.scanInstructions")}
                   </p>
                 </div>
               </div>
@@ -433,11 +446,11 @@ function QrPay() {
 
           {scanning ? (
             <Button variant="outline" className="w-full rounded-xl" onClick={stopScan}>
-              <X className="h-4 w-4 mr-2" /> Stop Scanning
+              <X className="h-4 w-4 mr-2" /> {t("pay.stopScanning")}
             </Button>
           ) : (
             <Button className="w-full rounded-xl shadow-premium-sm h-12" onClick={startScan}>
-              <Camera className="h-4 w-4 mr-2" /> Start Scanning
+              <Camera className="h-4 w-4 mr-2" /> {t("pay.startScanning")}
             </Button>
           )}
 
@@ -448,13 +461,13 @@ function QrPay() {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">or enter code manually</span>
+                <span className="bg-card px-2 text-muted-foreground">{t("pay.orEnterCode", { defaultValue: "or enter code manually" })}</span>
               </div>
             </div>
             <div className="mt-3 flex gap-2">
               <Input
                 className="rounded-xl"
-                placeholder="Merchant ID, QR code, or URL"
+                placeholder={t("pay.merchantId", { defaultValue: "Merchant ID, QR code, or URL" })}
                 value={manualCode}
                 onChange={(e) => setManualCode(e.target.value)}
                 onKeyDown={(e) => {
@@ -474,7 +487,7 @@ function QrPay() {
                   }
                 }}
               >
-                Look up
+                {t("common.search", { defaultValue: "Look up" })}
               </Button>
             </div>
           </div>
@@ -494,9 +507,9 @@ function QrPay() {
                 setError(null);
               }}
             >
-              <ArrowLeft className="h-4 w-4 mr-1" /> Back
+              <ArrowLeft className="h-4 w-4 mr-1" /> {t("common.back")}
             </Button>
-            <h3 className="font-semibold">Confirm Payment</h3>
+            <h3 className="font-semibold">{t("pay.confirmPayment")}</h3>
             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={reset}>
               <X className="h-4 w-4" />
             </Button>
@@ -507,7 +520,7 @@ function QrPay() {
             </div>
             <p className="font-semibold">{found.name}</p>
             <p className="text-xs capitalize text-muted-foreground">
-              Merchant · {found.category}
+              {t("nav.merchantDashboard", { defaultValue: "Merchant" })} · {found.category}
             </p>
             <div className="mt-1 flex items-center justify-center gap-1.5 text-xs">
               {found.rating > 0 && (
@@ -518,20 +531,20 @@ function QrPay() {
               )}
               {found.manual ? (
                 <Badge variant="outline" className="border-amber-500/40 text-[10px] text-amber-600 dark:text-amber-400 rounded-full">
-                  Unverified
+                  {t("pay.unverified", { defaultValue: "Unverified" })}
                 </Badge>
               ) : (
-                <span className="text-emerald-600 dark:text-emerald-400 font-medium">Verified Merchant</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-medium">{t("pay.verifiedMerchant")}</span>
               )}
             </div>
             {found.account && (
               <p className="mt-2 font-mono text-xs text-muted-foreground">
-                Account: {found.account}
+                {t("pay.accountNumber", { defaultValue: "Account" })}: {found.account}
               </p>
             )}
           </div>
           <div className="mt-4 space-y-2">
-            <Label>Amount to pay ({userCur})</Label>
+            <Label>{t("pay.amountToPay")} ({userCur})</Label>
             <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-center">
               <div className="flex items-center justify-center gap-1">
                 <span className="text-lg text-muted-foreground">{symbol}</span>
@@ -586,9 +599,9 @@ function QrPay() {
             >
               <Check className="h-8 w-8" strokeWidth={3} />
             </motion.div>
-            <h3 className="text-xl font-bold">Payment Successful</h3>
+            <h3 className="text-xl font-bold">{t("pay.paymentSuccess", { defaultValue: "Payment Successful" })}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              {fmt(done.amount)} paid to {done.merchant}
+              {t("pay.paidTo", { amount: fmt(done.amount), to: done.merchant, defaultValue: `${fmt(done.amount)} paid to ${done.merchant}` })}
             </p>
           </div>
 
@@ -624,10 +637,10 @@ function QrPay() {
               className="flex-1 rounded-xl"
               onClick={() => window.print()}
             >
-              <Printer className="h-4 w-4 mr-2" /> Print
+              <Printer className="h-4 w-4 mr-2" /> {t("statement.print", { defaultValue: "Print" })}
             </Button>
             <Button className="flex-1 rounded-xl shadow-premium-sm" onClick={reset}>
-              <RefreshCw className="h-4 w-4 mr-2" /> New Payment
+              <RefreshCw className="h-4 w-4 mr-2" /> {t("common.add", { defaultValue: "New Payment" })}
             </Button>
           </div>
         </motion.div>
@@ -666,7 +679,7 @@ function MerchantsPay() {
   const merchants = data?.merchants ?? [];
   return (
     <div>
-      <p className="mb-3 text-sm text-muted-foreground">Browse and pay verified merchants</p>
+      <p className="mb-3 text-sm text-muted-foreground">{t("pay.browseMerchants", { defaultValue: "Browse and pay verified merchants" })}</p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {merchants.length === 0 &&
           [1, 2, 3].map((i) => <Skeleton key={i} className="h-28" />)}
@@ -847,9 +860,9 @@ function BillsPay() {
             >
               <Check className="h-8 w-8" strokeWidth={3} />
             </motion.div>
-            <h3 className="text-xl font-bold">Bill Payment Successful</h3>
+            <h3 className="text-xl font-bold">{t("pay.paymentSuccess", { defaultValue: "Bill Payment Successful" })}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              {fmt(receipt.amount)} paid to {receipt.billerName}
+              {t("pay.paidTo", { amount: fmt(receipt.amount), to: receipt.billerName, defaultValue: `${fmt(receipt.amount)} paid to ${receipt.billerName}` })}
             </p>
           </div>
 
@@ -891,10 +904,10 @@ function BillsPay() {
 
           <div className="mt-4 flex gap-2">
             <Button variant="outline" className="flex-1 rounded-xl" onClick={() => window.print()}>
-              <Printer className="h-4 w-4 mr-2" /> Print
+              <Printer className="h-4 w-4 mr-2" /> {t("statement.print", { defaultValue: "Print" })}
             </Button>
             <Button className="flex-1 rounded-xl shadow-premium-sm" onClick={resetForm}>
-              <Receipt className="h-4 w-4 mr-2" /> Pay Another
+              <Receipt className="h-4 w-4 mr-2" /> {t("pay.payBill", { defaultValue: "Pay Another" })}
             </Button>
           </div>
         </motion.div>
@@ -1230,7 +1243,7 @@ function BillsPay() {
 // AirtimePay — Airtime + Data tabs (real POST through
 // /api/pay-merchant with type airtime/data).
 // ============================================================
-function AirtimePay() {
+function AirtimePay({ country }: { country?: string }) {
   return (
     <Tabs defaultValue="airtime">
       <TabsList className="grid w-full grid-cols-2 h-auto">
@@ -1242,19 +1255,20 @@ function AirtimePay() {
         </TabsTrigger>
       </TabsList>
       <TabsContent value="airtime" className="mt-4">
-        <AirtimeForm />
+        <AirtimeForm country={country} />
       </TabsContent>
       <TabsContent value="data" className="mt-4">
-        <DataForm />
+        <DataForm country={country} />
       </TabsContent>
     </Tabs>
   );
 }
 
-function NetworkPicker({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
+function NetworkPicker({ value, onChange, disabled, country }: { value: string; onChange: (v: string) => void; disabled?: boolean; country?: string }) {
+  const networks = getAvailableMobileMoneyProviders(country);
   return (
     <div className="grid grid-cols-4 gap-2">
-      {NETWORKS.map((n) => (
+      {networks.map((n) => (
         <button
           key={n.id}
           onClick={() => onChange(n.id)}
@@ -1274,9 +1288,9 @@ function NetworkPicker({ value, onChange, disabled }: { value: string; onChange:
   );
 }
 
-function AirtimeForm() {
+function AirtimeForm({ country }: { country?: string }) {
   const { fmt, symbol, currency: userCur } = useFormatMoney();
-  const [network, setNetwork] = useState("mtn");
+  const [network, setNetwork] = useState(getAvailableMobileMoneyProviders(country)[0]?.id || "mtn");
   const [phone, setPhone] = useState("");
   const [amount, setAmount] = useState("");
   const [paying, setPaying] = useState(false);
@@ -1363,7 +1377,7 @@ function AirtimeForm() {
       <div className="space-y-4">
         <div>
           <Label className="mb-2 block">Select Network</Label>
-          <NetworkPicker value={network} onChange={setNetwork} />
+          <NetworkPicker value={network} onChange={setNetwork} country={country} />
         </div>
         <div className="space-y-2">
           <Label>Phone Number</Label>
@@ -1424,9 +1438,9 @@ function AirtimeForm() {
   );
 }
 
-function DataForm() {
+function DataForm({ country }: { country?: string }) {
   const { fmt, symbol, currency: userCur } = useFormatMoney();
-  const [network, setNetwork] = useState("mtn");
+  const [network, setNetwork] = useState(getAvailableMobileMoneyProviders(country)[0]?.id || "mtn");
   const [phone, setPhone] = useState("");
   const [plan, setPlan] = useState<string>("");
   const [paying, setPaying] = useState(false);
@@ -1518,7 +1532,7 @@ function DataForm() {
       <div className="space-y-4">
         <div>
           <Label className="mb-2 block">Select Network</Label>
-          <NetworkPicker value={network} onChange={setNetwork} />
+          <NetworkPicker value={network} onChange={setNetwork} country={country} />
         </div>
         <div className="space-y-2">
           <Label>Phone Number</Label>

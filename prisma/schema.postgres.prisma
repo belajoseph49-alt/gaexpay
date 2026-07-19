@@ -335,6 +335,7 @@ model Merchant {
   approvedBy String?
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
+  invoices  Invoice[]
 
   @@index([status, createdAt])
   @@index([category])
@@ -829,4 +830,26 @@ model Session {
   @@index([userId])
   @@index([jti])
   @@index([expiresAt])
+}
+
+// ============================================================
+// Merchant Billing (Facturation)
+// ============================================================
+model Invoice {
+  id            String   @id @default(cuid())
+  merchantId    String
+  merchant      Merchant @relation(fields: [merchantId], references: [id])
+  amount        Decimal  @db.Decimal(18, 4)
+  currency      String   @default("NGN")
+  description   String
+  status        String   @default("pending") // pending | paid | cancelled
+  customerName  String?
+  customerEmail String?
+  dueDate       DateTime?
+  paidAt        DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([merchantId, createdAt])
+  @@index([status])
 }

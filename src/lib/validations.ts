@@ -47,6 +47,7 @@ export const recipientSchema = z.object({
   account: z.string().min(1).max(50),
   bank: z.string().max(100).optional(),
   phone: phoneSchema.optional(),
+  gaexpayUserId: z.string().optional(),
 });
 
 // ---------- Composed schemas ----------

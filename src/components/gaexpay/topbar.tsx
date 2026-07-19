@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
 import { LANGUAGE_BY_CODE } from "@/lib/i18n/translations";
+import { useLocale } from "next-intl";
 
 interface CurrentUser {
   id: string;
@@ -31,7 +32,9 @@ interface CurrentUser {
 }
 
 export function Topbar() {
-  const { setAiOpen, setView, userCurrency, setCurrencyPickerOpen, language, setLanguagePickerOpen } = useApp();
+  const { setAiOpen, setView, userCurrency, setCurrencyPickerOpen, setLanguagePickerOpen } = useApp();
+  const locale = useLocale();
+  const language = locale;
   const { t } = useTranslation();
   const { data } = useFetch<{ unread: number; notifications: any[] }>("/api/notifications");
   const { data: meData } = useFetch<{ user: CurrentUser }>("/api/me");

@@ -1,120 +1,53 @@
-# ============================================================
-# GaexPay — Local / Staging orchestration
-#
-#   • app       — Next.js 16 standalone server (this repo)
-#   • postgres  — PostgreSQL 16 (production data store)
-#   • redis     — Redis 7 (rate-limit + cache)
-#   • caddy     — Reverse proxy + automatic HTTPS
-#
-# Usage:
-#   cp .env.example .env  &&  edit values
-#   docker compose up -d
-# ============================================================
+version: '3.8'
 
-# Use the local Dockerfile for the app service
 services:
-  app:
+  web:
     build:
       context: .
       dockerfile: Dockerfile
-    image: gaexpay/app:latest
-    container_name: gaexpay-app
-    restart: unless-stopped
+    ports:
+      - "3005:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/gaexpay?schema=public
+      - DIRECT_URL=postgresql://postgres:password@db:5432/gaexpay?schema=public
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=production
+      - GAEXPAY_JWT_SECRET=super_secret_jwt_key_that_is_32_characters_long_min
+      - GAEXPAY_ENC_KEY=super_secret_enc_key_that_is_32_characters_long_min
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
       redis:
-        condition: service_started
-    env_file:
-      - .env
-    environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - HOSTNAME=0.0.0.0
-      - DATABASE_URL=postgresql://gaexpay:${POSTGRES_PASSWORD:?err}@postgres:5432/${POSTGRES_DB:-gaexpay}?schema=public
-      - DIRECT_URL=postgresql://gaexpay:${POSTGRES_PASSWORD:?err}@postgres:5432/${POSTGRES_DB:-gaexpay}?schema=public
-      - REDIS_URL=redis://redis:6379/0
-    ports:
-      - "3000:3000"   # exposed for direct inspection; Caddy proxies :80/:443
-    networks:
-      - gaexpay-net
-    healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+        condition: service_healthy
 
-  postgres:
-    image: postgres:16-alpine
-    container_name: gaexpay-postgres
-    restart: unless-stopped
+  db:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-gaexpay}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?err}
-      - POSTGRES_DB=${POSTGRES_DB:-gaexpay}
-      - PGDATA=/var/lib/postgresql/data/pgdata
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=gaexpay
     volumes:
-      - postgres-data:/var/lib/postgresql/data
-    # Do NOT publish 5432 publicly in production — uncomment for local debugging.
-    # ports:
-    #   - "5432:5432"
-    networks:
-      - gaexpay-net
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gaexpay} -d ${POSTGRES_DB:-gaexpay}"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 10s
 
   redis:
     image: redis:7-alpine
-    container_name: gaexpay-redis
-    restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "6379:6379"
     volumes:
-      - redis-data:/data
-    # ports:
-    #   - "6379:6379"
-    networks:
-      - gaexpay-net
+      - redisdata:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
+      interval: 5s
+      timeout: 5s
       retries: 5
 
-  caddy:
-    image: caddy:2-alpine
-    container_name: gaexpay-caddy
-    restart: unless-stopped
-    depends_on:
-      - app
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"   # HTTP/3
-    volumes:
-      - ./Caddyfile.production:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
-    environment:
-      - ACME_AGREE=true
-    networks:
-      - gaexpay-net
-
 volumes:
-  postgres-data:
-    name: gaexpay-postgres-data
-  redis-data:
-    name: gaexpay-redis-data
-  caddy-data:
-    name: gaexpay-caddy-data
-  caddy-config:
-    name: gaexpay-caddy-config
-
-networks:
-  gaexpay-net:
-    name: gaexpay-net
-    driver: bridge
+  pgdata:
+  redisdata:

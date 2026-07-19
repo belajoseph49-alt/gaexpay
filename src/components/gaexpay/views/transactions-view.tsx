@@ -186,9 +186,9 @@ export function TransactionsView() {
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t("transactions.title")}</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t("nav.transactions", { defaultValue: "Transactions" })}</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            {loading ? "Loading your activity…" : `${filtered.length} transactions found`}
+            {loading ? t("transactions.loading", { defaultValue: "Loading your activity…" }) : t("transactions.found", { count: filtered.length, defaultValue: `${filtered.length} transactions found` })}
           </p>
         </div>
         <div className="flex gap-2">
@@ -208,7 +208,7 @@ export function TransactionsView() {
             className="h-9 rounded-xl"
             onClick={() => window.open("/api/export?format=csv&days=90", "_blank")}
           >
-            <Download className="h-4 w-4 mr-1.5" /> Export CSV
+            <Download className="h-4 w-4 mr-1.5" /> {t("transactions.export", { defaultValue: "Export CSV" })}
           </Button>
         </div>
       </div>
@@ -222,11 +222,11 @@ export function TransactionsView() {
                 <ArrowDownRight className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Total In</p>
+                <p className="text-xs text-muted-foreground">{t("transactions.totalIn", { defaultValue: "Total In" })}</p>
                 <p className="text-lg font-bold tabular-nums truncate">{fmt(totalIn)}</p>
               </div>
             </div>
-            <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 shrink-0 text-[9px]">credit</Badge>
+            <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 shrink-0 text-[9px]">{t("transactions.credit", { defaultValue: "credit" })}</Badge>
           </div>
         </Card>
         <Card className="p-4 sm:p-5 card-lift border-border/60 shadow-premium-sm">
@@ -236,11 +236,11 @@ export function TransactionsView() {
                 <ArrowUpRight className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Total Out</p>
+                <p className="text-xs text-muted-foreground">{t("transactions.totalOut", { defaultValue: "Total Out" })}</p>
                 <p className="text-lg font-bold tabular-nums truncate">{fmt(totalOut)}</p>
               </div>
             </div>
-            <Badge variant="outline" className="text-rose-600 border-rose-500/30 shrink-0 text-[9px]">debit</Badge>
+            <Badge variant="outline" className="text-rose-600 border-rose-500/30 shrink-0 text-[9px]">{t("transactions.debit", { defaultValue: "debit" })}</Badge>
           </div>
         </Card>
         <Card className="p-4 sm:p-5 card-lift border-border/60 shadow-premium-sm">
@@ -255,7 +255,7 @@ export function TransactionsView() {
                 <TrendingUp className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Net Flow</p>
+                <p className="text-xs text-muted-foreground">{t("transactions.netFlow", { defaultValue: "Net Flow" })}</p>
                 <p
                   className={cn(
                     "text-lg font-bold tabular-nums truncate",
@@ -266,7 +266,7 @@ export function TransactionsView() {
                 </p>
               </div>
             </div>
-            <Badge variant="outline" className="text-muted-foreground shrink-0 text-[9px]">net</Badge>
+            <Badge variant="outline" className="text-muted-foreground shrink-0 text-[9px]">{t("transactions.net", { defaultValue: "net" })}</Badge>
           </div>
         </Card>
       </div>
@@ -288,7 +288,7 @@ export function TransactionsView() {
                     : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
-                {q.label}
+                {t(`transactions.filter_${q.id}`, { defaultValue: q.label })}
               </button>
             );
           })}
@@ -299,7 +299,7 @@ export function TransactionsView() {
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search name, description, reference…"
+              placeholder={t("transactions.search", { defaultValue: "Search name, description, reference…" })}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="h-10 rounded-xl pl-9"
@@ -308,7 +308,7 @@ export function TransactionsView() {
           <Select value={type} onValueChange={(v) => { setType(v); setDirection("all"); }}>
             <SelectTrigger className="h-10 w-[140px] rounded-xl"><Filter className="h-4 w-4 mr-1.5" /><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="all">{t("transactions.allTypes", { defaultValue: "All Types" })}</SelectItem>
               <SelectItem value="transfer">Transfer</SelectItem>
               <SelectItem value="deposit">Deposit</SelectItem>
               <SelectItem value="withdrawal">Withdrawal</SelectItem>
@@ -322,7 +322,7 @@ export function TransactionsView() {
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="h-10 w-[140px] rounded-xl"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="all">{t("transactions.allStatus", { defaultValue: "All Status" })}</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="failed">Failed</SelectItem>
@@ -335,7 +335,7 @@ export function TransactionsView() {
             className="h-10 rounded-xl"
             onClick={() => setShowDateFilter(!showDateFilter)}
           >
-            <Calendar className="h-4 w-4 mr-1.5" /> Date
+            <Calendar className="h-4 w-4 mr-1.5" /> {t("transactions.date", { defaultValue: "Date" })}
             {(dateFrom || dateTo) && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-white" />}
           </Button>
           {(dateFrom || dateTo || type !== "all" || status !== "all" || direction !== "all" || search) && (
@@ -348,18 +348,18 @@ export function TransactionsView() {
                 setDirection("all"); setSearch("");
               }}
             >
-              <X className="h-3.5 w-3.5" /> Clear
+              <X className="h-3.5 w-3.5" /> {t("common.cancel", { defaultValue: "Clear" })}
             </Button>
           )}
         </div>
         {showDateFilter && (
           <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-border/60 pt-3">
             <div className="space-y-1">
-              <Label className="text-xs">From Date</Label>
+              <Label className="text-xs">{t("transactions.fromDate", { defaultValue: "From Date" })}</Label>
               <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-auto h-9 rounded-xl" />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">To Date</Label>
+              <Label className="text-xs">{t("transactions.toDate", { defaultValue: "To Date" })}</Label>
               <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-auto h-9 rounded-xl" />
             </div>
             <div className="flex gap-1">
@@ -417,14 +417,14 @@ export function TransactionsView() {
               <div className="grid h-16 w-16 place-items-center rounded-full bg-primary/10 text-primary mb-4">
                 <Inbox className="h-7 w-7" />
               </div>
-              <p className="text-base font-semibold">No transactions yet</p>
+              <p className="text-base font-semibold">{t("transactions.emptyTitle", { defaultValue: "No transactions yet" })}</p>
               <p className="mt-1 text-sm text-muted-foreground max-w-xs">
                 {search || type !== "all" || status !== "all" || direction !== "all" || dateFrom || dateTo
-                  ? "No transactions match your current filters. Try adjusting or clearing them."
-                  : "Send your first payment or top up your wallet to get started."}
+                  ? t("transactions.emptySearch", { defaultValue: "No transactions match your current filters. Try adjusting or clearing them." })
+                  : t("transactions.emptySubtitle", { defaultValue: "Send your first payment or top up your wallet to get started." })}
               </p>
               <Button className="mt-5 h-10 rounded-xl shadow-premium-sm" onClick={() => setView("send")}>
-                <ArrowRight className="h-4 w-4 mr-1.5" /> Send Money
+                <ArrowRight className="h-4 w-4 mr-1.5" /> {t("common.send", { defaultValue: "Send Money" })}
               </Button>
             </div>
           </Card>
@@ -435,7 +435,7 @@ export function TransactionsView() {
               <div className="sticky top-0 z-10 -mx-1 mb-2 px-1">
                 <div className="inline-block rounded-full bg-background/80 px-3 py-1 backdrop-blur">
                   <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {label} · {items.length}
+                    {t(`transactions.date_${label.toLowerCase().replace(' ', '_')}`, { defaultValue: label })} · {items.length}
                   </span>
                 </div>
               </div>
@@ -503,7 +503,7 @@ export function TransactionsView() {
       <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
         <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Transaction Details</DialogTitle>
+            <DialogTitle>{t("transactions.detailsTitle", { defaultValue: "Transaction Details" })}</DialogTitle>
           </DialogHeader>
           {selected && (
             <div className="space-y-4">
@@ -533,24 +533,24 @@ export function TransactionsView() {
                 </span>
               </div>
               <div className="space-y-2 rounded-xl border border-border/60 bg-muted/30 p-4 text-sm">
-                <DetailRow label="Reference" value={selected.reference} mono />
-                <DetailRow label="Type" value={selected.type} />
-                <DetailRow label="Category" value={selected.category} />
-                <DetailRow label="Description" value={selected.description} />
-                <DetailRow label="Counterparty" value={selected.counterpartyName || "—"} />
-                {selected.counterpartyAccount && <DetailRow label="Account" value={selected.counterpartyAccount} />}
-                {selected.counterpartyBank && <DetailRow label="Bank/Provider" value={selected.counterpartyBank} />}
-                <DetailRow label="Method" value={selected.method} />
-                {selected.provider && <DetailRow label="Provider" value={selected.provider} />}
-                <DetailRow label="Fee" value={formatMoney(selected.fee, selected.currency)} />
-                <DetailRow label="Date" value={formatDateTime(selected.createdAt)} />
-                {selected.completedAt && <DetailRow label="Completed" value={formatDateTime(selected.completedAt)} />}
-                {selected.riskScore > 0.5 && <DetailRow label="Risk Score" value={`${(selected.riskScore * 100).toFixed(0)}%`} />}
+                <DetailRow label={t("transactions.reference", { defaultValue: "Reference" })} value={selected.reference} mono />
+                <DetailRow label={t("transactions.type", { defaultValue: "Type" })} value={selected.type} />
+                <DetailRow label={t("transactions.category", { defaultValue: "Category" })} value={selected.category} />
+                <DetailRow label={t("transactions.description", { defaultValue: "Description" })} value={selected.description} />
+                <DetailRow label={t("transactions.counterparty", { defaultValue: "Counterparty" })} value={selected.counterpartyName || "—"} />
+                {selected.counterpartyAccount && <DetailRow label={t("transactions.account", { defaultValue: "Account" })} value={selected.counterpartyAccount} />}
+                {selected.counterpartyBank && <DetailRow label={t("transactions.bankProvider", { defaultValue: "Bank/Provider" })} value={selected.counterpartyBank} />}
+                <DetailRow label={t("transactions.method", { defaultValue: "Method" })} value={selected.method} />
+                {selected.provider && <DetailRow label={t("transactions.provider", { defaultValue: "Provider" })} value={selected.provider} />}
+                <DetailRow label={t("transactions.fee", { defaultValue: "Fee" })} value={formatMoney(selected.fee, selected.currency)} />
+                <DetailRow label={t("transactions.date", { defaultValue: "Date" })} value={formatDateTime(selected.createdAt)} />
+                {selected.completedAt && <DetailRow label={t("transactions.completed", { defaultValue: "Completed" })} value={formatDateTime(selected.completedAt)} />}
+                {selected.riskScore > 0.5 && <DetailRow label={t("transactions.riskScore", { defaultValue: "Risk Score" })} value={`${(selected.riskScore * 100).toFixed(0)}%`} />}
               </div>
 
               {/* Tags */}
               <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">Tags</p>
+                <p className="text-xs font-medium text-muted-foreground mb-2">{t("transactions.tags", { defaultValue: "Tags" })}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {tags.map((tag) => {
                     const active = txTags.includes(tag.id);
@@ -576,7 +576,7 @@ export function TransactionsView() {
 
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1 rounded-xl" type="button">
-                  <Download className="h-4 w-4 mr-1.5" /> Receipt
+                  <Download className="h-4 w-4 mr-1.5" /> {t("transactions.receipt", { defaultValue: "Receipt" })}
                 </Button>
                 {selected.direction === "debit" && selected.status === "completed" && (
                   <Button
@@ -585,7 +585,7 @@ export function TransactionsView() {
                     type="button"
                     onClick={() => { setSelected(null); setView("send"); }}
                   >
-                    <Repeat className="h-4 w-4 mr-1.5" /> Send Again
+                    <Repeat className="h-4 w-4 mr-1.5" /> {t("transactions.sendAgain", { defaultValue: "Send Again" })}
                   </Button>
                 )}
                 <Button
@@ -598,7 +598,7 @@ export function TransactionsView() {
                     setTimeout(() => setDisputeTx(tx), 100);
                   }}
                 >
-                  <AlertTriangle className="h-4 w-4 mr-1.5" /> Dispute
+                  <AlertTriangle className="h-4 w-4 mr-1.5" /> {t("transactions.dispute", { defaultValue: "Dispute" })}
                 </Button>
               </div>
             </div>
@@ -617,11 +617,11 @@ export function TransactionsView() {
       <Dialog open={showDisputes} onOpenChange={setShowDisputes}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
-            <DialogTitle>My Disputes</DialogTitle>
+            <DialogTitle>{t("transactions.myDisputes", { defaultValue: "My Disputes" })}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
             {disputesData?.disputes?.length === 0 && (
-              <div className="py-8 text-center text-sm text-muted-foreground">No disputes filed</div>
+              <div className="py-8 text-center text-sm text-muted-foreground">{t("transactions.noDisputes", { defaultValue: "No disputes filed" })}</div>
             )}
             {disputesData?.disputes?.map((d) => (
               <div key={d.id} className="rounded-xl border border-border/60 p-3">
@@ -640,7 +640,7 @@ export function TransactionsView() {
                 </div>
                 <p className="text-sm font-medium capitalize">{d.reason.replace(/_/g, " ")}</p>
                 <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{d.description}</p>
-                <p className="text-[10px] text-muted-foreground mt-1">Filed {timeAgo(d.createdAt)}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{t("transactions.filed", { defaultValue: "Filed" })} {timeAgo(d.createdAt)}</p>
               </div>
             ))}
           </div>
@@ -660,15 +660,16 @@ function DetailRow({ label, value, mono }: { label: string; value: string; mono?
 }
 
 const DISPUTE_REASONS = [
-  { id: "unauthorized", label: "Unauthorized transaction", desc: "I didn't authorize this payment" },
-  { id: "failed_not_received", label: "Payment not received", desc: "Recipient didn't get the funds" },
-  { id: "wrong_amount", label: "Wrong amount", desc: "The amount charged is incorrect" },
-  { id: "duplicate", label: "Duplicate charge", desc: "I was charged more than once" },
-  { id: "merchant_issue", label: "Merchant issue", desc: "Goods/services not delivered" },
-  { id: "other", label: "Other", desc: "Something else" },
+  { id: "unauthorized", tLabel: "transactions.dispute_unauthorized", tDesc: "transactions.dispute_unauthorized_desc", fallbackLabel: "Unauthorized transaction", fallbackDesc: "I didn't authorize this payment" },
+  { id: "failed_not_received", tLabel: "transactions.dispute_failed", tDesc: "transactions.dispute_failed_desc", fallbackLabel: "Payment not received", fallbackDesc: "Recipient didn't get the funds" },
+  { id: "wrong_amount", tLabel: "transactions.dispute_wrong_amount", tDesc: "transactions.dispute_wrong_amount_desc", fallbackLabel: "Wrong amount", fallbackDesc: "The amount charged is incorrect" },
+  { id: "duplicate", tLabel: "transactions.dispute_duplicate", tDesc: "transactions.dispute_duplicate_desc", fallbackLabel: "Duplicate charge", fallbackDesc: "I was charged more than once" },
+  { id: "merchant_issue", tLabel: "transactions.dispute_merchant", tDesc: "transactions.dispute_merchant_desc", fallbackLabel: "Merchant issue", fallbackDesc: "Goods/services not delivered" },
+  { id: "other", tLabel: "transactions.dispute_other", tDesc: "transactions.dispute_other_desc", fallbackLabel: "Other", fallbackDesc: "Something else" },
 ];
 
 function DisputeDialog({ tx, onClose, onSubmitted }: { tx: any; onClose: () => void; onSubmitted: () => void }) {
+  const t = useTranslations();
   const [reason, setReason] = useState("unauthorized");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("medium");
@@ -691,13 +692,13 @@ function DisputeDialog({ tx, onClose, onSubmitted }: { tx: any; onClose: () => v
         }),
       });
       if (res.ok) {
-        toast.success("Dispute filed successfully. We'll review it within 48 hours.");
+        toast.success(t("transactions.disputeSuccess", { defaultValue: "Dispute filed successfully. We'll review it within 48 hours." }));
         onSubmitted();
       } else {
-        toast.error("Failed to file dispute");
+        toast.error(t("transactions.disputeFailed", { defaultValue: "Failed to file dispute" }));
       }
     } catch {
-      toast.error("Something went wrong");
+      toast.error(t("common.error", { defaultValue: "Something went wrong" }));
     } finally {
       setLoading(false);
     }
@@ -708,27 +709,27 @@ function DisputeDialog({ tx, onClose, onSubmitted }: { tx: any; onClose: () => v
       <DialogContent className="max-w-md rounded-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-500" /> File a Dispute
+            <AlertTriangle className="h-5 w-5 text-amber-500" /> {t("transactions.fileDispute", { defaultValue: "File a Dispute" })}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Transaction</span>
+              <span className="text-xs text-muted-foreground">{t("transactions.transaction", { defaultValue: "Transaction" })}</span>
               <span className="font-mono text-xs">{tx.reference}</span>
             </div>
             <div className="flex items-center justify-between mt-1">
-              <span className="text-xs text-muted-foreground">Amount</span>
+              <span className="text-xs text-muted-foreground">{t("transactions.amount", { defaultValue: "Amount" })}</span>
               <span className="font-semibold">{formatMoney(tx.amount, tx.currency)}</span>
             </div>
             <div className="flex items-center justify-between mt-1">
-              <span className="text-xs text-muted-foreground">Date</span>
+              <span className="text-xs text-muted-foreground">{t("transactions.date", { defaultValue: "Date" })}</span>
               <span className="text-xs">{formatDateTime(tx.createdAt)}</span>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Reason</Label>
+            <Label>{t("transactions.reason", { defaultValue: "Reason" })}</Label>
             <div className="space-y-1.5 max-h-48 overflow-y-auto">
               {DISPUTE_REASONS.map((r) => (
                 <button
@@ -743,8 +744,8 @@ function DisputeDialog({ tx, onClose, onSubmitted }: { tx: any; onClose: () => v
                     {reason === r.id && <div className="h-2 w-2 rounded-full bg-primary" />}
                   </div>
                   <div>
-                    <p className="text-sm font-medium">{r.label}</p>
-                    <p className="text-xs text-muted-foreground">{r.desc}</p>
+                    <p className="text-sm font-medium">{t(r.tLabel, { defaultValue: r.fallbackLabel })}</p>
+                    <p className="text-xs text-muted-foreground">{t(r.tDesc, { defaultValue: r.fallbackDesc })}</p>
                   </div>
                 </button>
               ))}
@@ -752,41 +753,41 @@ function DisputeDialog({ tx, onClose, onSubmitted }: { tx: any; onClose: () => v
           </div>
 
           <div className="space-y-2">
-            <Label>Describe the issue</Label>
+            <Label>{t("transactions.describeIssue", { defaultValue: "Describe the issue" })}</Label>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Please provide details about what happened..."
+              placeholder={t("transactions.describeIssuePlaceholder", { defaultValue: "Please provide details about what happened..." })}
               rows={3}
               className="rounded-xl"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Priority</Label>
+            <Label>{t("transactions.priority", { defaultValue: "Priority" })}</Label>
             <Select value={priority} onValueChange={setPriority}>
               <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="low">{t("transactions.priorityLow", { defaultValue: "Low" })}</SelectItem>
+                <SelectItem value="medium">{t("transactions.priorityMedium", { defaultValue: "Medium" })}</SelectItem>
+                <SelectItem value="high">{t("transactions.priorityHigh", { defaultValue: "High" })}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="flex items-start gap-2 rounded-xl bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
             <FileText className="h-4 w-4 shrink-0 mt-0.5" />
-            <span>Our team will review your dispute within 48 hours. You'll receive updates via email and in-app notifications. Filing a dispute doesn't guarantee a refund.</span>
+            <span>{t("transactions.disputeDisclaimer", { defaultValue: "Our team will review your dispute within 48 hours. You'll receive updates via email and in-app notifications. Filing a dispute doesn't guarantee a refund." })}</span>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" className="rounded-xl" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" className="rounded-xl" onClick={onClose}>{t("common.cancel", { defaultValue: "Cancel" })}</Button>
           <Button
             onClick={submit}
             disabled={!description.trim() || loading}
             className="rounded-xl bg-amber-600 hover:bg-amber-700"
           >
-            {loading ? "Filing..." : "File Dispute"}
+            {loading ? t("transactions.filing", { defaultValue: "Filing..." }) : t("transactions.fileDisputeBtn", { defaultValue: "File Dispute" })}
           </Button>
         </DialogFooter>
       </DialogContent>

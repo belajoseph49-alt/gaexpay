@@ -75,7 +75,7 @@ export async function POST(
     if (!userId) return apiError("Unauthorized", 401);
 
     const identifier = getClientIdentifier(req, userId);
-    const rl = rateLimitSensitive(identifier);
+    const rl = await rateLimitSensitive(identifier);
     if (!rl.success) return apiRateLimited(rl.retryAfterMs);
 
     const { id } = await params;

@@ -14,7 +14,7 @@
  * If English is also missing, the raw key is returned (visible to devs).
  */
 
-import { useApp } from "@/lib/store";
+import { useLocale } from "next-intl";
 import {
   translations,
   DEFAULT_LANGUAGE,
@@ -22,14 +22,19 @@ import {
 } from "@/lib/i18n/translations";
 
 export function useTranslation() {
-  const language = useApp((s) => s.language) as LanguageCode;
+  const locale = useLocale() as LanguageCode;
+  const language = locale;
 
   const dict = translations[language] || translations[DEFAULT_LANGUAGE];
 
-  const t = (key: string, params?: Record<string, string | number>): string => {
-    let text = dict[key] ?? translations[DEFAULT_LANGUAGE][key] ?? key;
+  const t = (key: string, params?: Record<string, string | number> & { defaultValue?: string }): string => {
+    let text = dict[key] ?? translations[DEFAULT_LANGUAGE][key];
+    if (text === undefined) {
+      text = params?.defaultValue ?? key;
+    }
     if (params) {
       for (const [k, v] of Object.entries(params)) {
+        if (k === "defaultValue") continue;
         text = text.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
       }
     }

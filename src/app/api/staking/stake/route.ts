@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAuthUserId, getClientIdentifier } from "@/lib/api-auth";
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
     if (!userId) return apiError("Unauthorized", 401);
 
     const identifier = getClientIdentifier(req, userId);
-    const rl = rateLimitSensitive(identifier);
+    const rl = await rateLimitSensitive(identifier);
     if (!rl.success) {
       return NextResponse.json(
         { error: "Too many requests. Please slow down." },

@@ -64,7 +64,7 @@ export async function POST(req: Request) {
 
     // ---------- Rate limit ----------
     const identifier = getClientIdentifier(req, userId);
-    const rl = rateLimitSensitive(identifier);
+    const rl = await rateLimitSensitive(identifier);
     if (!rl.success) {
       return NextResponse.json(
         { error: "Too many cashout requests. Please slow down." },

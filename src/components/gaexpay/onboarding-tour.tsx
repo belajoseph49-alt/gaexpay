@@ -20,8 +20,8 @@ const TOUR_STEPS = [
   },
   {
     icon: SendHorizontal,
-    title: "Send & Receive Money",
-    description: "Transfer money instantly to anyone — via bank, mobile money (MTN, Orange, Airtel), or GaexPay wallet. It's free between GaexPay users!",
+    title: "Action Hub",
+    description: "Easily send money to friends, request payments, or transfer to bank accounts, mobile money (MTN, Orange, Airtel), or GaexPay wallet. It's free between GaexPay users!",
     color: "from-sky-500 to-blue-600",
     action: "send" as any,
   },

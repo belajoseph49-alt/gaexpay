@@ -512,7 +512,7 @@ export function KybView() {
                       <Input
                         value={company.companyName}
                         onChange={(e) => updateCompany({ companyName: e.target.value })}
-                        placeholder="Acme Holdings Ltd."
+                        placeholder="Your Company Ltd."
                         className="mt-1"
                       />
                     </div>

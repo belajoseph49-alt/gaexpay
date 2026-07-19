@@ -6,12 +6,16 @@ import {
   ArrowRight, Shield, Zap, Globe, Smartphone, CreditCard, QrCode,
   Users, Star, Fingerprint, Sparkles, TrendingUp, Wallet,
   SendHorizontal, Coins, Lock, FileCheck, BadgeCheck,
-  Twitter, Github, Linkedin, Instagram, ChevronRight, Check,
+  Twitter, Github, Linkedin, Instagram, ChevronRight, Check, ArrowDownToLine,
 } from "lucide-react";
 import { Logo } from "./logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ThemeToggle } from "./theme-toggle";
+import { LanguageSwitcher } from "./language-switcher";
 import { CURRENCIES } from "@/lib/gaexpay";
+import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/use-translation";
 
 // Rotating "live" transactions used in the hero ticker.
 const LIVE_TX = [
@@ -91,6 +95,10 @@ function TrustStrip() {
 }
 
 export function Landing({ onEnter, onSignup }: { onEnter: () => void; onSignup: () => void }) {
+  const [activeMockTab, setActiveMockTab] = useState<"wallet" | "card" | "qr" | "ai">("wallet");
+  const [cardFrozen, setCardFrozen] = useState(false);
+  const { t } = useTranslation();
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       {/* Header — premium glass */}
@@ -98,14 +106,16 @@ export function Landing({ onEnter, onSignup }: { onEnter: () => void; onSignup: 
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 lg:px-8">
           <Logo />
           <nav className="hidden items-center gap-7 text-sm font-medium text-muted-foreground md:flex">
-            <a href="#features" className="transition hover:text-foreground">Features</a>
-            <a href="#security" className="transition hover:text-foreground">Security</a>
-            <a href="#platforms" className="transition hover:text-foreground">Platforms</a>
-            <a href="#pi-network" className="transition hover:text-foreground">Pi Network</a>
+            <a href="#features" className="transition hover:text-foreground">{t("landing.features")}</a>
+            <a href="#security" className="transition hover:text-foreground">{t("landing.security")}</a>
+            <a href="#platforms" className="transition hover:text-foreground">{t("landing.platforms")}</a>
+            <a href="#pi-network" className="transition hover:text-foreground">{t("landing.piNetwork")}</a>
           </nav>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="hidden sm:inline-flex rounded-xl" onClick={onEnter}>Sign in</Button>
-            <Button size="sm" className="rounded-xl shadow-premium-sm" onClick={onSignup}>Get Started <ArrowRight className="h-4 w-4 ml-1" /></Button>
+            <ThemeToggle />
+            <LanguageSwitcher />
+            <Button variant="ghost" size="sm" className="hidden sm:inline-flex rounded-xl" onClick={onEnter}>{t("landing.signIn")}</Button>
+            <Button size="sm" className="rounded-xl shadow-premium-sm" onClick={onSignup}>{t("landing.getStarted")} <ArrowRight className="h-4 w-4 ml-1" /></Button>
           </div>
         </div>
       </header>
@@ -114,27 +124,31 @@ export function Landing({ onEnter, onSignup }: { onEnter: () => void; onSignup: 
         {/* Hero — clean, airy, emerald accent */}
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 mesh-bg" />
-          <div className="relative mx-auto max-w-7xl px-4 py-16 lg:px-8 lg:py-24">
-            <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+          <div className="relative mx-auto max-w-7xl px-4 py-12 lg:px-8 lg:py-20">
+            <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-16">
               {/* Copy */}
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="lg:col-span-6"
+              >
                 <Badge className="mb-5 bg-primary/10 text-primary border-0 hover:bg-primary/15 rounded-full px-3 py-1">
-                  <Sparkles className="h-3 w-3 mr-1.5" /> Now with AI-powered assistant
+                  <Sparkles className="h-3 w-3 mr-1.5" /> {t("landing.aiPowered")}
                 </Badge>
                 <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-[3.5rem] lg:leading-[1.1]">
-                  Borderless money,<br />
-                  <span className="gradient-text">built for Africa.</span>
+                  {t("landing.heroTitle1")}<br />
+                  <span className="gradient-text">{t("landing.heroTitle2")}</span>
                 </h1>
                 <p className="mt-6 max-w-lg text-lg leading-relaxed text-muted-foreground">
-                  Send, spend, save and exchange across 9+ currencies. Instant mobile money,
-                  bank transfers, QR payments and virtual cards — all in one beautiful wallet.
+                  {t("landing.heroSubtitle")}
                 </p>
                 <div className="mt-8 flex flex-wrap gap-3">
                   <Button size="lg" onClick={onSignup} className="rounded-xl shadow-premium-md h-12 px-6">
-                    Get Started Free <ArrowRight className="h-4 w-4 ml-2" />
+                    {t("landing.getStartedFree")} <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                   <Button size="lg" variant="outline" className="rounded-xl h-12 px-6" onClick={onEnter}>
-                    Sign In / Live Demo
+                    {t("landing.signInLiveDemo")}
                   </Button>
                 </div>
                 {/* Social proof */}
@@ -147,11 +161,11 @@ export function Landing({ onEnter, onSignup }: { onEnter: () => void; onSignup: 
                         </div>
                       ))}
                     </div>
-                    <span>2M+ users</span>
+                    <span>{t("landing.users")}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="flex">{[1,2,3,4,5].map(i => <Star key={i} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />)}</div>
-                    <span>4.9 rating</span>
+                    <span>{t("landing.rating")}</span>
                   </div>
                 </div>
                 {/* Live activity */}
@@ -160,83 +174,288 @@ export function Landing({ onEnter, onSignup }: { onEnter: () => void; onSignup: 
                 <TrustStrip />
               </motion.div>
 
-              {/* Phone mockup — refined emerald gradient, soft float */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.92, rotate: 3 }}
-                animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                transition={{ delay: 0.2, duration: 0.6 }}
-                className="relative mx-auto"
-              >
+              {/* Interactive Phone mockup & Tab switcher */}
+              <div className="lg:col-span-6 flex flex-col sm:flex-row items-center justify-center gap-6">
+                {/* Vertical Tab Switcher (Floating Glass Dock) */}
+                <div className="flex sm:flex-col gap-2 p-1.5 rounded-2xl border border-border/60 bg-card/60 backdrop-blur-md shadow-premium-sm order-2 sm:order-1 max-w-full overflow-x-auto no-scrollbar">
+                  {[
+                    { id: "wallet", label: t("nav.wallets"), icon: Wallet },
+                    { id: "card", label: t("nav.cards"), icon: CreditCard },
+                    { id: "qr", label: t("common.scan"), icon: QrCode },
+                    { id: "ai", label: "Gaxie AI", icon: Sparkles },
+                  ].map((tab) => {
+                    const Icon = tab.icon;
+                    const active = activeMockTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveMockTab(tab.id as any)}
+                        className={cn(
+                          "flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition shrink-0",
+                          active
+                            ? "bg-primary text-primary-foreground shadow-premium-xs"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                        )}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span className="hidden md:inline">{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Phone shell */}
                 <motion.div
-                  animate={{ y: [0, -8, 0] }}
-                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                  className="relative w-[290px] rounded-[2.75rem] border-[6px] border-slate-900 bg-slate-900 p-2.5 shadow-premium-xl dark:border-slate-800"
+                  initial={{ opacity: 0, scale: 0.92, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ delay: 0.2, duration: 0.6 }}
+                  className="relative order-1 sm:order-2 shrink-0"
                 >
-                  <div className="absolute left-1/2 top-0 h-5 w-28 -translate-x-1/2 rounded-b-2xl bg-slate-900 dark:bg-slate-800" />
-                  <div className="overflow-hidden rounded-[2.25rem] bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700 p-5 text-white shadow-inner">
-                    <div className="flex items-center justify-between mb-6">
-                      <span className="text-xs font-medium text-white/80">Total Balance</span>
-                      <div className="grid h-7 w-7 place-items-center rounded-full bg-white/15 backdrop-blur">
-                        <Wallet className="h-3.5 w-3.5" />
+                  {/* Floating badge top-left */}
+                  <motion.div
+                    animate={{ y: [0, -4, 0] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute -left-12 bottom-16 z-20 hidden md:block"
+                  >
+                    <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-card/90 px-3 py-2 shadow-premium-md backdrop-blur-sm">
+                      <div className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-500/15 text-emerald-600">
+                        <Shield className="h-3.5 w-3.5" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold leading-tight">Protected</p>
+                        <p className="text-[9px] text-muted-foreground leading-tight">AES-256 SECURE</p>
                       </div>
                     </div>
-                    <p className="text-3xl font-bold tabular-nums tracking-tight">₦845,230.55</p>
-                    <p className="mt-1 text-xs text-white/70">≈ $548.21 USD</p>
-                    <div className="mt-6 grid grid-cols-4 gap-2">
-                      {[SendHorizontal, QrCode, ArrowRight, CreditCard].map((Icon, i) => (
-                        <div key={i} className="grid h-11 place-items-center rounded-xl bg-white/15 backdrop-blur transition hover:bg-white/25">
-                          <Icon className="h-4 w-4" />
-                        </div>
-                      ))}
+                  </motion.div>
+
+                  {/* Main phone frame */}
+                  <div className="relative w-[285px] h-[580px] rounded-[3rem] border-[8px] border-slate-900 bg-slate-900 p-2.5 shadow-premium-xl dark:border-slate-800 flex flex-col">
+                    {/* Speaker notch */}
+                    <div className="absolute left-1/2 top-0 h-4.5 w-28 -translate-x-1/2 rounded-b-2xl bg-slate-900 dark:bg-slate-800 z-30 flex items-center justify-center">
+                      <div className="w-10 h-1 rounded-full bg-slate-800 dark:bg-slate-700" />
                     </div>
-                    <div className="mt-4 space-y-2">
-                      {[["Spencer Supermarket", "-₦12,400", "bg-rose-400/20"], ["Chinedu Eze", "+₦25,000", "bg-emerald-400/20"], ["Ikeja Electric", "-₦18,500", "bg-rose-400/20"]].map(([n, a, c], i) => (
-                        <motion.div
-                          key={n as string}
-                          initial={{ opacity: 0, x: 10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.5 + i * 0.15 }}
-                          className="flex items-center justify-between rounded-xl bg-white/10 px-3 py-2.5 text-xs backdrop-blur"
-                        >
-                          <span className="font-medium">{n}</span>
-                          <span className={`rounded-md px-1.5 py-0.5 font-semibold tabular-nums ${c}`}>{a}</span>
-                        </motion.div>
-                      ))}
+
+                    {/* Simulated Screen Container */}
+                    <div className="relative flex-1 rounded-[2.5rem] bg-gradient-to-b from-slate-950 to-slate-900 overflow-hidden flex flex-col p-4 pt-11 text-white select-none">
+                      {/* Ambient screen glow */}
+                      <div className="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+
+                      <AnimatePresence mode="wait">
+                        {activeMockTab === "wallet" && (
+                          <motion.div
+                            key="wallet"
+                            initial={{ opacity: 0, x: 15 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -15 }}
+                            transition={{ duration: 0.25 }}
+                            className="flex-1 flex flex-col gap-4"
+                          >
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <span className="text-[10px] text-white/50 block font-medium uppercase tracking-wider">{t("landing.totalBalance")}</span>
+                                <span className="text-2xl font-bold tabular-nums tracking-tight">₦845,230.55</span>
+                              </div>
+                              <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-md">
+                                <Wallet className="h-4 w-4 text-emerald-400" />
+                              </div>
+                            </div>
+
+                            {/* Simulated Quick Actions Grid */}
+                            <div className="grid grid-cols-4 gap-2">
+                              {[
+                                { label: t("common.send"), icon: SendHorizontal },
+                                { label: t("common.scan"), icon: QrCode },
+                                { label: t("common.topUp"), icon: ArrowDownToLine },
+                                { label: t("nav.cards"), icon: CreditCard },
+                              ].map((item, idx) => {
+                                const Icon = item.icon;
+                                return (
+                                  <div key={idx} className="flex flex-col items-center gap-1">
+                                    <div className="h-10 w-full rounded-xl bg-white/5 border border-white/5 flex items-center justify-center transition hover:bg-white/15 cursor-pointer">
+                                      <Icon className="h-4 w-4 text-white/80" />
+                                    </div>
+                                    <span className="text-[9px] text-white/60 font-medium">{item.label}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {/* Simulated Recent Transactions */}
+                            <div className="flex-1 flex flex-col min-h-0">
+                              <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2">{t("business.recentTransactions")}</span>
+                              <div className="flex-1 overflow-y-auto no-scrollbar space-y-2">
+                                {[
+                                  { name: "Spencer Supermarket", amount: "-₦12,400", time: "10 mins ago", type: "debit" },
+                                  { name: "Chinedu Eze", amount: "+₦25,000", time: "1 hour ago", type: "credit" },
+                                  { name: "Ikeja Electric", amount: "-₦18,500", time: "3 hours ago", type: "debit" },
+                                  { name: "Fatima Bello", amount: "-₦5,000", time: "Yesterday", type: "debit" },
+                                ].map((tx, idx) => (
+                                  <div key={idx} className="flex justify-between items-center rounded-xl bg-white/5 border border-white/5 px-3 py-2 text-[11px] backdrop-blur-sm">
+                                    <div>
+                                      <span className="font-semibold block truncate max-w-[130px]">{tx.name}</span>
+                                      <span className="text-[9px] text-white/40">{tx.time}</span>
+                                    </div>
+                                    <span className={cn(
+                                      "font-bold tabular-nums px-2 py-0.5 rounded-md",
+                                      tx.type === "credit" ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"
+                                    )}>
+                                      {tx.amount}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {activeMockTab === "card" && (
+                          <motion.div
+                            key="card"
+                            initial={{ opacity: 0, x: 15 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -15 }}
+                            transition={{ duration: 0.25 }}
+                            className="flex-1 flex flex-col gap-6"
+                          >
+                            <span className="text-xs font-bold text-white/40 uppercase tracking-wider">{t("nav.cards")}</span>
+
+                            {/* 3D Glassmorphic Card Mockup */}
+                            <motion.div
+                              whileHover={{ y: -4, rotateY: 10 }}
+                              className={cn(
+                                "h-36 rounded-2xl p-4 flex flex-col justify-between shadow-premium-lg border transition duration-300 relative overflow-hidden",
+                                cardFrozen
+                                  ? "bg-slate-800/80 border-slate-700/60 opacity-60"
+                                  : "bg-gradient-to-br from-violet-600 via-fuchsia-600 to-indigo-800 border-white/10"
+                              )}
+                            >
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <span className="text-[10px] tracking-widest text-white/60 block font-semibold">VISA</span>
+                                  <span className="text-[8px] text-white/40 uppercase font-medium">PLATINUM</span>
+                                </div>
+                                <div className="h-6 w-9 rounded bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                                  <div className="h-4 w-6 rounded bg-gradient-to-r from-amber-400 to-amber-200 opacity-80" />
+                                </div>
+                              </div>
+
+                              <div className="font-mono text-sm tracking-widest text-center my-3">
+                                4827 •••• •••• 9012
+                              </div>
+
+                              <div className="flex justify-between items-end text-[9px]">
+                                <div>
+                                  <span className="text-[7px] text-white/40 block">CARDHOLDER</span>
+                                  <span className="font-bold">ADAEZE OKONKWO</span>
+                                </div>
+                                <span className="font-mono font-semibold">12/28</span>
+                              </div>
+                            </motion.div>
+
+                            {/* Card Control Buttons */}
+                            <div className="space-y-2">
+                              <button
+                                onClick={() => setCardFrozen(!cardFrozen)}
+                                className={cn(
+                                  "w-full h-10 rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-2",
+                                  cardFrozen
+                                    ? "bg-emerald-500 text-white"
+                                    : "bg-white/10 hover:bg-white/15 text-white border border-white/10"
+                                )}
+                              >
+                                <Lock className="h-3.5 w-3.5" />
+                                {cardFrozen ? "Unfreeze Card" : "Freeze Card"}
+                              </button>
+
+                              <div className="flex justify-between items-center rounded-xl bg-white/5 border border-white/5 px-3 py-2.5 text-xs">
+                                <span className="text-white/60">Spending Limit</span>
+                                <span className="font-bold tabular-nums">₦500,000 / mo</span>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {activeMockTab === "qr" && (
+                          <motion.div
+                            key="qr"
+                            initial={{ opacity: 0, x: 15 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -15 }}
+                            transition={{ duration: 0.25 }}
+                            className="flex-1 flex flex-col items-center gap-6 text-center"
+                          >
+                            <span className="text-xs font-bold text-white/40 uppercase tracking-wider self-start">{t("common.scan")}</span>
+
+                            {/* QR Scanner Container */}
+                            <div className="relative w-44 h-44 rounded-2xl border-2 border-emerald-500/30 bg-black/40 p-3 shadow-inner flex items-center justify-center overflow-hidden">
+                              {/* Scan Corners */}
+                              <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-emerald-500 rounded-tl-lg" />
+                              <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-emerald-500 rounded-tr-lg" />
+                              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-emerald-500 rounded-bl-lg" />
+                              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-emerald-500 rounded-br-lg" />
+
+                              {/* Scanline Animation */}
+                              <div className="absolute w-full h-[2px] bg-emerald-400 left-0 animate-scan z-10 opacity-75 shadow-[0_0_8px_oklch(0.62_0.14_162)]" />
+
+                              {/* Glow QR Placeholder */}
+                              <div className="w-32 h-32 bg-white/10 rounded-xl flex items-center justify-center p-2 relative">
+                                <QrCode className="w-full h-full text-emerald-400/90" />
+                              </div>
+                            </div>
+
+                            <div>
+                              <p className="text-sm font-semibold text-white">Merchant QR Scanner</p>
+                              <p className="text-[10px] text-white/60 mt-1 max-w-[200px]">Scan a payment code at any registered local store to pay instantly.</p>
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {activeMockTab === "ai" && (
+                          <motion.div
+                            key="ai"
+                            initial={{ opacity: 0, x: 15 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -15 }}
+                            transition={{ duration: 0.25 }}
+                            className="flex-1 flex flex-col justify-between"
+                          >
+                            <div className="flex items-center gap-2 border-b border-white/10 pb-2 mb-2">
+                              <div className="h-6 w-6 rounded-full bg-amber-500/20 flex items-center justify-center">
+                                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                              </div>
+                              <span className="text-xs font-bold">Gaxie AI Assistant</span>
+                            </div>
+
+                            {/* Chat Thread Container */}
+                            <div className="flex-1 space-y-3 overflow-y-auto no-scrollbar py-2 text-[10px]">
+                              <div className="flex justify-end">
+                                <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl rounded-br-md px-3 py-2 max-w-[80%] shadow-premium-xs">
+                                  Can I swap my Pi coins for Naira?
+                                </div>
+                              </div>
+                              <div className="flex justify-start">
+                                <div className="bg-white/10 border border-white/5 rounded-2xl rounded-bl-md px-3 py-2 max-w-[85%] shadow-premium-xs">
+                                  <span className="font-bold text-amber-400 block mb-0.5">GAXIE</span>
+                                  Yes! 🚀 You can swap Pi instantly in the app at the current rate of 1 π ≈ ₦47.35. Would you like to connect your wallet?
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Input box */}
+                            <div className="flex items-center gap-1.5 bg-white/5 border border-white/5 p-1 rounded-xl">
+                              <div className="flex-1 text-[10px] text-white/40 px-2">Type a message...</div>
+                              <div className="h-7 w-7 rounded-lg bg-emerald-500 flex items-center justify-center">
+                                <SendHorizontal className="h-3.5 w-3.5" />
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   </div>
                 </motion.div>
-                {/* Floating card */}
-                <motion.div
-                  animate={{ y: [0, -6, 0] }}
-                  transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                  className="absolute -right-4 top-24 hidden sm:block"
-                >
-                  <div className="w-44 rounded-2xl bg-gradient-to-br from-slate-800 to-black p-3.5 text-white shadow-premium-lg ring-1 ring-white/10">
-                    <div className="flex justify-between text-[10px] text-white/60"><span className="font-semibold tracking-wider">VISA</span><span>Virtual</span></div>
-                    <p className="mt-4 font-mono text-sm tracking-wider">4827 •••• 9012</p>
-                    <div className="mt-2 flex items-end justify-between">
-                      <p className="text-[10px] text-white/70">ADAEZE OKONKWO</p>
-                      <div className="h-5 w-7 rounded bg-gradient-to-br from-amber-300 to-amber-500 opacity-80" />
-                    </div>
-                  </div>
-                </motion.div>
-                {/* Floating badge */}
-                <motion.div
-                  animate={{ y: [0, 6, 0] }}
-                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                  className="absolute -left-4 bottom-16 hidden sm:block"
-                >
-                  <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-card px-3 py-2 shadow-premium-md">
-                    <div className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-500/15 text-emerald-600">
-                      <Shield className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-semibold leading-tight">Protected</p>
-                      <p className="text-[9px] text-muted-foreground leading-tight">AES-256</p>
-                    </div>
-                  </div>
-                </motion.div>
-              </motion.div>
+              </div>
+
             </div>
           </div>
         </section>
@@ -274,7 +493,7 @@ export function Landing({ onEnter, onSignup }: { onEnter: () => void; onSignup: 
           </div>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {[
-              { icon: Zap, title: "Instant Transfers", desc: "Send & receive money in seconds. GaexPay-to-GaexPay is always free.", tone: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
+              { icon: Zap, title: "Instant Transfers", desc: "Action Hub lets you send & receive money in seconds. GaexPay-to-GaexPay is always free.", tone: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
               { icon: Smartphone, title: "Mobile Money", desc: "MTN MoMo, Orange, Airtel, Moov & M-PESA integrated natively.", tone: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
               { icon: CreditCard, title: "Virtual & Physical Cards", desc: "Issue a Visa/Mastercard instantly. Spend globally online & offline.", tone: "bg-violet-500/10 text-violet-600 dark:text-violet-400" },
               { icon: QrCode, title: "QR Payments", desc: "Scan to pay at millions of merchants. No cash, no cards needed.", tone: "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400" },

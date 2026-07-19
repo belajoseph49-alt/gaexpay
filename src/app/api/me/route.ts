@@ -15,7 +15,7 @@ export async function GET(req: Request) {
       where: { id: userId },
       select: {
         id: true, email: true, phone: true, firstName: true, lastName: true,
-        username: true, country: true, city: true, address: true, dob: true,
+        username: true, avatar: true, country: true, city: true, address: true, dob: true,
         gender: true, kycStatus: true, kycTier: true, mfaEnabled: true,
         biometricEnabled: true, twoFactorMethod: true, language: true,
         currency: true, themePreference: true, emailNotif: true, pushNotif: true,
@@ -48,6 +48,42 @@ export async function GET(req: Request) {
         permissions: parsedPermissions,
       },
     });
+  } catch (e) {
+    return apiCatch(e);
+  }
+}
+
+/** PATCH /api/me — update current user's profile. */
+export async function PATCH(req: Request) {
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) return apiError("Unauthorized", 401);
+
+    const body = await req.json();
+    if (!body || typeof body !== "object") {
+      return apiError("Invalid payload", 400);
+    }
+
+    // Allowed fields
+    const allowedFields = ["firstName", "lastName", "phone", "username", "dob", "country", "city", "address", "avatar"];
+    const data: Record<string, any> = {};
+
+    for (const key of allowedFields) {
+      if (body[key] !== undefined) {
+        data[key] = body[key];
+      }
+    }
+
+    if (Object.keys(data).length === 0) {
+      return apiError("No valid fields to update", 400);
+    }
+
+    const updated = await db.user.update({
+      where: { id: userId },
+      data,
+    });
+
+    return NextResponse.json({ success: true, user: updated });
   } catch (e) {
     return apiCatch(e);
   }

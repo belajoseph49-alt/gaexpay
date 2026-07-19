@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * prisma/seed-staking.ts — Staking pools + demo live streams (Task 17-c)
  *

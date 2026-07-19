@@ -23,7 +23,7 @@ export function AnalyticsView() {
   const { t } = useTranslation();
   const { data } = useFetch<{ transactions: any[] }>("/api/transactions?limit=200&days=90");
   const [range, setRange] = useState("30");
-  const { fmt, symbol, currency: userCur } = useFormatMoney();
+  const { fmt, fmtCompact, symbol, currency: userCur } = useFormatMoney();
   const txs = data?.transactions ?? [];
 
   const days = range === "7" ? 7 : range === "90" ? 90 : 30;
@@ -90,8 +90,8 @@ export function AnalyticsView() {
             </defs>
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
             <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} interval={Math.floor(series.length / 8)} />
-            <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-            <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} formatter={(v: any) => formatMoney(Number(v), "NGN")} />
+            <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => fmtCompact(v)} />
+            <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} formatter={(v: any) => fmt(Number(v))} />
             <Area type="monotone" dataKey="in" stroke="#10b981" strokeWidth={2} fill="url(#aIn)" name="Inflow" />
             <Area type="monotone" dataKey="out" stroke="#f43f5e" strokeWidth={2} fill="url(#aOut)" name="Outflow" />
           </AreaChart>
@@ -110,7 +110,7 @@ export function AnalyticsView() {
                   <Cell key={i} fill={["#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4", "#f43f5e", "#84cc16"][i % 7]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(v: any) => formatMoney(Number(v), "NGN")} contentStyle={{ borderRadius: 12, fontSize: 12 }} />
+              <Tooltip formatter={(v: any) => fmt(Number(v))} contentStyle={{ borderRadius: 12, fontSize: 12 }} />
             </PieChart>
           </ResponsiveContainer>
           <div className="mt-3 space-y-1.5">
@@ -133,9 +133,9 @@ export function AnalyticsView() {
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={methods} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+              <XAxis type="number" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => fmtCompact(v)} />
               <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={70} />
-              <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} formatter={(v: any) => formatMoney(Number(v), "NGN")} />
+              <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} formatter={(v: any) => fmt(Number(v))} />
               <Bar dataKey="value" radius={[0, 6, 6, 0]} fill="#10b981" />
             </BarChart>
           </ResponsiveContainer>

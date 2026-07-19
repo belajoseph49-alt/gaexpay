@@ -6,7 +6,7 @@ import {
   Search, LayoutDashboard, Wallet, SendHorizontal, ArrowLeftRight, CreditCard,
   QrCode, BarChart3, ShieldCheck, Settings, LifeBuoy, Users, Gift, PiggyBank,
   Wallet2, CalendarClock, FileText, Store, ArrowLeftRight as Exchange,
-  CornerDownLeft, ArrowUp, ArrowDown, Loader2, User, Store as StoreIcon, Receipt, Trophy, Calendar, MapPin,
+  CornerDownLeft, ArrowUp, ArrowDown, Loader2, User, Store as StoreIcon, Receipt, Trophy, Calendar, MapPin, Network, Code2,
 } from "lucide-react";
 import { useApp, type View } from "@/lib/store";
 import {
@@ -29,7 +29,7 @@ const COMMANDS: CommandItem[] = [
   // Navigation
   { id: "dashboard", label: "Dashboard", description: "Go to dashboard overview", icon: LayoutDashboard, keywords: ["home", "overview", "main"], section: "Navigate" },
   { id: "wallets", label: "Wallets", description: "View multi-currency wallets", icon: Wallet, keywords: ["balance", "money", "currency"], section: "Navigate" },
-  { id: "send", label: "Send & Receive", description: "Transfer money", icon: SendHorizontal, keywords: ["transfer", "pay", "request"], section: "Navigate" },
+  { id: "send", label: "Action Hub", description: "Transfer money", icon: SendHorizontal, keywords: ["transfer", "pay", "request"], section: "Navigate" },
   { id: "transactions", label: "Transactions", description: "View transaction history", icon: ArrowLeftRight, keywords: ["history", "activity", "payments"], section: "Navigate" },
   { id: "cards", label: "Cards", description: "Manage virtual & physical cards", icon: CreditCard, keywords: ["visa", "mastercard", "debit"], section: "Navigate" },
   { id: "pay", label: "Pay & Bills", description: "QR payments, bills, airtime", icon: QrCode, keywords: ["scan", "merchant", "electricity", "airtime"], section: "Navigate" },
@@ -45,6 +45,9 @@ const COMMANDS: CommandItem[] = [
   { id: "settings", label: "Settings", description: "Account & security settings", icon: Settings, keywords: ["profile", "security", "preferences"], section: "Navigate" },
   { id: "support", label: "Support", description: "Get help & contact us", icon: LifeBuoy, keywords: ["help", "faq", "chat"], section: "Navigate" },
   { id: "admin", label: "Admin Console", description: "Platform administration", icon: Users, keywords: ["manage", "users", "fraud"], section: "Navigate" },
+  { id: "api-management", label: "API & Webhooks", description: "Manage API keys and webhooks", icon: Network, keywords: ["developer", "integration", "keys"], section: "Navigate" },
+  { id: "compliance", label: "AML & Compliance", description: "Compliance and Risk tools", icon: ShieldCheck, keywords: ["aml", "risk", "kyc"], section: "Navigate" },
+  { id: "developer", label: "Developer Portal", description: "Documentation and tools", icon: Code2, keywords: ["docs", "api", "dev"], section: "Navigate" },
   { id: "achievements", label: "Achievements", description: "View your badges & progress", icon: Trophy, keywords: ["badges", "rewards", "level", "gamification"], section: "Navigate" },
   { id: "calendar", label: "Payment Calendar", description: "Monthly calendar of transfers", icon: Calendar, keywords: ["schedule", "monthly", "calendar", "dates"], section: "Navigate" },
   { id: "spending-map", label: "Spending Map", description: "Spending by location & merchant", icon: MapPin, keywords: ["geo", "location", "merchant", "map"], section: "Navigate" },

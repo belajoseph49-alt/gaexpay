@@ -261,7 +261,7 @@ export function ApiEditModal({ open, config, onClose, onSaved }: Props) {
                   <Label htmlFor="name">Name <span className="text-rose-500">*</span></Label>
                   <Input
                     id="name"
-                    placeholder="e.g. Stripe Production"
+                    placeholder="e.g. Payment Provider Production"
                     value={form.name}
                     onChange={(e) => update("name", e.target.value)}
                   />
@@ -273,7 +273,7 @@ export function ApiEditModal({ open, config, onClose, onSaved }: Props) {
                   <Label htmlFor="provider">Provider</Label>
                   <Input
                     id="provider"
-                    placeholder="e.g. stripe, coingecko, twilio"
+                    placeholder="e.g. provider_name, sms_api"
                     value={form.provider}
                     onChange={(e) => update("provider", e.target.value)}
                   />
@@ -306,7 +306,7 @@ export function ApiEditModal({ open, config, onClose, onSaved }: Props) {
                 <Label htmlFor="webhookUrl">Webhook URL (optional)</Label>
                 <Input
                   id="webhookUrl"
-                  placeholder="https://gaexpay.com/api/webhooks/stripe"
+                  placeholder="https://gaexpay.com/api/webhooks/provider"
                   value={form.webhookUrl}
                   onChange={(e) => update("webhookUrl", e.target.value)}
                 />

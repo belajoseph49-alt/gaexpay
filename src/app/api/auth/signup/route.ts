@@ -44,7 +44,7 @@ export async function POST(req: Request) {
   try {
     // --- Rate limit ---------------------------------------------------------
     const rlId = `signup:${getClientIdentifier(req, null)}`;
-    const rl = rateLimitSensitive(rlId);
+    const rl = await rateLimitSensitive(rlId);
     if (!rl.success) {
       return NextResponse.json(
         { error: "Too many signup attempts. Please try again in a minute." },

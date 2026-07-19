@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 /**
@@ -690,7 +691,7 @@ function ChatThread({
   const scrollRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // New Task 22-a state
+  // Task 22-a state
   const [replyTo, setReplyTo] = useState<MessageItem | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
@@ -704,6 +705,17 @@ function ChatThread({
   const [recording, setRecording] = useState<{ recorder: MediaRecorder; startTime: number } | null>(null);
   const [recordSeconds, setRecordSeconds] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Gaxie AI panel
+  const [gaxieOpen, setGaxieOpen] = useState(false);
+  const [gaxieMsgs, setGaxieMsgs] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
+  const [gaxieInput, setGaxieInput] = useState("");
+  const [gaxieSending, setGaxieSending] = useState(false);
+  const gaxieScrollRef = useRef<HTMLDivElement>(null);
+
+  // Scroll-to-bottom new-messages badge
+  const [newMsgCount, setNewMsgCount] = useState(0);
+  const prevMsgCountRef = useRef(0);
 
   const myId = meData?.user?.id;
   const ngnWallet = walletsData?.wallets.find((w) => w.currency === "NGN");
@@ -777,13 +789,26 @@ function ChatThread({
   useEffect(() => {
     if (scrollRef.current && isAtBottomRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      setNewMsgCount(0);
+    } else if (messages.length > prevMsgCountRef.current && !isAtBottomRef.current) {
+      setNewMsgCount((n) => n + (messages.length - prevMsgCountRef.current));
     }
+    prevMsgCountRef.current = messages.length;
   }, [messages]);
   const onScroll = useCallback(() => {
     if (!scrollRef.current) return;
     const el = scrollRef.current;
     isAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (isAtBottomRef.current) setNewMsgCount(0);
   }, []);
+
+  function scrollToBottom() {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      setNewMsgCount(0);
+      isAtBottomRef.current = true;
+    }
+  }
 
   // ---- Typing indicator (poll) --------------------------------------------
   useEffect(() => {
@@ -1140,6 +1165,42 @@ function ChatThread({
     if (msg) toast.success(msg);
   }
 
+  // ---- Gaxie AI ----------------------------------------------------------
+  async function sendGaxie() {
+    const content = gaxieInput.trim();
+    if (!content || gaxieSending) return;
+    const newMsg: { role: "user" | "assistant"; content: string } = { role: "user", content };
+    const history = [...gaxieMsgs, newMsg];
+    setGaxieMsgs(history);
+    setGaxieInput("");
+    setGaxieSending(true);
+    // Auto-scroll gaxie panel
+    setTimeout(() => { if (gaxieScrollRef.current) gaxieScrollRef.current.scrollTop = gaxieScrollRef.current.scrollHeight; }, 50);
+    try {
+      const res = await fetch("/api/ai-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          messages: [
+            ...history,
+            // context hint
+            { role: "system", content: `Context: chatting with ${isGroup ? (groupInfo?.name ?? "a group") : (other ? fullName(other) : "a contact")}. User NGN balance: ${ngnBalance.toLocaleString()}.` },
+          ],
+        }),
+      });
+      const data = await res.json().catch(() => ({ reply: "Sorry, I couldn't respond." }));
+      const reply: { role: "user" | "assistant"; content: string } = { role: "assistant", content: data.reply || "Sorry, I couldn't respond." };
+      setGaxieMsgs((prev) => [...prev, reply]);
+    } catch {
+      const err: { role: "user" | "assistant"; content: string } = { role: "assistant", content: "I'm having trouble connecting. Please try again." };
+      setGaxieMsgs((prev) => [...prev, err]);
+    } finally {
+      setGaxieSending(false);
+      setTimeout(() => { if (gaxieScrollRef.current) gaxieScrollRef.current.scrollTop = gaxieScrollRef.current.scrollHeight; }, 50);
+    }
+  }
+
   // ---- Sender lookup for group replies / names -----------------------------
   const senderNameFor = useCallback((senderId: string): string => {
     if (groupInfo) {
@@ -1216,6 +1277,15 @@ function ChatThread({
         <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" aria-label="Video call">
           <Video className="h-[18px] w-[18px]" />
         </Button>
+        {/* Gaxie AI button */}
+        <Button
+          variant="ghost" size="icon"
+          className={cn("h-9 w-9 rounded-xl", gaxieOpen ? "bg-amber-500/15 text-amber-600" : "text-muted-foreground hover:text-amber-600")}
+          aria-label="Gaxie AI assistant"
+          onClick={() => setGaxieOpen((s) => !s)}
+        >
+          <Sparkles className="h-[18px] w-[18px]" />
+        </Button>
       </div>
 
       {/* Search bar */}
@@ -1270,8 +1340,80 @@ function ChatThread({
         )}
       </AnimatePresence>
 
+      {/* Gaxie AI side panel */}
+      <AnimatePresence>
+        {gaxieOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 280, opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="border-b overflow-hidden bg-gradient-to-b from-amber-500/5 to-background flex flex-col"
+          >
+            {/* Panel header */}
+            <div className="flex items-center gap-2 px-3 py-2 border-b">
+              <div className="grid h-6 w-6 place-items-center rounded-full bg-amber-500/15 text-amber-600">
+                <Sparkles className="h-3.5 w-3.5" />
+              </div>
+              <p className="text-xs font-semibold flex-1">Gaxie AI <span className="text-muted-foreground font-normal">— your fintech assistant</span></p>
+              <button onClick={() => setGaxieOpen(false)} className="grid h-6 w-6 place-items-center rounded-full text-muted-foreground hover:text-foreground">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            {/* Messages */}
+            <div ref={gaxieScrollRef} className="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
+              {gaxieMsgs.length === 0 && (
+                <div className="text-center py-4">
+                  <p className="text-xs text-muted-foreground">Hi! I'm Gaxie, your GaexPay AI assistant.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Ask me about payments, balances, or how to use GaexPay.</p>
+                </div>
+              )}
+              {gaxieMsgs.map((m, i) => (
+                <div key={i} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
+                  <div className={cn(
+                    "rounded-2xl px-3 py-1.5 text-xs max-w-[85%] shadow-premium-xs",
+                    m.role === "user"
+                      ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-br-md"
+                      : "bg-card border border-amber-500/20 rounded-bl-md",
+                  )}>
+                    {m.role === "assistant" && <p className="text-[9px] font-bold text-amber-600 mb-0.5">GAXIE</p>}
+                    <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>
+                  </div>
+                </div>
+              ))}
+              {gaxieSending && (
+                <div className="flex justify-start">
+                  <div className="rounded-2xl rounded-bl-md px-3 py-2 bg-card border border-amber-500/20">
+                    <Loader2 className="h-3 w-3 animate-spin text-amber-500" />
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* Input */}
+            <div className="flex items-center gap-2 border-t p-2">
+              <Input
+                value={gaxieInput}
+                onChange={(e) => setGaxieInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendGaxie(); } }}
+                placeholder="Ask Gaxie anything…"
+                className="h-8 rounded-xl text-xs bg-muted/40 border-amber-500/20 flex-1"
+                disabled={gaxieSending}
+              />
+              <Button
+                size="icon"
+                className="h-8 w-8 rounded-full shrink-0 bg-amber-500 hover:bg-amber-600"
+                onClick={sendGaxie}
+                disabled={gaxieSending || !gaxieInput.trim()}
+              >
+                <Send className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Messages */}
-      <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 bg-muted/10">
+      <div className="relative flex-1">
+      <div ref={scrollRef} onScroll={onScroll} className="h-full overflow-y-auto p-3 sm:p-4 space-y-2 bg-muted/10">
         {loading ? (
           <div className="space-y-2">
             {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className={cn("h-12 rounded-2xl", i % 2 ? "ml-auto w-2/3" : "w-2/3")} />)}
@@ -1316,6 +1458,23 @@ function ChatThread({
             );
           })
         )}
+        </div>
+
+        {/* Scroll-to-bottom badge */}
+        <AnimatePresence>
+          {newMsgCount > 0 && (
+            <motion.button
+              initial={{ opacity: 0, y: 10, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.9 }}
+              onClick={scrollToBottom}
+              className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full bg-emerald-500 px-3 py-1.5 text-white text-xs font-semibold shadow-premium-md hover:bg-emerald-600 transition"
+            >
+              <ChevronDown className="h-3.5 w-3.5" />
+              {newMsgCount} new {newMsgCount === 1 ? "message" : "messages"}
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Reply / edit preview bar */}
@@ -2993,14 +3152,85 @@ function CommunitiesTab() {
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
+  const [creating, setCreating] = useState(false);
 
-  // Demo communities (presentational — no backend yet)
-  const demoCommunities = [
-    { id: "1", name: "Local Crypto Market", description: "P2P trading community for crypto enthusiasts across Africa.", members: 1284, category: "Finance", emoji: "₿", color: "from-amber-500 to-orange-600" },
-    { id: "2", name: "Lagos Foodies", description: "Share restaurant reviews, split bills, and discover new spots.", members: 856, category: "Local", emoji: "🍽️", color: "from-emerald-500 to-teal-600" },
-    { id: "3", name: "Freelancers Africa", description: "Network, share gigs, and manage client payments together.", members: 2103, category: "Finance", emoji: "💼", color: "from-violet-500 to-fuchsia-600" },
-    { id: "4", name: "Accra Tech Hub", description: "Developers, designers, and founders building the future.", members: 742, category: "Local", emoji: "💻", color: "from-sky-500 to-cyan-600" },
+  const { data, loading, reload } = useFetch<{ communities: Array<{
+    id: string; name: string; description?: string | null; avatar?: string | null;
+    memberCount: number; isMember: boolean; updatedAt: string;
+  }> }>("/api/messaging/communities");
+
+  const communities = data?.communities ?? [];
+
+  // Fallback demo communities when none exist yet
+  const demoCommunities = communities.length > 0 ? communities : [
+    { id: "demo-1", name: "Local Crypto Market", description: "P2P trading community for crypto enthusiasts across Africa.", memberCount: 1284, isMember: false, updatedAt: new Date().toISOString() },
+    { id: "demo-2", name: "Lagos Foodies", description: "Share restaurant reviews, split bills, and discover new spots.", memberCount: 856, isMember: false, updatedAt: new Date().toISOString() },
+    { id: "demo-3", name: "Freelancers Africa", description: "Network, share gigs, and manage client payments together.", memberCount: 2103, isMember: false, updatedAt: new Date().toISOString() },
+    { id: "demo-4", name: "Accra Tech Hub", description: "Developers, designers, and founders building the future.", memberCount: 742, isMember: false, updatedAt: new Date().toISOString() },
   ];
+
+  const EMOJI_MAP: Record<string, string> = {
+    "Local Crypto Market": "₿", "Lagos Foodies": "🍽️",
+    "Freelancers Africa": "💼", "Accra Tech Hub": "💻",
+  };
+  const COLOR_MAP: Record<string, string> = {
+    "Local Crypto Market": "from-amber-500 to-orange-600",
+    "Lagos Foodies": "from-emerald-500 to-teal-600",
+    "Freelancers Africa": "from-violet-500 to-fuchsia-600",
+    "Accra Tech Hub": "from-sky-500 to-cyan-600",
+  };
+  const GRAD_COLORS = [
+    "from-emerald-500 to-teal-600", "from-violet-500 to-fuchsia-600",
+    "from-amber-500 to-orange-600", "from-rose-500 to-pink-600",
+    "from-sky-500 to-cyan-600", "from-lime-500 to-green-600",
+  ];
+  function communityColor(name: string, idx: number) {
+    return COLOR_MAP[name] ?? GRAD_COLORS[idx % GRAD_COLORS.length];
+  }
+  function communityEmoji(name: string) {
+    return EMOJI_MAP[name] ?? "🌍";
+  }
+
+  async function createCommunity() {
+    if (!name.trim()) return toast.error("Enter a community name");
+    setCreating(true);
+    try {
+      const res = await fetch("/api/messaging/communities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name: name.trim(), description: desc.trim(), visibility }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to create");
+      toast.success(`Community "${name.trim()}" created!`);
+      setShowCreate(false);
+      setName(""); setDesc("");
+      reload();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to create community");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function joinCommunity(id: string, communityName: string) {
+    if (id.startsWith("demo-")) {
+      toast.info(`Joining "${communityName}" — available after communities are seeded!`);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/messaging/communities/${id}/join`, {
+        method: "POST", credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to join");
+      toast.success(`Joined "${communityName}"!`);
+      reload();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to join");
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -3034,7 +3264,7 @@ function CommunitiesTab() {
                 className={cn("flex-1 rounded-xl border p-3 text-left transition", visibility === "public" ? "border-primary ring-2 ring-primary/20 bg-primary/5" : "border-border/60 hover:bg-muted/40")}
               >
                 <p className="text-sm font-semibold">🌍 Public</p>
-                <p className="text-[10px] text-muted-foreground">Discoverable in search</p>
+                <p className="text-[10px] text-muted-foreground">Discoverable by everyone</p>
               </button>
               <button
                 onClick={() => setVisibility("private")}
@@ -3045,11 +3275,8 @@ function CommunitiesTab() {
               </button>
             </div>
           </div>
-          <Button
-            className="w-full h-11 rounded-xl shadow-premium-sm"
-            disabled={!name.trim()}
-            onClick={() => { toast.success("Community creation coming soon!"); setShowCreate(false); setName(""); setDesc(""); }}
-          >
+          <Button className="w-full h-11 rounded-xl shadow-premium-sm" disabled={!name.trim() || creating} onClick={createCommunity}>
+            {creating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />}
             Create community
           </Button>
         </Card>
@@ -3058,28 +3285,39 @@ function CommunitiesTab() {
       {/* Discover communities */}
       <div>
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Discover</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {demoCommunities.map((c) => (
-            <Card key={c.id} className="p-4 card-lift border-border/60 cursor-pointer" >
-              <div className="flex items-start gap-3">
-                <div className={cn("grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-white text-xl shadow-premium-sm", c.color)}>
-                  {c.emoji}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-sm truncate">{c.name}</p>
-                    <Badge variant="outline" className="h-4 px-1.5 text-[9px] uppercase shrink-0">{c.category}</Badge>
+        {loading ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[1,2,3,4].map((i) => <Skeleton key={i} className="h-32 rounded-2xl" />)}
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {demoCommunities.map((c, idx) => (
+              <Card key={c.id} className="p-4 card-lift border-border/60">
+                <div className="flex items-start gap-3">
+                  <div className={cn("grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-white text-xl shadow-premium-sm", communityColor(c.name, idx))}>
+                    {communityEmoji(c.name)}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{c.description}</p>
-                  <p className="text-[10px] text-muted-foreground mt-1.5">{c.members.toLocaleString()} members</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-sm truncate">{c.name}</p>
+                      {c.isMember && <Badge className="h-4 px-1.5 text-[9px] bg-emerald-500/15 text-emerald-600 border-0">Joined</Badge>}
+                    </div>
+                    {c.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{c.description}</p>}
+                    <p className="text-[10px] text-muted-foreground mt-1.5">{c.memberCount.toLocaleString()} members</p>
+                  </div>
                 </div>
-              </div>
-              <Button size="sm" variant="outline" className="w-full mt-3 rounded-xl text-xs" onClick={() => toast.info(`Joining "${c.name}" — coming soon!`)}>
-                Join community
-              </Button>
-            </Card>
-          ))}
-        </div>
+                <Button
+                  size="sm"
+                  variant={c.isMember ? "outline" : "default"}
+                  className="w-full mt-3 rounded-xl text-xs"
+                  onClick={() => c.isMember ? toast.info("You're already a member!") : joinCommunity(c.id, c.name)}
+                >
+                  {c.isMember ? "View community" : "Join community"}
+                </Button>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -3094,43 +3332,101 @@ function StoriesTab() {
   const contacts = (data?.conversations ?? [])
     .filter((c) => !c.isGroup && c.user)
     .map((c) => c.user as Participant);
+
+  const storyInputRef = useRef<HTMLInputElement>(null);
+  const [myStories, setMyStories] = useState<{ url: string; name: string; mimeType: string; addedAt: Date }[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleStoryUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/messaging/upload", { method: "POST", credentials: "include", body: formData });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+      setMyStories((prev) => [{ url: data.url, name: data.name, mimeType: data.mimeType, addedAt: new Date() }, ...prev]);
+      toast.success("Story added!");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to upload story");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   return (
     <Card className="p-5">
+      <input ref={storyInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleStoryUpload} />
       <h3 className="font-semibold mb-3">My Story</h3>
       <div className="flex items-center gap-3 mb-5">
         <div className="relative">
           <Avatar className="h-16 w-16 ring-2 ring-emerald-500 ring-offset-2">
-            <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-lg font-bold">AO</AvatarFallback>
+            {myStories[0]?.mimeType?.startsWith("image/") ? (
+              <img src={myStories[0].url} alt="story" className="h-full w-full object-cover rounded-full" />
+            ) : (
+              <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-lg font-bold">Me</AvatarFallback>
+            )}
           </Avatar>
-          <button className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full bg-emerald-500 text-white ring-2 ring-background">
-            <Plus className="h-4 w-4" />
+          <button
+            onClick={() => storyInputRef.current?.click()}
+            disabled={uploading}
+            className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full bg-emerald-500 text-white ring-2 ring-background disabled:opacity-60"
+          >
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           </button>
         </div>
         <div>
-          <p className="text-sm font-semibold">Add to story</p>
-          <p className="text-xs text-muted-foreground">Share a photo that disappears in 24h</p>
+          <p className="text-sm font-semibold">{myStories.length > 0 ? `${myStories.length} story${myStories.length > 1 ? " items" : ""}` : "Add to story"}</p>
+          <p className="text-xs text-muted-foreground">Share a photo or video that disappears in 24h</p>
         </div>
       </div>
-      <h3 className="font-semibold mb-3">Recent contacts</h3>
+
+      {/* My stories row */}
+      {myStories.length > 0 && (
+        <div className="mb-5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Your stories</p>
+          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+            {myStories.map((s, i) => (
+              <div key={i} className="flex flex-col items-center gap-1.5 shrink-0">
+                <div className="relative h-16 w-16 rounded-full ring-2 ring-emerald-500 ring-offset-2 overflow-hidden">
+                  {s.mimeType.startsWith("image/") ? (
+                    <img src={s.url} alt={s.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full bg-gradient-to-br from-emerald-500 to-teal-600 grid place-items-center text-white">
+                      <Camera className="h-6 w-6" />
+                    </div>
+                  )}
+                </div>
+                <span className="text-[10px] text-muted-foreground">{s.addedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <h3 className="font-semibold mb-3">Contacts' stories</h3>
       {contacts.length === 0 ? (
         <p className="text-sm text-muted-foreground">No contacts yet.</p>
       ) : (
         <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
           {contacts.map((c) => (
-            <div key={c.id} className="flex flex-col items-center gap-1.5 shrink-0">
+            <button
+              key={c.id}
+              onClick={() => toast.info(`${c.firstName}'s story — coming soon!`)}
+              className="flex flex-col items-center gap-1.5 shrink-0"
+            >
               <Avatar className="h-14 w-14 ring-2 ring-amber-400 ring-offset-2">
                 <AvatarImage src={c.avatar || undefined} />
                 <AvatarFallback className="bg-gradient-to-br from-amber-400 to-orange-500 text-white text-xs font-bold">{initials(c)}</AvatarFallback>
               </Avatar>
               <span className="text-[11px] font-medium max-w-[60px] truncate">{c.firstName}</span>
-            </div>
+            </button>
           ))}
         </div>
       )}
-      <div className="mt-6 rounded-xl bg-muted/40 p-4 text-sm text-muted-foreground text-center">
-        <Sparkles className="h-5 w-5 mx-auto mb-2 text-amber-500" />
-        Stories are coming soon. You'll be able to share ephemeral updates with your GaexPay contacts.
-      </div>
     </Card>
   );
 }

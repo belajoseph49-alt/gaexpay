@@ -72,26 +72,10 @@ const NAV: NavGroup[] = [
       { id: "dashboard", label: "Dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard, accountTypes: ["personal"] },
       { id: "business-dashboard", label: "Business Dashboard", labelKey: "nav.businessDashboard", icon: Building2, accountTypes: ["business"] },
       { id: "wallets", label: "Wallets", labelKey: "nav.wallets", icon: Wallet },
-      { id: "send", label: "Send & Receive", labelKey: "nav.sendReceive", icon: SendHorizontal },
-      { id: "international", label: "International Transfer", labelKey: "nav.internationalTransfer", icon: Globe, featureFlag: "international_transfer" },
-      { id: "unified-address", label: "My Payment Address", labelKey: "nav.myPaymentAddress", icon: AtSign },
+      { id: "send", label: "Action Hub", labelKey: "nav.sendReceive", icon: SendHorizontal },
       { id: "transactions", label: "Transactions", labelKey: "nav.transactions", icon: ArrowLeftRight },
-      { id: "cards", label: "Cards", labelKey: "nav.cards", icon: CreditCard, featureFlag: "virtual_cards" },
-      { id: "pay", label: "Pay & Bills", labelKey: "nav.payBills", icon: QrCode, featureFlag: "qr_payments" },
       { id: "marketplace", label: "Marketplace", labelKey: "nav.marketplace", icon: ShoppingBag, badge: "New" },
-      { id: "savings", label: "Savings Goals", labelKey: "nav.savingsGoals", icon: PiggyBank, accountTypes: ["personal"], featureFlag: "savings_goals" },
-      { id: "savings-challenges", label: "Savings Challenges", labelKey: "nav.savingsChallenges", icon: Trophy, badge: "New", accountTypes: ["personal"] },
-      { id: "budgets", label: "Budgets", labelKey: "nav.budgets", icon: Wallet2, accountTypes: ["personal"], featureFlag: "budgets" },
-      { id: "scheduled", label: "Scheduled", labelKey: "nav.scheduled", icon: CalendarClock, featureFlag: "scheduled_transfers" },
-      { id: "calendar", label: "Calendar", labelKey: "nav.calendar", icon: Calendar },
-      { id: "exchange", label: "Exchange", labelKey: "nav.exchange", icon: Repeat },
-      { id: "crypto", label: "Crypto Wallets", labelKey: "nav.cryptoWallets", icon: Bitcoin, featureFlag: "crypto_trading" },
-      { id: "crypto-swap", label: "Crypto Swap", labelKey: "nav.cryptoSwap", icon: Repeat, featureFlag: "crypto_trading" },
-      { id: "crypto-trade", label: "Buy / Sell Crypto", labelKey: "nav.buySellCrypto", icon: DollarSign, featureFlag: "crypto_trading" },
-      { id: "crypto-cashout", label: "Crypto → Fiat", labelKey: "nav.cryptoToFiat", icon: Banknote, featureFlag: "crypto_trading" },
       { id: "analytics", label: "Analytics", labelKey: "nav.analytics", icon: BarChart3, featureFlag: "analytics" },
-      { id: "spending-map", label: "Spending Map", labelKey: "nav.spendingMap", icon: MapPin, featureFlag: "spending_map" },
-      { id: "statement", label: "Statements", labelKey: "nav.statements", icon: FileText },
     ],
   },
   {
@@ -101,38 +85,31 @@ const NAV: NavGroup[] = [
       { id: "team", label: "Team", labelKey: "nav.team", icon: Users, accountTypes: ["business"] },
       { id: "invoices", label: "Invoices", labelKey: "nav.invoices", icon: FileText, accountTypes: ["business"] },
       { id: "payroll", label: "Payroll", labelKey: "nav.payroll", icon: Banknote, accountTypes: ["business"] },
-      { id: "merchant", label: "Merchant Dashboard", labelKey: "nav.merchantDashboard", icon: Store, badge: "Pro", featureFlag: "merchant_dashboard" },
-      { id: "business-pro", label: "Business Pro", labelKey: "nav.businessPro", icon: Briefcase, badge: "Pro", featureFlag: "business_pro" },
-      { id: "treasury", label: "Treasury", labelKey: "nav.treasury", icon: Landmark, badge: "L4", featureFlag: "treasury" },
     ],
   },
   {
     section: "Community",
     sectionKey: "nav.community",
     items: [
-      { id: "social", label: "Social", labelKey: "nav.social", icon: Users, featureFlag: "social" },
-      { id: "messaging", label: "Messages", labelKey: "nav.messages", icon: MessageSquare, featureFlag: "messaging" },
-      { id: "gaex-chat", label: "GaexChat", labelKey: "nav.gaexChat", icon: MessageSquare, badge: "New" },
-      { id: "live", label: "Live", labelKey: "nav.live", icon: Radio, featureFlag: "live_streaming" },
+      { id: "social", label: "Social", labelKey: "nav.social", icon: Users },
+      { id: "messaging", label: "Messages", labelKey: "nav.messages", icon: MessageSquare },
+      { id: "live", label: "Live", labelKey: "nav.live", icon: Radio },
     ],
   },
   {
     section: "Crypto & Finance",
     sectionKey: "nav.cryptoFinance",
     items: [
-      { id: "staking", label: "Staking", labelKey: "nav.staking", icon: Lock, featureFlag: "staking" },
-      { id: "gaex-token", label: "GAEX Token", labelKey: "nav.gaexToken", icon: Coins, badge: "NEW", featureFlag: "gaex_token" },
+      { id: "staking", label: "Staking", labelKey: "nav.staking", icon: Lock },
+      { id: "gaex-token", label: "GAEX Token", labelKey: "nav.gaexToken", icon: Coins, badge: "NEW" },
     ],
   },
   {
     section: "Commerce",
     sectionKey: "nav.commerce",
     items: [
-      { id: "seller-dashboard", label: "Seller Dashboard", labelKey: "nav.sellerDashboard", icon: Store, featureFlag: "seller_dashboard" },
+      { id: "seller-dashboard", label: "Seller Dashboard", labelKey: "nav.sellerDashboard", icon: Store },
       { id: "notifications", label: "Notifications", labelKey: "nav.notifications", icon: Bell },
-      { id: "cash-links", label: "Cash Links", labelKey: "nav.cashLinks", icon: Link2, featureFlag: "cash_links" },
-      { id: "virtual-accounts", label: "Virtual Accounts", labelKey: "nav.virtualAccounts", icon: Building2, featureFlag: "virtual_accounts" },
-      { id: "hold-earn", label: "Hold & Earn", labelKey: "nav.holdEarn", icon: Sparkles, badge: "2%", featureFlag: "hold_earn" },
     ],
   },
   {
@@ -142,8 +119,6 @@ const NAV: NavGroup[] = [
       { id: "kyc", label: "Identity (KYC)", labelKey: "nav.identity", icon: ShieldCheck, accountTypes: ["personal"] },
       { id: "kyb", label: "Identity (KYB)", labelKey: "misc.kycBusiness", icon: ShieldCheck, accountTypes: ["business"] },
       { id: "security", label: "Security Center", labelKey: "nav.securityCenter", icon: Shield },
-      { id: "achievements", label: "Achievements", labelKey: "nav.achievements", icon: Trophy, accountTypes: ["personal"] },
-      { id: "referral", label: "Referral & Rewards", labelKey: "nav.referral", icon: Gift },
       { id: "settings", label: "Settings", labelKey: "nav.settings", icon: Settings },
       { id: "support", label: "Support", labelKey: "nav.support", icon: LifeBuoy },
     ],
@@ -152,11 +127,10 @@ const NAV: NavGroup[] = [
     section: "Platform",
     sectionKey: "nav.platform",
     items: [
-      { id: "admin-panel", label: "Admin Panel", labelKey: "nav.adminPanel", icon: Crown, badge: "Admin", roles: ["super_admin", "admin"] },
-      { id: "api-management", label: "API Management", labelKey: "nav.apiManagement", icon: Network, badge: "Dev", roles: ["super_admin", "admin"], permission: "api.view" },
-      { id: "enterprise-admin", label: "Enterprise Admin", labelKey: "nav.enterpriseAdmin", icon: Building2, badge: "L4", roles: ["super_admin", "admin"], featureFlag: "enterprise_admin" },
-      { id: "compliance", label: "AML & Compliance", labelKey: "nav.amlCompliance", icon: ShieldCheck, badge: "L4", roles: ["super_admin", "admin", "kyc_manager"], featureFlag: "aml_compliance" },
-      { id: "developer", label: "Developer Portal", labelKey: "nav.developerPortal", icon: Code2, featureFlag: "developer_portal" },
+      { id: "admin", label: "Admin Console", labelKey: "nav.adminConsole", icon: Users, badge: "Admin", roles: ["super_admin", "admin"] },
+      { id: "api-management", label: "API & Webhooks", labelKey: "nav.apiWebhooks", icon: Network, badge: "Dev", roles: ["super_admin", "admin", "developer"] },
+      { id: "compliance", label: "AML & Compliance", labelKey: "nav.amlCompliance", icon: ShieldCheck, badge: "L4", roles: ["super_admin", "admin", "kyc_manager"] },
+      { id: "developer", label: "Developer Portal", labelKey: "nav.developerPortal", icon: Code2 },
     ],
   },
 ];
@@ -242,7 +216,7 @@ export function Sidebar() {
           filteredNav.map((group) => (
             <div key={group.section} className="mb-5">
               <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
-                {t(group.sectionKey)}
+                {t(group.sectionKey, { defaultValue: group.section }).toUpperCase()}
               </p>
               <div className="space-y-0.5">
                 {group.items.map((item) => {
@@ -266,13 +240,13 @@ export function Sidebar() {
                         "h-[17px] w-[17px] shrink-0 transition-transform duration-200",
                         active ? "text-primary" : "text-muted-foreground/80 group-hover:text-foreground group-hover:scale-105",
                       )} />
-                      <span className="flex-1 text-left truncate">{t(item.labelKey)}</span>
+                      <span className="flex-1 text-left truncate">{t(item.labelKey, { defaultValue: item.label })}</span>
                       {item.badge && (
                         <Badge
                           variant={active ? "secondary" : "outline"}
-                          className="h-[18px] text-[9px] px-1.5 font-semibold shrink-0 border-0"
+                          className="h-[18px] text-[9px] px-1.5 font-semibold shrink-0 border-0 uppercase tracking-widest"
                         >
-                          {item.badge}
+                          {t(`badge.${item.badge.toLowerCase()}`, { defaultValue: item.badge })}
                         </Badge>
                       )}
                     </button>

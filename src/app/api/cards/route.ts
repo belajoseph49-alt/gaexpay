@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     if (!userId) return apiError("Unauthorized", 401);
 
     const identifier = getClientIdentifier(req, userId);
-    const rl = rateLimitSensitive(identifier);
+    const rl = await rateLimitSensitive(identifier);
     if (!rl.success) {
       return NextResponse.json(
         { error: "Too many requests. Please slow down." },
@@ -52,17 +52,24 @@ export async function POST(req: Request) {
     };
 
     const last4 = Math.floor(1000 + Math.random() * 9000).toString();
+    let maskedNumber = `**** **** **** ${last4}`;
+    let fullNumberEnc = "enc_" + last4;
+    let expiryMonth = String(Math.floor(Math.random() * 12) + 1).padStart(2, "0");
+    let expiryYear = String(26 + Math.floor(Math.random() * 4));
+    let cvvEnc = "enc_cvv_new";
+
+
     const card = await db.card.create({
       data: {
         userId,
         type: b.type ?? "virtual",
         brand: b.brand ?? "visa",
         nickname: b.nickname ?? "GaexPay Card",
-        maskedNumber: `**** **** **** ${last4}`,
-        fullNumberEnc: "enc_" + last4,
-        expiryMonth: String(Math.floor(Math.random() * 12) + 1).padStart(2, "0"),
-        expiryYear: String(26 + Math.floor(Math.random() * 4)),
-        cvvEnc: "enc_cvv_new",
+        maskedNumber,
+        fullNumberEnc,
+        expiryMonth,
+        expiryYear,
+        cvvEnc,
         holderName: b.holderName ?? "ADAEZE OKONKWO",
         currency: b.currency ?? "NGN",
         balance: 0,
@@ -100,7 +107,7 @@ export async function PATCH(req: Request) {
     if (!userId) return apiError("Unauthorized", 401);
 
     const identifier = getClientIdentifier(req, userId);
-    const rl = rateLimitSensitive(identifier);
+    const rl = await rateLimitSensitive(identifier);
     if (!rl.success) {
       return NextResponse.json(
         { error: "Too many requests. Please slow down." },
